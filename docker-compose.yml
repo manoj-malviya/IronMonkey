@@ -1,0 +1,54 @@
+version: "3"
+services:
+  api:
+    container_name: iron-monkey-api
+    build:
+      context: .
+      dockerfile: ./.docker/dev/api/Dockerfile
+    command: dotnet run
+    volumes:
+      - ./Family.Api/:/usr/src/app
+      - ~/.aspnet/https:/https:ro
+    working_dir: /usr/src/app
+    ports:
+      - 5400:5400
+    environment:
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+      - ConnectionStrings__sqlConnection=Server=mysql;Database=family;Uid=root;Pwd=root;
+    depends_on:
+      - mysql
+  web:
+    container_name: iron-monkey-web
+    build: ./.docker/web
+    command: npm run dev
+    volumes:
+      - ./Web/:/usr/src/app
+    working_dir: /usr/src/app
+    ports:
+      - 5173:5173
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - '8888:8888'
+    environment:
+      - UPLOAD_LIMIT=100M
+      - PMA_ARBITRARY=1
+      - PMA_HOST=mysql
+      - MYSQL_ROOT_PASSWORD=root
+      - APACHE_PORT=8888
+    depends_on:
+      - mysql
+  mysql: 
+    environment: 
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=family
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=root
+    image: "mariadb:10.5"
+    ports: 
+      - "3306:3306"
+    volumes: 
+      - "mysql-family-db:/var/lib/mysql"
+volumes:
+  mysql-family-db:
