@@ -7,8 +7,17 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.DependencyInjection;
 using IronMonkey.Api.Extensions;
 using IronMonkey.Api.Repository;
+using IronMonkey.Api.Infrastructures.Tenants;
+using IronMonkey.Api.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// tenant setter & getter
+builder.Services.AddScopedAs<TenantService>(new[] {typeof(ITenantGetter), typeof(ITenantSetter)});
+// IOptions version of tenants
+builder.Services.Configure<TenantConfigurationSection>(builder.Configuration);
+// middleware that sets the current tenant
+builder.Services.AddScoped<MultiTenantServiceMiddleware>();
 
 builder.Services.ConfigureCors();
 builder.Services.ConfigureSqlContext(builder.Configuration);
@@ -59,6 +68,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+// middleware that reads and sets the tenant
+app.UseMiddleware<MultiTenantServiceMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

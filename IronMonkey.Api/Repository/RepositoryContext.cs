@@ -16,8 +16,8 @@ namespace IronMonkey.Api.Repository
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.ApplyConfiguration(new PersonConfiguration());
-            modelBuilder.ApplyConfiguration(new IronMonkeyConfiguration());
+            //modelBuilder.ApplyConfiguration(new PersonConfiguration());
+            //modelBuilder.ApplyConfiguration(new IronMonkeyConfiguration());
             modelBuilder.ApplyConfiguration(new RoleConfiguration());
         }
 

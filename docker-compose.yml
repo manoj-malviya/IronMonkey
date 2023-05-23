@@ -7,7 +7,7 @@ services:
       dockerfile: ./.docker/dev/api/Dockerfile
     command: dotnet run
     volumes:
-      - ./Family.Api/:/usr/src/app
+      - ./IronMonkey.Api/:/usr/src/app
       - ~/.aspnet/https:/https:ro
     working_dir: /usr/src/app
     ports:
@@ -15,7 +15,6 @@ services:
     environment:
       - ASPNETCORE_Kestrel__Certificates__Default__Password=password
       - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
-      - ConnectionStrings__sqlConnection=Server=mysql;Database=family;Uid=root;Pwd=root;
     depends_on:
       - mysql
   web:
