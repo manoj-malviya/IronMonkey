@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using IronMonkey.Api.Extensions;
 using IronMonkey.Api.Repository;
 using IronMonkey.Api.Infrastructures.Tenants;
-using IronMonkey.Api.Middlewares;
+using IronMonkey.Api.Infrastructures.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 

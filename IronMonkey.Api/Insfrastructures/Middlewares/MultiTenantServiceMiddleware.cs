@@ -1,7 +1,7 @@
 using IronMonkey.Api.Infrastructures.Tenants;
 using Microsoft.Extensions.Options;
 
-namespace IronMonkey.Api.Middlewares
+namespace IronMonkey.Api.Infrastructures.Middlewares
 {
     public class MultiTenantServiceMiddleware : IMiddleware
     {
@@ -22,7 +22,7 @@ namespace IronMonkey.Api.Middlewares
         {
             var tenant = config.Value.Tenants.First();
 
-            if (context.Request.Query.TryGetValue("tenant", out var values))
+            if (context.Request.Headers.TryGetValue("tenant", out var values))
             {
                 var key = values.First();
                 tenant = config.Value
