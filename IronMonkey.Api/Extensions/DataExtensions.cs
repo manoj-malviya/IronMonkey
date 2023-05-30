@@ -11,7 +11,18 @@ namespace IronMonkey.Api.Extensions
         {
             using var scope = app.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<RepositoryContext>();
-            db.Database.Migrate();
+
+            var tenants = app.Configuration.GetSection<TenantConfigurationSection>();
+
+            foreach(var t in tenants)
+            {
+                var connectionString = t.ConnectionString;
+                db.Database.SetConnectionString(connectionString);
+                if (db.Database.GetMigrations().Count() > 0)
+                {
+                    db.Database.Migrate();
+                }
+            }
             return app;
         }
     }
