@@ -72,6 +72,8 @@ var app = builder.Build();
 // middleware that reads and sets the tenant
 app.UseMiddleware<MultiTenantServiceMiddleware>();
 
+app.ApplyMigrations();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
