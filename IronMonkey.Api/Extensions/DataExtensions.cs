@@ -12,11 +12,12 @@ namespace IronMonkey.Api.Extensions
             using var scope = app.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<RepositoryContext>();
 
-            var tenants = app.Configuration.GetSection<TenantConfigurationSection>();
+            var section = app.Configuration.Get<TenantConfigurationSection>();
 
-            foreach(var t in tenants)
+            foreach(var t in section.Tenants)
             {
                 var connectionString = t.ConnectionString;
+                System.Console.WriteLine(connectionString);
                 db.Database.SetConnectionString(connectionString);
                 if (db.Database.GetMigrations().Count() > 0)
                 {
