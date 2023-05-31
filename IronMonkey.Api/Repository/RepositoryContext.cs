@@ -1,4 +1,4 @@
-using IronMonkey.Api.Entities;
+using IronMonkey.Api.Entities.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;

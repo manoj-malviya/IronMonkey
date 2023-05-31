@@ -1,5 +1,5 @@
 using System.Text;
-using IronMonkey.Api.Entities;
+using IronMonkey.Api.Entities.Models;
 using IronMonkey.Api.JwtFeatures;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;

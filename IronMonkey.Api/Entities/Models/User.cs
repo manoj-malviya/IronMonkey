@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 
-namespace IronMonkey.Api.Entities
+namespace IronMonkey.Api.Entities.Models
 {
     public class User : IdentityUser
     {

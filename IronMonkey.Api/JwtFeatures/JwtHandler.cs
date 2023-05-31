@@ -1,5 +1,5 @@
 using IronMonkey.Api.Dtos;
-using IronMonkey.Api.Entities;
+using IronMonkey.Api.Entities.Models;
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
