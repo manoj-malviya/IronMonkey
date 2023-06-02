@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using IronMonkey.Api.Repository;
 using IronMonkey.Api.Contracts;
 using IronMonkey.Api.Infrastructures.Tenants;
+using IronMonkey.Api.Infrastructures.Workflows;
+using System.Net.Http.Headers;
 
 namespace IronMonkey.Api.Extensions
 {
@@ -57,6 +59,18 @@ namespace IronMonkey.Api.Extensions
             }
 
             return services;
+        }
+
+        public static void ConfigureElsaClient(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddHttpClient<ElsaClient>(httpClient =>
+            {
+                var url = configuration["Elsa:ServerUrl"]!.TrimEnd('/') + '/';
+                var apiKey = configuration["Elsa:ApiKey"]!;
+                
+                httpClient.BaseAddress = new Uri(url);
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("ApiKey", apiKey);
+            });
         }
 
     }
