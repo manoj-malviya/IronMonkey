@@ -9,12 +9,33 @@ services:
     volumes:
       - ./IronMonkey.Api/:/usr/src/app
       - ~/.aspnet/https:/https:ro
+      - /usr/src/app/bin #this way we do not copy host bin to container, took 1 hrs to figure out
+      - /usr/src/app/obj
     working_dir: /usr/src/app
     ports:
-      - 5400:5400
+      - 5002:5002
     environment:
       - ASPNETCORE_Kestrel__Certificates__Default__Password=password
       - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+      - Elsa__ServerUrl=https://elsa/elsa/api
+      - Elsa__ApiKey=00000000-0000-0000-0000-000000000000
+    depends_on:
+      - mysql
+  workflow:
+    container_name: iron-monkey-workflow
+    build:
+      context: .
+      dockerfile: ./.docker/dev/elsa/Dockerfile
+    command: dotnet run
+    volumes:
+      - ~/db:/usr/src/db
+      - ./Workflow/:/usr/src/app
+      - ~/.aspnet/https:/https:ro
+      - /usr/src/app/bin #this way we do not copy host bin to container, took 1 hrs to figure out
+      - /usr/src/app/obj
+    working_dir: /usr/src/app
+    ports:
+      - 5001:5001
     depends_on:
       - mysql
   web:
