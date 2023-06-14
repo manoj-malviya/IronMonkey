@@ -68,7 +68,7 @@ namespace IronMonkey.Api.Controllers
 
             var token = await _jwtHandler.GenerateToken(user);
 
-            return Ok(new AuthResponse { Token = token, IsAuthSuccessful = true });
+            return Ok(new AuthResponse { Token = token, IsAuthSuccessful = true, UserName = user.UserName });
         }
     }
 

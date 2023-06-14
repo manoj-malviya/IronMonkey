@@ -1,5 +1,8 @@
-export function isAuthenticated() {
+export function getUser(cookies) {
     // Check if the user is authenticated
-    const authToken = localStorage.getItem('authToken');
-    return !!authToken;
+    const authToken = cookies.get('session');
+
+    const user = JSON.parse(authToken);
+
+    return user;
 }

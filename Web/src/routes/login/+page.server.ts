@@ -1,16 +1,23 @@
-import type { PageServerLoad, Actions } from './$types';
+import { redirect, fail } from '@sveltejs/kit';
+import type { PageServerLoad, Actions, Action } from './$types';
+
+export const load: PageServerLoad = async ({ locals }) => {
+  // redirect user if logged in
+  console.log(locals);
+  if (locals.user) {
+    throw redirect(302, '/')
+  }
+}
  
-export const actions = {
-  login: async ({ cookies, request }) => {
+const login: Action = async ({ cookies, request }) => {
     const data = await request.formData();
-    console.log(data);
     const formData = {
       Provider: 'google',
       IdToken: data.get('credential')
     };
 
     try{
-      const response = await fetch('http://host.docker.internal:5400/auth/externallogin', {
+      const response = await fetch('http://host.docker.internal:5002/auth/externallogin', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -20,18 +27,20 @@ export const actions = {
     
       if (response.ok) {
         const token = await response.json();
-        console.log(token.token);
-        cookies.set('accessToken', token.token);
-        return { success: true, error: null };
+        cookies.set('session', token.token, {
+          path: '/',
+          httpOnly: true,
+          sameSite: 'strict',
+          maxAge: 24*60*60
+        });
+
+        throw redirect(302, '/');
       } else {
-        console.error('Error:', response.statusText);
-        return {success: false, error: response.statusText};
+        return fail(400, { credentials: true });
       }
     } catch(e) {
       console.log(e);
     }
-  },
-  register: async (event) => {
-    // TODO register the user
   }
-} satisfies Actions;
+
+  export const actions: Actions = { login }
