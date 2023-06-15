@@ -2,7 +2,7 @@
     import NavbarDashboard from '$lib/components/NavbarDashboard.svelte';
     import Sidebar from '$lib/components/Sidebar.svelte';
     import { beforeUpdate } from 'svelte';
-	import '../app.postcss';
+	import '@assets/app.postcss';
 </script>
 <svelte:head>
   <title>SvelteKit Auth</title>

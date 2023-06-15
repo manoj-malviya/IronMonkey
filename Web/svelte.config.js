@@ -1,6 +1,7 @@
 import preprocess from "svelte-preprocess";
 import adapter from "@sveltejs/adapter-auto";
 import { vitePreprocess } from "@sveltejs/kit/vite";
+import { resolve } from 'path';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -23,6 +24,10 @@ const config = {
     // 		'referrer': ['no-referrer-when-downgrade']
     // 	}
     // }
+    alias: {
+      // Add your custom aliases here
+      '@assets': resolve('./src/assets')
+    }
   },
 };
 
