@@ -36,12 +36,16 @@
             <DropdownItem>Settings</DropdownItem>
             <DropdownItem>Earnings</DropdownItem>
             <DropdownDivider />
-            <DropdownItem>Sign out</DropdownItem>
+            <DropdownItem>
+              <form action="/logout" method="post">
+                <button type="submit">Sign Out</button>
+              </form>
+            </DropdownItem>
           </Dropdown>
         {/if}
         {#if !$page.data.user}
         <NavUl divClass="flex items-center">
-        <NavLi href="/" active={true}>Home</NavLi>
+        <NavLi href="/" active={true}>Login</NavLi>
         <NavLi id="nav-menu1" class="cursor-pointer"><Chevron aligned>Dropdown</Chevron></NavLi>
         <NavLi href="/services">Services</NavLi>
         <NavLi href="/pricing">Pricing</NavLi>
