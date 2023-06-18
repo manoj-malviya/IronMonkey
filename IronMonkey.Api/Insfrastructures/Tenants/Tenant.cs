@@ -6,5 +6,7 @@ public class Tenant
 {
     public string Name { get; set; }
     public string ConnectionString { get; set; }
-    public MongoDbContext DbContext {get; set;}
+
+    public string MongoConnectionString {get; set;}
+    public string MongoDatabaseName {get; set;}
 }

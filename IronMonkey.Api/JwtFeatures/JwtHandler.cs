@@ -14,9 +14,9 @@ namespace IronMonkey.Api.JwtFeatures
         private readonly IConfiguration _configuration;
         private readonly IConfigurationSection _jwtSettings;
         private readonly IConfigurationSection _goolgeSettings;
-        private readonly UserManager<User> _userManager;
+        private readonly UserManager<ApplicationUser> _userManager;
         
-        public JwtHandler(IConfiguration configuration, UserManager<User> userManager)
+        public JwtHandler(IConfiguration configuration, UserManager<ApplicationUser> userManager)
         {
             _configuration = configuration;
             _jwtSettings = _configuration.GetSection("JwtSettings");
@@ -24,7 +24,7 @@ namespace IronMonkey.Api.JwtFeatures
             _userManager = userManager;
         }
 
-        public async Task<string> GenerateToken(User user)
+        public async Task<string> GenerateToken(ApplicationUser user)
         {
             var signingCredentials = GetSigningCredentials();
             var claims = await GetClaims(user);
@@ -62,7 +62,7 @@ namespace IronMonkey.Api.JwtFeatures
             return new SigningCredentials(secret, SecurityAlgorithms.HmacSha256);
         }
 
-        private async Task<List<Claim>> GetClaims(User user)
+        private async Task<List<Claim>> GetClaims(ApplicationUser user)
         {
             var claims = new List<Claim>
             {

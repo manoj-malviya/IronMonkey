@@ -1,43 +1,47 @@
 version: "3"
 services:
-  api:
-    container_name: iron-monkey-api
-    build:
-      context: .
-      dockerfile: ./.docker/dev/api/Dockerfile
-    command: dotnet run
-    volumes:
-      - ./IronMonkey.Api/:/usr/src/app
-      - ~/.aspnet/https:/https:ro
-      - /usr/src/app/bin #this way we do not copy host bin to container, took 1 hrs to figure out
-      - /usr/src/app/obj
-    working_dir: /usr/src/app
-    ports:
-      - 5002:5002
-    environment:
-      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
-      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
-      - Elsa__ServerUrl=https://elsa/elsa/api
-      - Elsa__ApiKey=00000000-0000-0000-0000-000000000000
-    depends_on:
-      - mysql
-  workflow:
-    container_name: iron-monkey-workflow
-    build:
-      context: .
-      dockerfile: ./.docker/dev/elsa/Dockerfile
-    command: dotnet run
-    volumes:
-      - ~/db:/usr/src/db
-      - ./Workflow/:/usr/src/app
-      - ~/.aspnet/https:/https:ro
-      - /usr/src/app/bin #this way we do not copy host bin to container, took 1 hrs to figure out
-      - /usr/src/app/obj
-    working_dir: /usr/src/app
-    ports:
-      - 5001:5001
-    depends_on:
-      - mysql
+  # api:
+  #   container_name: iron-monkey-api
+  #   build:
+  #     context: .
+  #     dockerfile: ./.docker/dev/api/Dockerfile
+  #   command: dotnet run
+  #   volumes:
+  #     - ./IronMonkey.Api/:/usr/src/app
+  #     - ~/.aspnet/https:/https:ro
+  #     - /usr/src/app/bin #this way we do not copy host bin to container, took 1 hrs to figure out
+  #     - /usr/src/app/obj
+  #   working_dir: /usr/src/app
+  #   ports:
+  #     - 5002:5002
+  #     - 8888:8888
+  #   environment:
+  #     - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+  #     - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+  #     - Elsa__ServerUrl=https://elsa/elsa/api
+  #     - DOTNET_RUNNING_IN_CONTAINER=true
+  #     - ASPNETCORE_APPL_PATH=/use/src/app
+  #     - ASPNETCORE_SUPPRESSSTATUSMESSAGES=true
+  #     - Elsa__ApiKey=00000000-0000-0000-0000-000000000000
+  #   depends_on:
+  #     - mongo
+  # workflow:
+  #   container_name: iron-monkey-workflow
+  #   build:
+  #     context: .
+  #     dockerfile: ./.docker/dev/elsa/Dockerfile
+  #   command: dotnet run
+  #   volumes:
+  #     - ~/db:/usr/src/db
+  #     - ./Workflow/:/usr/src/app
+  #     - ~/.aspnet/https:/https:ro
+  #     - /usr/src/app/bin #this way we do not copy host bin to container, took 1 hrs to figure out
+  #     - /usr/src/app/obj
+  #   working_dir: /usr/src/app
+  #   ports:
+  #     - 5001:5001
+  #   depends_on:
+  #     - mysql
   web:
     container_name: iron-monkey-web
     build: ./.docker/web
@@ -47,28 +51,37 @@ services:
     working_dir: /usr/src/app
     ports:
       - 3000:3000
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    ports:
-      - '8888:8888'
+  # phpmyadmin:
+  #   image: phpmyadmin/phpmyadmin
+  #   ports:
+  #     - '8888:8888'
+  #   environment:
+  #     - UPLOAD_LIMIT=100M
+  #     - PMA_ARBITRARY=1
+  #     - PMA_HOST=mysql
+  #     - MYSQL_ROOT_PASSWORD=root
+  #     - APACHE_PORT=8888
+  #   depends_on:
+  #     - mysql
+  mongo:
+    image: mongodb/mongodb-community-server:latest
     environment:
-      - UPLOAD_LIMIT=100M
-      - PMA_ARBITRARY=1
-      - PMA_HOST=mysql
-      - MYSQL_ROOT_PASSWORD=root
-      - APACHE_PORT=8888
-    depends_on:
-      - mysql
-  mysql: 
-    environment: 
-      - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=family
-      - MYSQL_USER=root
-      - MYSQL_PASSWORD=root
-    image: "mariadb:10.5"
-    ports: 
-      - "3306:3306"
-    volumes: 
-      - "mysql-family-db:/var/lib/mysql"
+      - MONGO_INITDB_ROOT_USERNAME=user
+      - MONGO_INITDB_ROOT_PASSWORD=pass
+    ports:
+      - '27018:27017'
+    volumes:
+      - "mongo:/data/db"
+  # mysql: 
+  #   environment: 
+  #     - MYSQL_ROOT_PASSWORD=root
+  #     - MYSQL_DATABASE=family
+  #     - MYSQL_USER=root
+  #     - MYSQL_PASSWORD=root
+  #   image: "mariadb:10.5"
+  #   ports: 
+  #     - "3306:3306"
+  #   volumes: 
+  #     - "mysql-family-db:/var/lib/mysql"
 volumes:
-  mysql-family-db:
+  mongo:

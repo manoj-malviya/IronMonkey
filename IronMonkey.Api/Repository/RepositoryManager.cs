@@ -1,13 +1,14 @@
 using IronMonkey.Api.Contracts;
+using IronMonkey.Api.Infrastructures.MongoDb;
 
 namespace IronMonkey.Api.Repository
 {
     public class RepositoryManager : IRepositoryManager
     {
-        private RepositoryContext _repositoryContext;
+        private IMongoDbContext _repositoryContext;
         // private ICompanyRepository? _companyRepository;
 
-        public RepositoryManager(RepositoryContext repositoryContext)
+        public RepositoryManager(IMongoDbContext repositoryContext)
         {
             _repositoryContext = repositoryContext;
         }
@@ -23,6 +24,6 @@ namespace IronMonkey.Api.Repository
         //     }
         // }
 
-        public void Save() => _repositoryContext.SaveChanges();
+        // public void Save() => _repositoryContext.SaveChanges();
     }
 }

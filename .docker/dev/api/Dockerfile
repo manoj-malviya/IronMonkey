@@ -5,5 +5,6 @@ COPY ./IronMonkey.Api/ /usr/src/app
 RUN dotnet tool install --global dotnet-ef
 ENV PATH="$PATH:/root/.dotnet/tools"
 RUN dotnet restore
+RUN dotnet build -c Debug
 
-ENTRYPOINT [ "dotnet", "watch", "run", "--no-restore"]
+ENTRYPOINT [ "dotnet", "watch", "run", "--no-restore", "--configuration", "Debug", "--no-launch-profile"]
