@@ -10,6 +10,10 @@ using Microsoft.AspNetCore.Identity;
 using AspNetCore.Identity.Mongo;
 using IronMonkey.Api.Entities.Models;
 using Microsoft.Extensions.DependencyInjection;
+using AspNetCore.Identity.Mongo.Mongo;
+using AspNetCore.Identity.Mongo.Model;
+using AspNetCore.Identity.Mongo.Stores;
+using MongoDB.Bson;
 
 namespace IronMonkey.Api.Extensions
 {
@@ -56,20 +60,70 @@ namespace IronMonkey.Api.Extensions
             });
         }
 
-        public static void ConfigureMongoIdentity(this IServiceCollection services)
+        public static void ConfigureMongoIdentity(this IServiceCollection services, IdentityErrorDescriber identityErrorDescriber = null)
         {
             services.AddScoped<MongoDbIdentityOptionFactory>();
-            var svc = services.BuildServiceProvider();
-            var factory = svc.GetRequiredService<MongoDbIdentityOptionFactory>();
-            services.AddIdentityMongoDbProvider<ApplicationUser>(identity => {
+
+            //var svc = services.BuildServiceProvider();
+            //var factory = svc.GetRequiredService<MongoDbIdentityOptionFactory>();
+            // services.AddIdentityMongoDbProvider<ApplicationUser, ApplicationRole>(identity => {
+            //         //identity.Password.RequiredLength = 7;
+            //     },
+            //     mongo => {
+            //         var config = factory.CreateMongoIdentityOption();
+            //         System.Console.WriteLine(config.ConnectionString);
+            //         mongo.ConnectionString = config.ConnectionString; //"mongodb://user:pass@localhost:27018/default-db?authSource=admin";
+            //     }
+            // );
+            
+            
+
+            // apply migrations before identity services resolved
+            //Migrator.Apply<MigrationMongoUser<TKey>, TRole, TKey>(migrationCollection, migrationUserCollection, roleCollection);
+
+            var builder = services.AddIdentity<ApplicationUser, ApplicationRole>(identity => {
                     //identity.Password.RequiredLength = 7;
-                },
-                mongo => {
-                    var config = factory.CreateMongoIdentityOption();
-                    System.Console.WriteLine(config.ConnectionString);
-                    mongo.ConnectionString = config.ConnectionString; //"mongodb://user:pass@localhost:27018/default-db?authSource=admin";
-                }
-            ).AddDefaultTokenProviders();
+            }).AddDefaultTokenProviders();
+
+            // builder.AddRoleStore<RoleStore<ApplicationRole, ObjectId>>()
+            // .AddUserStore<UserStore<ApplicationUser, ApplicationRole, ObjectId>>()
+            // .AddUserManager<UserManager<ApplicationUser>>()
+            // .AddRoleManager<RoleManager<ApplicationRole>>()
+            // .AddDefaultTokenProviders();
+
+            builder.Services.AddScoped<IUserStore<ApplicationUser>>(provider =>
+            {
+                var factory =  provider.GetRequiredService<MongoDbIdentityOptionFactory>();
+                var dbOptions = factory.CreateMongoIdentityOption();
+                //setupDatabaseAction(dbOptions);
+
+                //var migrationCollection = MongoUtil.FromConnectionString<MigrationHistory>(dbOptions, dbOptions.MigrationCollection);
+                //var migrationUserCollection = MongoUtil.FromConnectionString<MigrationMongoUser<TKey>>(dbOptions, dbOptions.UsersCollection);
+                var userCollection = MongoUtil.FromConnectionString<ApplicationUser>(dbOptions, dbOptions.UsersCollection);
+                var roleCollection = MongoUtil.FromConnectionString<ApplicationRole>(dbOptions, dbOptions.RolesCollection);
+                return new UserStore<ApplicationUser, ApplicationRole, ObjectId>(userCollection, roleCollection, identityErrorDescriber);
+            });
+
+            builder.Services.AddScoped<IRoleStore<ApplicationRole>>(provider =>
+            {
+                var factory =  provider.GetRequiredService<MongoDbIdentityOptionFactory>();
+                var dbOptions = factory.CreateMongoIdentityOption();
+                //setupDatabaseAction(dbOptions);
+
+                var roleCollection = MongoUtil.FromConnectionString<ApplicationRole>(dbOptions, dbOptions.RolesCollection);
+                
+                return new RoleStore<ApplicationRole, ObjectId>(roleCollection, identityErrorDescriber);
+            });
+
+            // register custom ObjectId TypeConverter
+            // if (typeof(TKey) == typeof(ObjectId))
+            // {
+            //     //TypeConverterResolver.RegisterTypeConverter<ObjectId, ObjectIdConverter>();
+            // }
+
+            // Identity Services
+            //services.AddTransient<IRoleStore<TRole>>(x => new RoleStore<TRole, TKey>(roleCollection, identityErrorDescriber));
+            //services.AddTransient<IUserStore<TUser>>(x => new UserStore<TUser, TRole, TKey>(userCollection, roleCollection, identityErrorDescriber));
         }
 
         public static void ConfigureRepositoryManager(this IServiceCollection services) =>

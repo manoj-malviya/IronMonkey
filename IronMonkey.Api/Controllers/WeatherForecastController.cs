@@ -14,11 +14,13 @@ public class WeatherForecastController : ControllerBase
 
     private readonly ILogger<WeatherForecastController> _logger;
     private readonly IMongoDbContext _context;
+    private readonly MongoDbIdentityOptionFactory _o;
 
-    public WeatherForecastController(ILogger<WeatherForecastController> logger, IMongoDbContext context)
+    public WeatherForecastController(ILogger<WeatherForecastController> logger, IMongoDbContext context, MongoDbIdentityOptionFactory o)
     {
         _logger = logger;
         _context = context;
+        _o = o;
     }
 
     [HttpGet(Name = "GetWeatherForecast")]

@@ -11,7 +11,10 @@ namespace IronMonkey.Api.Entities.Models
 
     public class ApplicationRole: MongoRole
     {
-
+        public ApplicationRole(string role) : base(role)
+        {
+            // Additional initialization or logic if needed
+        }
     }
 
 }

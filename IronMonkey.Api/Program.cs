@@ -23,7 +23,7 @@ builder.Services.ConfigureMongoContext(builder.Configuration);
 builder.Services.ConfigureRepositoryManager();
 builder.Services.AddAutoMapper(typeof(Program));
 
-builder.Services.ConfigureMongoIdentity()
+builder.Services.ConfigureMongoIdentity();
 
 builder.Services.Configure<DataProtectionTokenProviderOptions>(opt =>
     opt.TokenLifespan = TimeSpan.FromHours(2));
