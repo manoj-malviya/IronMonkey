@@ -35,7 +35,7 @@
               "pipeCwd": "${workspaceRoot}",
               "pipeProgram": "docker",
               "pipeArgs": ["exec", "-i", "iron-monkey-api"],
-              "debuggerPath": "/vsdbg/vsdbg",
+              "debuggerPath": "/root/vsdbg/vsdbg",
               "quoteArgs": false
             },
             "sourceFileMap": {
