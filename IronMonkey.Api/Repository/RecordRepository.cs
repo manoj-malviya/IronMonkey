@@ -14,7 +14,7 @@ public class RecordRepository : IRecordRepository {
 
     public async void Create(Record record) {
 
-        var existing = this.GetByName(record.Name);
+        var existing = await this.GetByName(record.Name);
         if(existing == null) {
             await _collection.InsertOneAsync(record);
         }

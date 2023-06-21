@@ -20,7 +20,8 @@ services:
       # - DOTNET_RUNNING_IN_CONTAINER=true
       # - ASPNETCORE_APPL_PATH=/use/src/app
       # - ASPNETCORE_SUPPRESSSTATUSMESSAGES=true
-      # - DOTNET_USE_POLLING_FILE_WATCHER=1
+      - DOTNET_USE_POLLING_FILE_WATCHER=1
+      - ASPNETCORE_ENVIRONMENT=Development
       # - NUGET_FALLBACK_PACKAGES=/root/.nuget/fallbackpackages
       # - NUGET_PACKAGES=/root/.nuget/packages
     depends_on:
