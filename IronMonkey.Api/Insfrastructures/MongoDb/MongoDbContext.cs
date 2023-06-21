@@ -4,6 +4,7 @@ namespace IronMonkey.Api.Infrastructures.MongoDb
 {
     public interface IMongoDbContext
     {
+        public MongoClient Client { get; }
         public string ConnectionString {get; set;}
         public string DatabaseName {get; set;}
     }
@@ -18,8 +19,12 @@ namespace IronMonkey.Api.Infrastructures.MongoDb
         public MongoDbContext(string connectionString, string databaseName) {
             this.ConnectionString = connectionString;
             this.DatabaseName = databaseName;
+            Console.WriteLine(this.ConnectionString);
+            this.Client = new MongoClient(connectionString);
         }
         public string ConnectionString {get; set;}
         public string DatabaseName {get; set;}
+
+        public MongoClient Client {get;}
     }
 }

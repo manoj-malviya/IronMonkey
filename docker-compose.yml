@@ -14,15 +14,15 @@ services:
     working_dir: /usr/src/app
     ports:
       - 5002:5002
-      - 8888:8888
     environment:
       - ASPNETCORE_Kestrel__Certificates__Default__Password=password
       - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
-      - Elsa__ServerUrl=https://elsa/elsa/api
-      - DOTNET_RUNNING_IN_CONTAINER=true
-      - ASPNETCORE_APPL_PATH=/use/src/app
-      - ASPNETCORE_SUPPRESSSTATUSMESSAGES=true
-      - Elsa__ApiKey=00000000-0000-0000-0000-000000000000
+      # - DOTNET_RUNNING_IN_CONTAINER=true
+      # - ASPNETCORE_APPL_PATH=/use/src/app
+      # - ASPNETCORE_SUPPRESSSTATUSMESSAGES=true
+      # - DOTNET_USE_POLLING_FILE_WATCHER=1
+      # - NUGET_FALLBACK_PACKAGES=/root/.nuget/fallbackpackages
+      # - NUGET_PACKAGES=/root/.nuget/packages
     depends_on:
       - mongo
   # workflow:

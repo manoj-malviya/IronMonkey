@@ -5,25 +5,24 @@ namespace IronMonkey.Api.Repository
 {
     public class RepositoryManager : IRepositoryManager
     {
-        private IMongoDbContext _repositoryContext;
-        // private ICompanyRepository? _companyRepository;
+        private readonly IMongoDbContext _repositoryContext;
+        private RecordRepository? _recordRepository;
 
         public RepositoryManager(IMongoDbContext repositoryContext)
         {
             _repositoryContext = repositoryContext;
         }
 
-        // public ICompanyRepository Company
-        // {
-        //     get
-        //     {
-        //         if (_companyRepository == null)
-        //             _companyRepository = new CompanyRepository(_repositoryContext);
+        public IRecordRepository Record
+        {
+            get
+            {
+                if (_recordRepository == null)
+                    _recordRepository = new RecordRepository(_repositoryContext);
 
-        //         return _companyRepository;
-        //     }
-        // }
-
-        // public void Save() => _repositoryContext.SaveChanges();
+                return _recordRepository;
+            }
+        }
+        //public void Save() => _repositoryContext.SaveChanges();
     }
 }

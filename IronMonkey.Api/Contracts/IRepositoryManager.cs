@@ -1,8 +1,10 @@
+using IronMonkey.Api.Repository;
+
 namespace IronMonkey.Api.Contracts
 {
     public interface IRepositoryManager
     {
-        // ICompanyRepository Company { get; }
-        // void Save();
+        IRecordRepository Record { get; }
+        //void Save();
     }
 }
