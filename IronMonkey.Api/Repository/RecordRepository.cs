@@ -22,8 +22,8 @@ public class RecordRepository : IRecordRepository {
 
     public async Task<Record?> GetByName(string name) {
         Console.WriteLine("finding Record "+ name);
-        var f = await _collection.FindAsync(x => x.Name == name);
+        var f = await _collection.Find(x => x.Name == name).SingleOrDefaultAsync();
         
-        return await f.FirstAsync();
+        return f;
     }
 }
