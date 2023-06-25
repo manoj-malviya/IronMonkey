@@ -4,7 +4,7 @@ namespace IronMonkey.Api.Contracts
 {
     public interface IRepositoryManager
     {
-        IRecordRepository Record { get; }
+        IFormRepository Form { get; }
         //void Save();
     }
 }

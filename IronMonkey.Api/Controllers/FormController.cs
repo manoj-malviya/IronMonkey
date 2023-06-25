@@ -20,26 +20,28 @@ using Microsoft.IdentityModel.Tokens;
 namespace IronMonkey.Api.Controllers
 {
     [ApiController]
-    [Route("record")]
-    public class RecordController : ControllerBase
+    [Route("form")]
+    public class FormController : ControllerBase
     {
-        private readonly IRecordRepository _recordRepo;
-        public RecordController(IRepositoryManager repositoryManager)
+        private readonly IFormRepository _formRepo;
+        public FormController(IRepositoryManager repositoryManager)
         {
-            _recordRepo = repositoryManager.Record;
+            _formRepo = repositoryManager.Form;
+            
         }
 
         [HttpPost()]
         public async Task<IActionResult> Create()
         {
-            var v = new Record(){
+            var v = new Form(){
                 Name = "Enquiry",
+                Collection = "enquery"
                 Fields = new List<FieldDefinition>(){
-                    new FieldDefinition("Age", FieldType.Integer),
-                    new FieldDefinition("City", FieldType.String)
+                    new FieldDefinition("Age", FieldType.Integer, [new RequiredValditor()] ),
+                    new FieldDefinition("City", FieldType.String, [new RequiredValditor()])
                 }
             };
-            _recordRepo.Create(v);
+            _formRepo.Create(v);
 
             return new OkResult();
         }
