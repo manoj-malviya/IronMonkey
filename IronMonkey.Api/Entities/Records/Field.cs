@@ -1,7 +1,6 @@
-using IronMonkey.Api.Entities.Leads;
-using IronMonkey.Api.Entities.Leads.Definitions;
+using IronMonkey.Api.Entities.Forms;
 
-namespace IronMonkey.Api.Entities.Leads;
+namespace IronMonkey.Api.Entities.Records;
 
 public class Field {
     public string Name { get; set;}

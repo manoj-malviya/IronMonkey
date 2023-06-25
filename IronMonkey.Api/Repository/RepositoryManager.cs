@@ -6,19 +6,19 @@ namespace IronMonkey.Api.Repository
     public class RepositoryManager : IRepositoryManager
     {
         private readonly IMongoDbContext _repositoryContext;
-        private IFormRepository? _formRepository;
+        private IFormDefinitionRepository? _formRepository;
 
         public RepositoryManager(IMongoDbContext repositoryContext)
         {
             _repositoryContext = repositoryContext;
         }
 
-        public IRecordRepository Form
+        public IFormDefinitionRepository FormDefinition
         {
             get
             {
                 if (_formRepository == null)
-                    _formRepository = new FormRepository(_repositoryContext);
+                    _formRepository = new FormDefinitionRepository(_repositoryContext);
 
                 return _formRepository;
             }

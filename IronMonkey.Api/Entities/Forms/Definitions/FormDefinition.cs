@@ -1,9 +1,9 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace IronMonkey.Api.Entities.Leads.Definitions;
+namespace IronMonkey.Api.Entities.Forms.Definitions;
 
-public class Form {
+public class FormDefinition {
 
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
