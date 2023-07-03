@@ -14,6 +14,8 @@ using AspNetCore.Identity.Mongo.Mongo;
 using AspNetCore.Identity.Mongo.Model;
 using AspNetCore.Identity.Mongo.Stores;
 using MongoDB.Bson;
+using IronMonkey.Api.Services;
+using IronMonkey.Api.Infrastructures.Validations;
 
 namespace IronMonkey.Api.Extensions
 {
@@ -157,6 +159,14 @@ namespace IronMonkey.Api.Extensions
                 httpClient.BaseAddress = new Uri(url);
                 httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("ApiKey", apiKey);
             });
+        }
+
+        public static void ConfigureServices(this IServiceCollection services) {
+
+            services.AddSingleton<ValidatorService>();
+
+            services.AddScoped<RecordService>();
+
         }
 
     }

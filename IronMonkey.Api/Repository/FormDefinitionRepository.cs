@@ -21,7 +21,7 @@ public class FormDefinitionRepository : IFormDefinitionRepository {
     }
 
     public async Task<FormDefinition> Get(string id) {
-        return await _collection.Find(x => x.Name == id).SingleOrDefaultAsync();
+        return await _collection.Find(x => x.Id == id).SingleOrDefaultAsync();
 
     }
 

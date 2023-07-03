@@ -22,7 +22,7 @@ builder.Services.ConfigureCors();
 builder.Services.ConfigureMongoContext(builder.Configuration);
 builder.Services.ConfigureRepositoryManager();
 builder.Services.AddAutoMapper(typeof(Program));
-
+builder.Services.ConfigureServices();
 builder.Services.ConfigureMongoIdentity();
 
 builder.Services.Configure<DataProtectionTokenProviderOptions>(opt =>

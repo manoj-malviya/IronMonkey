@@ -1,3 +1,4 @@
+using IronMonkey.Api.Contracts;
 using IronMonkey.Api.Entities.Records;
 using IronMonkey.Api.Infrastructures.MongoDb;
 using MongoDB.Bson;
@@ -5,7 +6,7 @@ using MongoDB.Driver;
 
 namespace IronMonkey.Api.Repository;
 
-public class RecordRepository {
+public class RecordRepository : IRecordRepository {
     private readonly IMongoCollection<BsonDocument> _collection;
     public RecordRepository(IMongoDbContext context) {
         var db = context.Client.GetDatabase(context.DatabaseName);
