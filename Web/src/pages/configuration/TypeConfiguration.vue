@@ -20,19 +20,42 @@ const selectOptions = [
   { id: 3, label: 'Sales' }
 ];
 
+const typeOptions = [
+  {id:1, label: 'String'},
+  {id:2, label: 'Integer'},
+  {id:3, label: 'Double'},
+  {id:4, label: 'Boolean'}
+];
+
 const statusOptions = [
   {id: 0, label: 'Draft'},
   {id: 1, label: 'Active'},
   {id:2, label: 'InActive'}
+];
+
+const validationOptions = [
+  {name: 'Required', options:{}},
+  {name: 'Minimum', options:{}}
 ]
+
+
+const field = {
+  name: '',
+  type: 0
+};
 
 const form = reactive({
   name: '',
   storage: '',
   desc: '',
   department: 0,
+  fields: [field],
   status: 0
-})
+});
+
+const addField = () => {
+  form.fields.push({ ...field });
+};
 
 const submit = () => {
   //
@@ -52,7 +75,7 @@ const formStatusSubmit = () => {
 <template>
   <LayoutAuthenticated>
     <SectionMain>
-      <SectionTitleLineWithButton :icon="mdiBallotOutline" title="Forms example" main />
+      <SectionTitleLineWithButton :icon="mdiBallotOutline" title="Define your Type" main />
       <CardBox form @submit.prevent="submit">
         <FormField label="Type Basic">
           <FormControl v-model="form.name" :icon="mdiAccount" />
@@ -69,8 +92,10 @@ const formStatusSubmit = () => {
 
         <BaseDivider />
 
-        <FormField label="Question" help="Your question. Max 255 characters">
-          <FormControl type="textarea" placeholder="Explain how we can help you" />
+        <FormField label="Field" v-for="(field, index) in form.fields" :key="index">
+            <FormControl v-model="field.name" :icon="mdiAccount" />
+            <FormControl v-model="field.type" :options="typeOptions" />
+          <BaseButton @click="addField" color="info" label="Add Field" />
         </FormField>
 
         <template #footer>
