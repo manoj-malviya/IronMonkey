@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:7.0.302
+FROM mcr.microsoft.com/dotnet/sdk:8.0
 
 WORKDIR /usr/src/app
 COPY ./IronMonkey.Api/ /usr/src/app
@@ -7,4 +7,5 @@ ENV PATH="$PATH:/root/.dotnet/tools"
 RUN dotnet restore
 RUN dotnet build -c Debug
 
+USER $APP_UID
 ENTRYPOINT [ "dotnet", "watch", "run", "--no-restore", "--configuration", "Debug", "--no-launch-profile"]
