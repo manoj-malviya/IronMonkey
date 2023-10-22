@@ -1,0 +1,11 @@
+version: '2'
+services:
+  base:
+    build: .docker/web
+    volumes:
+      - ./Web/:/usr/src/app
+    working_dir: /usr/src/app
+  install:
+    extends:
+      service: base
+    command: bash -c "apt-get update -y && apt-get -y install procps && apt-get install git -y && npm i"

@@ -4,14 +4,15 @@ using IronMonkey.Api.JwtFeatures;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.Extensions.DependencyInjection;
 using IronMonkey.Api.Extensions;
-using IronMonkey.Api.Repository;
 using IronMonkey.Api.Infrastructures.Tenants;
 using IronMonkey.Api.Infrastructures.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddHttpLogging(logging => {
+
+});
 // tenant setter & getter
 builder.Services.AddScopedAs<TenantService>(new[] {typeof(ITenantGetter), typeof(ITenantSetter)});
 // IOptions version of tenants
@@ -20,22 +21,12 @@ builder.Services.Configure<TenantConfigurationSection>(builder.Configuration);
 builder.Services.AddScoped<MultiTenantServiceMiddleware>();
 
 builder.Services.ConfigureCors();
-builder.Services.ConfigureSqlContext(builder.Configuration);
+// builder.Services.ConfigureSqlContext(builder.Configuration);
+builder.Services.ConfigureMongoContext(builder.Configuration);
 builder.Services.ConfigureRepositoryManager();
 builder.Services.AddAutoMapper(typeof(Program));
-
-builder.Services.AddIdentity<User, IdentityRole>(opt =>
-{
-    opt.Password.RequiredLength = 7;
-    opt.Password.RequireDigit = false;
-
-    opt.User.RequireUniqueEmail = true;
-
-    opt.Lockout.AllowedForNewUsers = true;
-    opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(2);
-    opt.Lockout.MaxFailedAccessAttempts = 3;
-}).AddEntityFrameworkStores<RepositoryContext>()
-    .AddDefaultTokenProviders();
+builder.Services.ConfigureServices();
+builder.Services.ConfigureMongoIdentity();
 
 builder.Services.Configure<DataProtectionTokenProviderOptions>(opt =>
     opt.TokenLifespan = TimeSpan.FromHours(2));
@@ -83,7 +74,7 @@ if (app.Environment.IsDevelopment())
 
 // app.UseHttpsRedirection();
 
-app.UseHttpLogging();
+// app.UseHttpLogging();
 
 app.UseCors("CorsPolicy");
 
