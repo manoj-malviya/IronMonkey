@@ -8,4 +8,4 @@ RUN dotnet restore
 RUN dotnet build -c Debug
 
 USER $APP_UID
-ENTRYPOINT [ "dotnet", "watch", "run", "--no-restore", "--configuration", "Debug", "--no-launch-profile"]
+ENTRYPOINT [ "dotnet", "watch", "run", "--urls=http://*:5000", "--configuration", "Debug", "--no-launch-profile"]

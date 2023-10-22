@@ -4,6 +4,7 @@ import { mdiBallotOutline, mdiAccount, mdiMail, mdiGithub } from '@mdi/js'
 import SectionMain from '@/components/SectionMain.vue'
 import CardBox from '@/components/CardBox.vue'
 import FormCheckRadioGroup from '@/components/FormCheckRadioGroup.vue'
+import { mdiEye, mdiTrashCan } from '@mdi/js'
 import FormField from '@/components/FormField.vue'
 import FormControl from '@/components/FormControl.vue'
 import BaseDivider from '@/components/BaseDivider.vue'
@@ -13,6 +14,7 @@ import SectionTitle from '@/components/SectionTitle.vue'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
 import NotificationBarInCard from '@/components/NotificationBarInCard.vue'
+import DynamicFormField from '@/components/DynamicFormField.vue'
 
 const selectOptions = [
   { id: 1, label: 'Business development' },
@@ -49,13 +51,19 @@ const form = reactive({
   storage: '',
   desc: '',
   department: 0,
-  fields: [field],
+  fields: [{...field}],
   status: 0
 });
 
 const addField = () => {
   form.fields.push({ ...field });
 };
+
+const removeField = (idx) => {
+  if (idx > -1 && form.fields.length > 1) { // only splice array when item is found
+    form.fields.splice(idx, 1); // 2nd parameter means remove one item only
+  }
+}
 
 const submit = () => {
   //
@@ -92,12 +100,23 @@ const formStatusSubmit = () => {
 
         <BaseDivider />
 
-        <FormField label="Field" v-for="(field, index) in form.fields" :key="index">
-            <FormControl v-model="field.name" :icon="mdiAccount" />
+        <label class="block font-bold mb-1">Fields</label>
+        <DynamicFormField v-for="(field, index) in form.fields" :key="index">
+            <FormControl v-model="field.name" placeholder="Field Name" />
             <FormControl v-model="field.type" :options="typeOptions" />
-          <BaseButton @click="addField" color="info" label="Add Field" />
-        </FormField>
-
+            <template #actions>
+              <BaseButtons type="justify-start lg:justify-end" no-wrap>
+                <BaseButton
+                  v-if="form.fields.length > 1" 
+                  color="danger"
+                  :icon="mdiTrashCan"
+                  small
+                  @click="removeField(index)"
+                />
+            </BaseButtons>
+            </template>
+        </DynamicFormField>
+        <BaseButton @click="addField" color="info" label="Add Field" />
         <template #footer>
           <BaseButtons>
             <BaseButton type="submit" color="info" label="Submit" />

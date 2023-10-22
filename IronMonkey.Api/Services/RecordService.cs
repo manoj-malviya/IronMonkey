@@ -23,7 +23,7 @@ public class RecordService {
         //get Form
         var form = await _formRepository.Get(createRecord.formId);
         
-        bool isValid = Validate(createRecord, form);
+        //bool isValid = Validate(createRecord, form);
 
         return null;
     }
@@ -31,7 +31,7 @@ public class RecordService {
     private List<ValidationResult> Validate(CreateRecord record, FormDefinition definition)
     {
         if (record == null) {
-            return false;
+            return null;
         };
 
         var rules = new List<ValidationRule>();
