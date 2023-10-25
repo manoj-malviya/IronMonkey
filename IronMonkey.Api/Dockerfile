@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0
+FROM mcr.microsoft.com/dotnet/sdk:7.0
 
 RUN apt-get update
 RUN apt-get install -y unzip
@@ -12,5 +12,5 @@ RUN dotnet tool install --global dotnet-ef
 ENV PATH="$PATH:/root/.dotnet/tools"
 # RUN dotnet restore
 # RUN dotnet build -c Debug --no-restore
-
+USER $APP_UID
 ENTRYPOINT [ "dotnet", "watch", "run"]

@@ -11,8 +11,9 @@ using IronMonkey.Api.Infrastructures.Middlewares;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpLogging(logging => {
-
+    logging.LoggingFields = Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.All;
 });
+
 // tenant setter & getter
 builder.Services.AddScopedAs<TenantService>(new[] {typeof(ITenantGetter), typeof(ITenantSetter)});
 // IOptions version of tenants
@@ -74,7 +75,7 @@ if (app.Environment.IsDevelopment())
 
 // app.UseHttpsRedirection();
 
-// app.UseHttpLogging();
+app.UseHttpLogging();
 
 app.UseCors("CorsPolicy");
 

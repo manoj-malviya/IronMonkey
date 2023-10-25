@@ -17,6 +17,11 @@ public class FormDefinitionRepository : IFormDefinitionRepository {
         var existing = await this.GetByName(form.Name);
         if(existing == null) {
             await _collection.InsertOneAsync(form);
+        } else {
+            // Document exists, so update it
+            var filter = Builders<FormDefinition>.Filter.Eq(fd => fd.Id, existing.Id);
+            form.Id = existing.Id;
+            var result = await _collection.FindOneAndReplaceAsync(filter, form);
         }
     }
 

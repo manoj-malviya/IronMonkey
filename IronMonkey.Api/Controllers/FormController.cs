@@ -37,7 +37,7 @@ namespace IronMonkey.Api.Controllers
             
         }
 
-        [HttpPost()]
+        [HttpPost(Name = "save")]
         public async Task<IActionResult> Save()
         {
             var record = new CreateRecord();

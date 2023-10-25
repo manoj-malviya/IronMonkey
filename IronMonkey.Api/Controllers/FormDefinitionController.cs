@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
 using IronMonkey.Api.Contracts;
+using IronMonkey.Api.Controllers.Requests;
 using IronMonkey.Api.Dtos;
 using IronMonkey.Api.Entities.Forms;
 using IronMonkey.Api.Entities.Forms.Definitions;
@@ -34,21 +35,14 @@ namespace IronMonkey.Api.Controllers
             
         }
 
-        [HttpPost()]
-        public IActionResult Create()
+        [HttpPost(Name = "create")]
+        public IActionResult Create([FromBody] CreateFormDefinitionRequest form)
         {
             
             var v = new FormDefinition() {
-                Name = "Enquery",
-                Collection = "enquery",
-                Fields = new List<FieldDefinition>(){
-                    new FieldDefinition("Age", FieldType.Integer, new ValidationRule[]{
-                        new ValidationRule("Age", ValidationRuleType.Required, "")
-                    }),
-                    new FieldDefinition("Gender", FieldType.Integer, new ValidationRule[]{
-                        new ValidationRule("Gender", ValidationRuleType.Required, "")
-                    })
-                }
+                Name = form.Name,
+                Collection = form.Storage,
+                Fields = form.Fields
             };
 
             _formRepo.Create(v);

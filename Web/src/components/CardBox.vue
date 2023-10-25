@@ -40,6 +40,7 @@ const componentClass = computed(() => {
 })
 
 const submit = (event) => {
+  debugger;
   emit('submit', event)
 }
 </script>

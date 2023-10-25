@@ -1,5 +1,6 @@
 <script setup>
 import { reactive, ref } from 'vue'
+import { createPinia } from 'pinia'
 import { mdiBallotOutline, mdiAccount, mdiMail, mdiGithub } from '@mdi/js'
 import SectionMain from '@/components/SectionMain.vue'
 import CardBox from '@/components/CardBox.vue'
@@ -15,6 +16,11 @@ import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
 import NotificationBarInCard from '@/components/NotificationBarInCard.vue'
 import DynamicFormField from '@/components/DynamicFormField.vue'
+import { useConfigurationStore } from '@/stores/configurationStore.js'
+
+const pinia = createPinia()
+const configStore = useConfigurationStore(pinia);
+
 
 const selectOptions = [
   { id: 1, label: 'Business development' },
@@ -65,15 +71,28 @@ const removeField = (idx) => {
   }
 }
 
-const submit = () => {
-  //
-}
+// const submit = () => {
+//   //
+// }
 
 const formStatusCurrent = ref(0)
 
 const formStatusOptions = ['info', 'success', 'danger', 'warning']
 
-const formStatusSubmit = () => {
+const submit = () => {
+  const formDefinition = {
+    Name: form.name,
+    Collection: form.storage,
+    Fields: form.fields.map(f => {
+      return {
+        Name: f.name,
+        Type: f.type
+      }
+    })
+  };
+  debugger;
+  configStore.saveFormDefinition(formDefinition);
+
   formStatusCurrent.value = formStatusOptions[formStatusCurrent.value + 1]
     ? formStatusCurrent.value + 1
     : 0
@@ -84,7 +103,7 @@ const formStatusSubmit = () => {
   <LayoutAuthenticated>
     <SectionMain>
       <SectionTitleLineWithButton :icon="mdiBallotOutline" title="Define your Type" main />
-      <CardBox form @submit.prevent="submit">
+      <CardBox is-form="true" @submit.prevent="submit">
         <FormField label="Type Basic">
           <FormControl v-model="form.name" :icon="mdiAccount" />
           <FormControl v-model="form.storage" :icon="mdiMail" />
