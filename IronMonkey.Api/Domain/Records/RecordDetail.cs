@@ -1,4 +1,4 @@
-namespace IronMonkey.Api.Entities.Records;
+namespace IronMonkey.Api.Domain.Records;
 
 public class RecordDetail {
     public int LeadId { get; set; }

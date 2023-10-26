@@ -1,5 +1,5 @@
 using AspNetCore.Identity.Mongo;
-using IronMonkey.Api.Infrastructures.Tenants;
+using IronMonkey.Api.Data.MongoDb;
 
 namespace IronMonkey.Api.Infrastructures.MongoDb;
 

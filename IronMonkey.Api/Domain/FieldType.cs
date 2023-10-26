@@ -1,4 +1,4 @@
-namespace IronMonkey.Api.Entities.Forms;
+namespace IronMonkey.Api.Domain;
 public enum FieldType {
     String=1,
     Integer=2,

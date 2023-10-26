@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using IronMonkey.Api.Entities.Forms.Definitions;
+using IronMonkey.Api.Domain.Forms.Definitions;
 
 namespace IronMonkey.Api.Controllers.Requests;
 

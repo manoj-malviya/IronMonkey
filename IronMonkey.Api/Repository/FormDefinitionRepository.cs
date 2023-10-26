@@ -1,6 +1,6 @@
 using IronMonkey.Api.Contracts;
-using IronMonkey.Api.Entities.Forms.Definitions;
-using IronMonkey.Api.Infrastructures.MongoDb;
+using IronMonkey.Api.Data.MongoDb;
+using IronMonkey.Api.Domain.Forms.Definitions;
 using MongoDB.Driver;
 
 namespace IronMonkey.Api.Repository;

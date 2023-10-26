@@ -1,13 +1,13 @@
-namespace IronMonkey.Api.Infrastructures.Validations;
+namespace IronMonkey.Api.Domain.Forms.Definitions;
 
-public class ValidationRule
+public class FieldValidationRule
 {
     public string Property {get; set;}
     public string Type { get; set; }
     public string Value { get; set; }
-    public string Message { get; set; }
+    public string Message { get; set; } = String.Empty;
 
-    public ValidationRule(string property, string type, string value)
+    public FieldValidationRule(string property, string type, string value)
     {
         Property = property;
         Type = type;

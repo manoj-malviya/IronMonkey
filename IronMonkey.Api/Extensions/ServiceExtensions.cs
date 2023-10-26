@@ -16,6 +16,7 @@ using AspNetCore.Identity.Mongo.Stores;
 using MongoDB.Bson;
 using IronMonkey.Api.Services;
 using IronMonkey.Api.Infrastructures.Validations;
+using IronMonkey.Api.Data.MongoDb;
 
 namespace IronMonkey.Api.Extensions
 {

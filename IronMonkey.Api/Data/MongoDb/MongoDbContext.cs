@@ -1,6 +1,6 @@
 using MongoDB.Driver;
 
-namespace IronMonkey.Api.Infrastructures.MongoDb
+namespace IronMonkey.Api.Data.MongoDb
 {
     public interface IMongoDbContext
     {

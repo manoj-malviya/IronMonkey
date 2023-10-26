@@ -3,6 +3,7 @@ using IronMonkey.Api.Repository;
 using IronMonkey.Api.Contracts;
 using IronMonkey.Api.Infrastructures.Tenants;
 using IronMonkey.Api.Infrastructures.MongoDb;
+using IronMonkey.Api.Data.MongoDb;
 
 namespace IronMonkey.Api.Extensions
 {

@@ -1,5 +1,5 @@
 using IronMonkey.Api.Contracts;
-using IronMonkey.Api.Infrastructures.MongoDb;
+using IronMonkey.Api.Data.MongoDb;
 
 namespace IronMonkey.Api.Repository
 {

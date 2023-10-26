@@ -1,6 +1,6 @@
 using IronMonkey.Api.Infrastructures.Tenants;
 
-namespace IronMonkey.Api.Infrastructures.MongoDb;
+namespace IronMonkey.Api.Data.MongoDb;
 
 public class MongoDbContextFactory
 {
