@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 using IronMonkey.Api.Contracts;
 using IronMonkey.Api.Domain.Forms.Definitions;
 using IronMonkey.Api.Dtos;
-using IronMonkey.Api.Entities.Records;
 using IronMonkey.Api.Infrastructures.Validations;
 
 namespace IronMonkey.Api.Domain.Records;

@@ -1,4 +1,4 @@
-using IronMonkey.Api.Entities.Records;
+using IronMonkey.Api.Domain.Records;
 
 namespace IronMonkey.Api.Dtos;
 

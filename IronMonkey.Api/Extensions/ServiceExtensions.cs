@@ -17,6 +17,7 @@ using MongoDB.Bson;
 using IronMonkey.Api.Services;
 using IronMonkey.Api.Infrastructures.Validations;
 using IronMonkey.Api.Data.MongoDb;
+using IronMonkey.Api.Domain.Records;
 
 namespace IronMonkey.Api.Extensions
 {
@@ -167,6 +168,7 @@ namespace IronMonkey.Api.Extensions
             services.AddSingleton<ValidatorService>();
 
             services.AddScoped<RecordService>();
+            services.AddScoped<FormDefinitionService>();
 
         }
 

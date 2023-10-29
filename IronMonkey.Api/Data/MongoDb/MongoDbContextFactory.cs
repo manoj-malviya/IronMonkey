@@ -19,6 +19,7 @@ public class MongoDbContextFactory
         var tenant = _tenantService.Tenant;
 
         var connectionString = tenant?.MongoConnectionString ?? defaultString; // Replace with your logic to retrieve the connection string
+        ArgumentNullException.ThrowIfNullOrEmpty(connectionString);
         return new MongoDbContext(connectionString);
     }
 }
