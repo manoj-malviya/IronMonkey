@@ -12,7 +12,7 @@ namespace IronMonkey.Api.Extensions
         public static WebApplication ApplyMigrations(this WebApplication app)
         {
             using var scope = app.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<IMongoDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<MongoDbContext>();
 
             var section = app.Configuration.Get<TenantConfigurationSection>();
 

@@ -57,7 +57,7 @@ namespace IronMonkey.Api.Extensions
         public static void ConfigureMongoContext(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddScoped<MongoDbContextFactory>();
-            services.AddScoped<IMongoDbContext>(provider =>
+            services.AddScoped<MongoDbContext>(provider =>
             {
                 var factory = provider.GetRequiredService<MongoDbContextFactory>();
                 return factory.CreateMongoDbContext();

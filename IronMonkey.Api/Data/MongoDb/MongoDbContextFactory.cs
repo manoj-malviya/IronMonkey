@@ -1,4 +1,6 @@
 using IronMonkey.Api.Infrastructures.Tenants;
+using Microsoft.EntityFrameworkCore;
+using MongoDB.Driver;
 
 namespace IronMonkey.Api.Data.MongoDb;
 
@@ -20,6 +22,13 @@ public class MongoDbContextFactory
 
         var connectionString = tenant?.MongoConnectionString ?? defaultString; // Replace with your logic to retrieve the connection string
         ArgumentNullException.ThrowIfNullOrEmpty(connectionString);
-        return new MongoDbContext(connectionString);
+
+        var databaseName = tenant?.MongoDatabaseName ?? "iron-monkey";
+
+        var mongoDb = new MongoClient(connectionString).GetDatabase(databaseName);
+        var dbContextOptions = new DbContextOptionsBuilder<MongoDbContext>()
+            .UseMongoDB(mongoDb.Client, mongoDb.DatabaseNamespace.DatabaseName);
+            
+        return new MongoDbContext(dbContextOptions.Options);
     }
 }

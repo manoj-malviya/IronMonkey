@@ -1,22 +1,30 @@
 using AspNetCore.Identity.Mongo;
 using IronMonkey.Api.Data.MongoDb;
+using IronMonkey.Api.Infrastructures.Tenants;
 
 namespace IronMonkey.Api.Infrastructures.MongoDb;
 
 public class MongoDbIdentityOptionFactory
 {
-    private readonly IMongoDbContext _context;
+    private readonly ITenantGetter _tenantService;
+    private readonly IConfiguration _config;
 
-    public MongoDbIdentityOptionFactory(IMongoDbContext context)
+    public MongoDbIdentityOptionFactory(ITenantGetter tenantService, IConfiguration configuration)
     {
-        _context = context;
+        _tenantService = tenantService;
+        _config = configuration;
     }
 
     public MongoIdentityOptions CreateMongoIdentityOption()
     {
         var opt = new MongoIdentityOptions();
-        Console.WriteLine("in Factory => "+ _context.ConnectionString);
-        opt.ConnectionString = _context.ConnectionString;
+        var defaultString = _config.GetConnectionString("MongoConnectionString");
+        var tenant = _tenantService.Tenant;
+
+        var connectionString = tenant?.MongoConnectionString ?? defaultString; // Replace with your logic to retrieve the connection string
+        ArgumentNullException.ThrowIfNullOrEmpty(connectionString);
+
+        opt.ConnectionString = connectionString;
         return opt;
     }
 }

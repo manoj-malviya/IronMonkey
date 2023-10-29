@@ -1,27 +1,27 @@
 using IronMonkey.Api.Contracts;
 using IronMonkey.Api.Data.MongoDb;
 using IronMonkey.Api.Domain.Records;
+using Microsoft.EntityFrameworkCore;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace IronMonkey.Api.Repository;
 
 public class RecordRepository : IRecordRepository {
-    private readonly IMongoCollection<BsonDocument> _collection;
-    public RecordRepository(IMongoDbContext context) {
-        var db = context.Client.GetDatabase(context.DatabaseName);
-        this._collection = db.GetCollection<BsonDocument>("lead");
+    private readonly MongoDbContext db;
+    public RecordRepository(MongoDbContext context) {
+        this.db = context;
     }
 
     public async void Create(Record lead) {
         var doc = ToDocument(lead);
-        await _collection.InsertOneAsync(doc);
+        await db.AddAsync(doc);
     }
 
     public async Task<Record> GetLead(string id) {
         var filter = Builders<BsonDocument>.Filter.Eq("Id", id);
 
-        var doc = await _collection.FindAsync(filter);
+        // var doc = await db.FindAsync()
 
         return new Record();
     }

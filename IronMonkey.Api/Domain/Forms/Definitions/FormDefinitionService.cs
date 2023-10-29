@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using IronMonkey.Api.Contracts;
 using IronMonkey.Api.Core;
+using IronMonkey.Api.Domain.Forms;
 using IronMonkey.Api.Domain.Forms.Definitions;
 using IronMonkey.Api.Dtos;
 
@@ -52,7 +53,7 @@ public class FormDefinitionService
     //     return validationResults;
     // }
 
-    public async Task<PagedList<FormDefinition>> GetForms(int page, int pageSize)
+    public async Task<PagedList<FormDefinitionRow>> GetForms(int page, int pageSize)
     {
         return await _formRepository.GetList(page, pageSize);
     }
