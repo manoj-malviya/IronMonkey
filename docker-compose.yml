@@ -1,31 +1,31 @@
 version: "3"
 services:
-  api:
-    container_name: iron-monkey-api
-    build:
-      context: .
-      dockerfile: ./IronMonkey.Api/Dockerfile
-    #command: dotnet run
-    volumes:
-      - ./IronMonkey.Api/:/usr/src/app
-      - ~/.aspnet/https:/https:ro
-      - /usr/src/app/bin #this way we do not copy host bin to container, took 1 hrs to figure out
-      - /usr/src/app/obj
-    working_dir: /usr/src/app
-    ports:
-      - 5002:5002
-    environment:
-      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
-      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
-      # - DOTNET_RUNNING_IN_CONTAINER=true
-      # - ASPNETCORE_APPL_PATH=/use/src/app
-      # - ASPNETCORE_SUPPRESSSTATUSMESSAGES=true
-      - DOTNET_USE_POLLING_FILE_WATCHER=1
-      - ASPNETCORE_ENVIRONMENT=Development
-      # - NUGET_FALLBACK_PACKAGES=/root/.nuget/fallbackpackages
-      # - NUGET_PACKAGES=/root/.nuget/packages
-    depends_on:
-      - mongo
+  # api:
+  #   container_name: iron-monkey-api
+  #   build:
+  #     context: .
+  #     dockerfile: ./IronMonkey.Api/Dockerfile
+  #   #command: dotnet run
+  #   volumes:
+  #     - ./IronMonkey.Api/:/usr/src/app
+  #     - ~/.aspnet/https:/https:ro
+  #     - /usr/src/app/bin #this way we do not copy host bin to container, took 1 hrs to figure out
+  #     - /usr/src/app/obj
+  #   working_dir: /usr/src/app
+  #   ports:
+  #     - 5002:5002
+  #   environment:
+  #     - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+  #     - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+  #     # - DOTNET_RUNNING_IN_CONTAINER=true
+  #     # - ASPNETCORE_APPL_PATH=/use/src/app
+  #     # - ASPNETCORE_SUPPRESSSTATUSMESSAGES=true
+  #     - DOTNET_USE_POLLING_FILE_WATCHER=1
+  #     - ASPNETCORE_ENVIRONMENT=Development
+  #     # - NUGET_FALLBACK_PACKAGES=/root/.nuget/fallbackpackages
+  #     # - NUGET_PACKAGES=/root/.nuget/packages
+  #   depends_on:
+  #     - mongo
   # workflow:
   #   container_name: iron-monkey-workflow
   #   build:

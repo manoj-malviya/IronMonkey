@@ -9,5 +9,5 @@ public interface IFormDefinitionRepository {
 
     public Task<FormDefinition?> Get(string Id);
 
-    public Task<PagedList<FormDefinitionRow>> GetList(int page, int pageSize);
+    public Task<PagedList<FormDefinition>> GetList(int page, int pageSize);
 }

@@ -24,8 +24,8 @@ namespace IronMonkey.Api.Controllers
             
             var v = new FormDefinition() {
                 Name = form.Name,
-                Collection = form.Storage,
-                Fields = form.Fields
+                Storage = form.Storage,
+                FieldList = form.Fields
             };
 
             _formRepo.Create(v);

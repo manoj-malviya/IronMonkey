@@ -82,7 +82,7 @@ const formStatusOptions = ['info', 'success', 'danger', 'warning']
 const submit = () => {
   const formDefinition = {
     Name: form.name,
-    Collection: form.storage,
+    Storage: form.storage,
     Fields: form.fields.map(f => {
       return {
         Name: f.name,

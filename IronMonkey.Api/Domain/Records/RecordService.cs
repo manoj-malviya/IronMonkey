@@ -35,13 +35,13 @@ public class RecordService {
 
         var rules = new List<FieldValidationRule>();
 
-        foreach (var field in definition.Fields)
-        {
-            foreach (var validator in field.Validators)
-            {
-                rules.Add(new FieldValidationRule("Value", validator.Type, validator.Value));
-            }
-        }
+        // foreach (var field in definition.Fields)
+        // {
+        //     foreach (var validator in field.Validators)
+        //     {
+        //         rules.Add(new FieldValidationRule("Value", validator.Type, validator.Value));
+        //     }
+        // }
 
         bool valid = true;
         List<ValidationResult> validationResults = new();

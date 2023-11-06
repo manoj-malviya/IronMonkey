@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import Style from '@/views/StyleView.vue'
 import Home from '@/pages/home/HomeView.vue'
 import Contact from '@/pages/contacts/ContactView.vue';
+import TypeList from '@/pages/configuration/Index.vue';
 import TypeConfiguration from '@/pages/configuration/TypeConfiguration.vue';
 
 const routes = [
@@ -35,7 +36,7 @@ const routes = [
     },
     path: '/configuration',
     name: 'configuration',
-    component: TypeConfiguration
+    component: TypeList
   },
   {
     // Document title tag
