@@ -1,11 +1,12 @@
 using System.ComponentModel.DataAnnotations;
+using IronMonkey.Api.Domain.Forms.Definitions;
 using IronMonkey.Api.Infrastructures.Validations.Rules;
 
 namespace IronMonkey.Api.Infrastructures.Validations;
 
 public class ValidatorService
 {
-    public bool ValidateModel<T>(T model, IEnumerable<ValidationRule> validationRules, List<ValidationResult> validationResults)
+    public bool ValidateModel<T>(T model, IEnumerable<FieldValidationRule> validationRules, List<ValidationResult> validationResults)
     {
         foreach (var rule in validationRules)
         {
@@ -20,7 +21,7 @@ public class ValidatorService
         return true;
     }
 
-    private bool ValidateProperty<T>(T model, ValidationRule rule, List<ValidationResult> validationResults)
+    private bool ValidateProperty<T>(T model, FieldValidationRule rule, List<ValidationResult> validationResults)
     {
         var validationContext = new ValidationContext(model);
         validationContext.MemberName = rule.Type; // Use rule.Type as the property name for validation

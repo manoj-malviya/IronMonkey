@@ -1,59 +1,42 @@
-using System;
-using System.ComponentModel.DataAnnotations;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-using System.Threading.Tasks;
-using AutoMapper;
 using IronMonkey.Api.Contracts;
-using IronMonkey.Api.Dtos;
-using IronMonkey.Api.Entities.Forms;
-using IronMonkey.Api.Entities.Forms.Definitions;
-using IronMonkey.Api.Entities.Models;
-using IronMonkey.Api.Infrastructures.Validations;
-using IronMonkey.Api.Infrastructures.Validations.Rules;
-using IronMonkey.Api.JwtFeatures;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
+using IronMonkey.Api.Controllers.Requests;
+using IronMonkey.Api.Domain.Forms.Definitions;
+using IronMonkey.Api.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
 
 namespace IronMonkey.Api.Controllers
 {
     [ApiController]
-    [Route("form-definition")]
+    [Route("[controller]/[action]")]
     public class FormDefinitionController : ControllerBase
     {
         private readonly IFormDefinitionRepository _formRepo;
-        public FormDefinitionController(IRepositoryManager repositoryManager)
+        private readonly FormDefinitionService _service;
+        public FormDefinitionController(IRepositoryManager repositoryManager, FormDefinitionService formDefinitionService)
         {
             _formRepo = repositoryManager.FormDefinition;
-            
+            _service = formDefinitionService;
         }
 
-        [HttpPost()]
-        public IActionResult Create()
+        [HttpPost]
+        public IActionResult Create([FromBody] CreateFormDefinitionRequest form)
         {
             
             var v = new FormDefinition() {
-                Name = "Enquery",
-                Collection = "enquery",
-                Fields = new List<FieldDefinition>(){
-                    new FieldDefinition("Age", FieldType.Integer, new ValidationRule[]{
-                        new ValidationRule("Age", ValidationRuleType.Required, "")
-                    }),
-                    new FieldDefinition("Gender", FieldType.Integer, new ValidationRule[]{
-                        new ValidationRule("Gender", ValidationRuleType.Required, "")
-                    })
-                }
+                Name = form.Name,
+                Storage = form.Storage,
+                FieldList = form.Fields
             };
 
             _formRepo.Create(v);
 
             return new OkResult();
+        }
+
+        [HttpGet]
+        public IActionResult GetList()
+        {
+            return Ok(_service.GetForms(1, 5));
         }
     }
 

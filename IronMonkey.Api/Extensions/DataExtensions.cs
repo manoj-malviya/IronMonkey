@@ -3,6 +3,7 @@ using IronMonkey.Api.Repository;
 using IronMonkey.Api.Contracts;
 using IronMonkey.Api.Infrastructures.Tenants;
 using IronMonkey.Api.Infrastructures.MongoDb;
+using IronMonkey.Api.Data.MongoDb;
 
 namespace IronMonkey.Api.Extensions
 {
@@ -11,7 +12,7 @@ namespace IronMonkey.Api.Extensions
         public static WebApplication ApplyMigrations(this WebApplication app)
         {
             using var scope = app.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<IMongoDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<MongoDbContext>();
 
             var section = app.Configuration.Get<TenantConfigurationSection>();
 

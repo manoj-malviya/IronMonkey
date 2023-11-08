@@ -1,14 +1,14 @@
 using IronMonkey.Api.Contracts;
-using IronMonkey.Api.Infrastructures.MongoDb;
+using IronMonkey.Api.Data.MongoDb;
 
 namespace IronMonkey.Api.Repository
 {
     public class RepositoryManager : IRepositoryManager
     {
-        private readonly IMongoDbContext _repositoryContext;
+        private readonly MongoDbContext _repositoryContext;
         private IFormDefinitionRepository? _formRepository;
 
-        public RepositoryManager(IMongoDbContext repositoryContext)
+        public RepositoryManager(MongoDbContext repositoryContext)
         {
             _repositoryContext = repositoryContext;
         }

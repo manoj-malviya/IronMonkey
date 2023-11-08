@@ -1,11 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using IronMonkey.Api.Contracts;
+using IronMonkey.Api.Domain.Forms.Definitions;
 using IronMonkey.Api.Dtos;
-using IronMonkey.Api.Entities.Records;
 using IronMonkey.Api.Infrastructures.Validations;
-using IronMonkey.Api.Entities.Forms.Definitions;
 
-namespace IronMonkey.Api.Services;
+namespace IronMonkey.Api.Domain.Records;
 
 public class RecordService {
     private readonly IFormDefinitionRepository _formRepository;
@@ -34,15 +33,15 @@ public class RecordService {
             return null;
         };
 
-        var rules = new List<ValidationRule>();
+        var rules = new List<FieldValidationRule>();
 
-        foreach (var field in definition.Fields)
-        {
-            foreach (var validator in field.Validators)
-            {
-                rules.Add(new ValidationRule("Value", validator.Type, validator.Value));
-            }
-        }
+        // foreach (var field in definition.Fields)
+        // {
+        //     foreach (var validator in field.Validators)
+        //     {
+        //         rules.Add(new FieldValidationRule("Value", validator.Type, validator.Value));
+        //     }
+        // }
 
         bool valid = true;
         List<ValidationResult> validationResults = new();

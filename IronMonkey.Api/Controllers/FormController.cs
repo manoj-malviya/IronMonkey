@@ -6,13 +6,10 @@ using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
 using IronMonkey.Api.Contracts;
+using IronMonkey.Api.Domain;
+using IronMonkey.Api.Domain.Records;
 using IronMonkey.Api.Dtos;
-using IronMonkey.Api.Entities.Forms;
-using IronMonkey.Api.Entities.Forms.Definitions;
 using IronMonkey.Api.Entities.Models;
-using IronMonkey.Api.Entities.Records;
-using IronMonkey.Api.Infrastructures.Validations;
-using IronMonkey.Api.Infrastructures.Validations.Rules;
 using IronMonkey.Api.JwtFeatures;
 using IronMonkey.Api.Services;
 using Microsoft.AspNetCore.Authentication;
@@ -37,7 +34,7 @@ namespace IronMonkey.Api.Controllers
             
         }
 
-        [HttpPost()]
+        [HttpPost(Name = "save")]
         public async Task<IActionResult> Save()
         {
             var record = new CreateRecord();

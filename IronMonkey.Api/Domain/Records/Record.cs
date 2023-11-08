@@ -2,7 +2,7 @@ using IronMonkey.Api.Entities.Customers;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace IronMonkey.Api.Entities.Records;
+namespace IronMonkey.Api.Domain.Records;
 
 public class Record
 {

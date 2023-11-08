@@ -1,10 +1,11 @@
+using IronMonkey.Api.Data.MongoDb;
 using IronMonkey.Api.Infrastructures.MongoDb;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IronMonkey.Api.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("[controller]/[action]")]
 public class WeatherForecastController : ControllerBase
 {
     private static readonly string[] Summaries = new[]
@@ -13,20 +14,15 @@ public class WeatherForecastController : ControllerBase
     };
 
     private readonly ILogger<WeatherForecastController> _logger;
-    private readonly IMongoDbContext _context;
-    private readonly MongoDbIdentityOptionFactory _o;
 
-    public WeatherForecastController(ILogger<WeatherForecastController> logger, IMongoDbContext context, MongoDbIdentityOptionFactory o)
+    public WeatherForecastController(ILogger<WeatherForecastController> logger)
     {
         _logger = logger;
-        _context = context;
-        _o = o;
     }
 
-    [HttpGet(Name = "GetWeatherForecast")]
+    [HttpGet]
     public IEnumerable<WeatherForecast> Get()
     {
-        Console.WriteLine(_context.DatabaseName);
         return Enumerable.Range(1, 5).Select(index => new WeatherForecast
         {
             Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),

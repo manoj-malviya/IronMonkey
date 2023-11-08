@@ -1,5 +1,6 @@
 namespace IronMonkey.Api.Infrastructures.Validations.Rules;
 
+using IronMonkey.Api.Domain.Forms.Definitions;
 using IronMonkey.Api.Infrastructures.Validations;
 using System.ComponentModel.DataAnnotations;
 
@@ -12,7 +13,7 @@ public class RequiredValidator : IValidator
 
     public string ErrorMessage { get; set; }
 
-    public bool IsValid(ValidationRule rule, ValidationContext validationContext)
+    public bool IsValid(FieldValidationRule rule, ValidationContext validationContext)
     {
         //Get PropertyInfo Object  
         var basePropertyInfo = validationContext.ObjectType.GetProperty(rule.Property);

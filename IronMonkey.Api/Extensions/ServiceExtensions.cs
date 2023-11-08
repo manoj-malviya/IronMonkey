@@ -16,6 +16,8 @@ using AspNetCore.Identity.Mongo.Stores;
 using MongoDB.Bson;
 using IronMonkey.Api.Services;
 using IronMonkey.Api.Infrastructures.Validations;
+using IronMonkey.Api.Data.MongoDb;
+using IronMonkey.Api.Domain.Records;
 
 namespace IronMonkey.Api.Extensions
 {
@@ -55,7 +57,7 @@ namespace IronMonkey.Api.Extensions
         public static void ConfigureMongoContext(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddScoped<MongoDbContextFactory>();
-            services.AddScoped<IMongoDbContext>(provider =>
+            services.AddScoped<MongoDbContext>(provider =>
             {
                 var factory = provider.GetRequiredService<MongoDbContextFactory>();
                 return factory.CreateMongoDbContext();
@@ -166,6 +168,7 @@ namespace IronMonkey.Api.Extensions
             services.AddSingleton<ValidatorService>();
 
             services.AddScoped<RecordService>();
+            services.AddScoped<FormDefinitionService>();
 
         }
 
