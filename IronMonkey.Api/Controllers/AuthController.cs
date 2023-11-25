@@ -21,11 +21,11 @@ namespace IronMonkey.Api.Controllers
     [Route("auth")]
     public class AuthController : ControllerBase
     {
-        private readonly UserManager<User> _userManager;
+        private readonly UserManager<ApplicationUser> _userManager;
         private readonly IMapper _mapper;
         private readonly JwtHandler _jwtHandler;
 
-        public AuthController(UserManager<User> userManager, IMapper mapper, JwtHandler jwtHandler)
+        public AuthController(UserManager<ApplicationUser> userManager, IMapper mapper, JwtHandler jwtHandler)
         {
             _userManager = userManager;
             _mapper = mapper;
@@ -36,8 +36,9 @@ namespace IronMonkey.Api.Controllers
         public async Task<IActionResult> ExternalLogin([FromBody] ExternalAuth externalAuth)
         {
             var payload = await _jwtHandler.VerifyGoogleToken(externalAuth);
-            if (payload == null)
+            if (payload == null) {
                 return BadRequest("Invalid External Authentication.");
+            }
 
             var info = new UserLoginInfo(externalAuth.Provider, payload.Subject, externalAuth.Provider);
 
@@ -47,7 +48,7 @@ namespace IronMonkey.Api.Controllers
                 user = await _userManager.FindByEmailAsync(payload.Email);
                 if (user == null)
                 {
-                    user = new User { Email = payload.Email, UserName = payload.Email };
+                    user = new ApplicationUser { Email = payload.Email, UserName = payload.Email };
                     await _userManager.CreateAsync(user);
 
                     //prepare and send an email for the email confirmation
@@ -61,14 +62,13 @@ namespace IronMonkey.Api.Controllers
                 }
             }
 
-            if (user == null)
+            if (user == null) {
                 return BadRequest("Invalid External Authentication.");
-
-            //check for the Locked out account
+            }
 
             var token = await _jwtHandler.GenerateToken(user);
 
-            return Ok(new AuthResponse { Token = token, IsAuthSuccessful = true });
+            return Ok(new AuthResponse { Token = token, IsAuthSuccessful = true, UserName = user.UserName });
         }
     }
 

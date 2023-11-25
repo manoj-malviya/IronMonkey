@@ -1,28 +1,28 @@
 using IronMonkey.Api.Contracts;
+using IronMonkey.Api.Data.MongoDb;
 
 namespace IronMonkey.Api.Repository
 {
     public class RepositoryManager : IRepositoryManager
     {
-        private RepositoryContext _repositoryContext;
-        // private ICompanyRepository? _companyRepository;
+        private readonly MongoDbContext _repositoryContext;
+        private IFormDefinitionRepository? _formRepository;
 
-        public RepositoryManager(RepositoryContext repositoryContext)
+        public RepositoryManager(MongoDbContext repositoryContext)
         {
             _repositoryContext = repositoryContext;
         }
 
-        // public ICompanyRepository Company
-        // {
-        //     get
-        //     {
-        //         if (_companyRepository == null)
-        //             _companyRepository = new CompanyRepository(_repositoryContext);
+        public IFormDefinitionRepository FormDefinition
+        {
+            get
+            {
+                if (_formRepository == null)
+                    _formRepository = new FormDefinitionRepository(_repositoryContext);
 
-        //         return _companyRepository;
-        //     }
-        // }
-
-        public void Save() => _repositoryContext.SaveChanges();
+                return _formRepository;
+            }
+        }
+        //public void Save() => _repositoryContext.SaveChanges();
     }
 }

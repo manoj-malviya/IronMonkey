@@ -1,9 +1,11 @@
+using IronMonkey.Api.Data.MongoDb;
+using IronMonkey.Api.Infrastructures.MongoDb;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IronMonkey.Api.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("[controller]/[action]")]
 public class WeatherForecastController : ControllerBase
 {
     private static readonly string[] Summaries = new[]
@@ -18,7 +20,7 @@ public class WeatherForecastController : ControllerBase
         _logger = logger;
     }
 
-    [HttpGet(Name = "GetWeatherForecast")]
+    [HttpGet]
     public IEnumerable<WeatherForecast> Get()
     {
         return Enumerable.Range(1, 5).Select(index => new WeatherForecast

@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/IronMonkey.Api/Family.Api.csproj",
+                "${workspaceFolder}/IronMonkey.Api/IronMonkey.Api.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
@@ -19,7 +19,7 @@
             "type": "process",
             "args": [
                 "publish",
-                "${workspaceFolder}/IronMonkey.Api/Family.Api.csproj",
+                "${workspaceFolder}/IronMonkey.Api/IronMonkey.Api.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
@@ -36,6 +36,63 @@
                 "${workspaceFolder}/IronMonkey.Api/Family.Api.csproj"
             ],
             "problemMatcher": "$msCompile"
+        },
+        {
+            "type": "docker-build",
+            "label": "docker-build: debug",
+            "dependsOn": [
+                "build"
+            ],
+            "dockerBuild": {
+                "tag": "ironmonkey:dev",
+                "target": "base",
+                "dockerfile": "${workspaceFolder}/IronMonkey.Api/Dockerfile",
+                "context": "${workspaceFolder}",
+                "pull": true
+            },
+            "netCore": {
+                "appProject": "${workspaceFolder}/IronMonkey.Api/IronMonkey.Api.csproj"
+            }
+        },
+        {
+            "type": "docker-build",
+            "label": "docker-build: release",
+            "dependsOn": [
+                "build"
+            ],
+            "dockerBuild": {
+                "tag": "ironmonkey:latest",
+                "dockerfile": "${workspaceFolder}/IronMonkey.Api/Dockerfile",
+                "context": "${workspaceFolder}",
+                "platform": "linux/amd64",
+                "pull": true
+            },
+            "netCore": {
+                "appProject": "${workspaceFolder}/IronMonkey.Api/IronMonkey.Api.csproj"
+            }
+        },
+        {
+            "type": "docker-run",
+            "label": "docker-run: debug",
+            "dependsOn": [
+                "docker-build: debug"
+            ],
+            "dockerRun": {},
+            "netCore": {
+                "appProject": "${workspaceFolder}/IronMonkey.Api/IronMonkey.Api.csproj",
+                "enableDebugging": true
+            }
+        },
+        {
+            "type": "docker-run",
+            "label": "docker-run: release",
+            "dependsOn": [
+                "docker-build: release"
+            ],
+            "dockerRun": {},
+            "netCore": {
+                "appProject": "${workspaceFolder}/IronMonkey.Api/IronMonkey.Api.csproj"
+            }
         }
     ]
 }
