@@ -34,9 +34,10 @@ namespace IronMonkey.Api.Controllers
         }
 
         [HttpGet]
-        public IActionResult GetList()
+        public async Task<IActionResult> GetList()
         {
-            return Ok(_service.GetForms(1, 5));
+            var forms = await _service.GetForms(1, 5);
+            return Ok(forms);
         }
     }
 
