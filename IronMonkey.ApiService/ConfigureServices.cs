@@ -1,18 +1,12 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
-using IronMonkey.ApiService.Authentication.Services;
 using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Common.Cache;
-using IronMonkey.ApiService.Common.Email;
 using IronMonkey.ApiService.Common.Services;
 using IronMonkey.Common.Auth;
-using IronMonkey.Data;
 using IronMonkey.Data.Extensions;
-using IronMonkey.Data.Types;
+using Microsoft.OpenApi;
 using Serilog;
 using Swashbuckle.AspNetCore.Filters;
 

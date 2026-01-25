@@ -11,7 +11,7 @@ using IronMonkey.Data.Types;
 
 namespace IronMonkey.ApiService.Authentication.Endpoints;
 
-public class LoginEndpoint : IEndpoint
+public class Login : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) => app
         .MapPost("/login", Handle)

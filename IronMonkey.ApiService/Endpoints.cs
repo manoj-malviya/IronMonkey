@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.OpenApi.Models;
 using IronMonkey.ApiService.Authentication.Endpoints;
 using IronMonkey.ApiService.Common;
-using IronMonkey.ApiService.Common.Auth;
+using Microsoft.OpenApi;
 
 namespace IronMonkey.ApiService;
 
@@ -16,11 +15,7 @@ public static class Endpoints
 
         endpoints.MapAuthenticationEndpoints();
         endpoints.MapUserEndpoints();
-        // endpoints.MapPublisherEndpoints();
         endpoints.MapHealthCheckEndpoints();
-        // endpoints.MapInvitationEndpoints();
-        // endpoints.MapPostEndpoints();
-        // endpoints.MapCommentEndpoints();
         endpoints.MapUserEndpoints();
     }
     
@@ -51,20 +46,6 @@ public static class Endpoints
         // endpoints.MapAuthorizedGroup()
         //     .MapEndpoint<Forecast>();
     }
-    
-    // private static void MapPublisherEndpoints(this IEndpointRouteBuilder app)
-    // {
-    //     var endpoints = app.MapGroup("/publisher")
-    //         .WithTags("Publisher");
-
-    //     endpoints.MapAuthorizedGroup()
-    //         .MapEndpoint<CreateContentTemplate>()
-    //         .MapEndpoint<ListContentTemplates>()
-    //         .MapEndpoint<SendWriterInvitation>()
-    //         .MapEndpoint<ListWriterInvitations>()
-    //         .MapEndpoint<AcceptWriterInvitation>()
-    //         .MapEndpoint<RejectWriterInvitation>();
-    // }                                
 
     private static RouteGroupBuilder MapPublicGroup(this IEndpointRouteBuilder app, string? prefix = null)
     {
@@ -84,27 +65,4 @@ public static class Endpoints
             .RequireAuthorization()
             .WithOpenApi();
     }
-    
-    private static readonly OpenApiSecurityScheme securityScheme = new()
-    {
-        Type = SecuritySchemeType.Http,
-        Name = JwtBearerDefaults.AuthenticationScheme,
-        Scheme = JwtBearerDefaults.AuthenticationScheme,
-        Reference = new()
-        {
-            Type = ReferenceType.SecurityScheme,
-            Id = JwtBearerDefaults.AuthenticationScheme
-        }
-    };
-    
-    // private static void MapInvitationEndpoints(this IEndpointRouteBuilder app)
-    // {
-    //     var endpoints = app.MapGroup("/invitations")
-    //         .WithTags("Invitations");
-
-    //     endpoints.MapAuthorizedGroup()
-    //         .MapEndpoint<SendWriterInvitation>()
-    //         .MapEndpoint<ListWriterInvitations>()
-    //         .MapEndpoint<AcceptWriterInvitation>()
-    // }
 }

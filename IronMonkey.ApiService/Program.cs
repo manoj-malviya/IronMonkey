@@ -1,4 +1,5 @@
 global using FluentValidation;
+using Asp.Versioning;
 using IronMonkey.ApiService;
 
 var builder = WebApplication.CreateBuilder(args);
