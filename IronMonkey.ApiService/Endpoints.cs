@@ -3,7 +3,6 @@ using Microsoft.OpenApi.Models;
 using IronMonkey.ApiService.Authentication.Endpoints;
 using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
-using IronMonkey.ApiService.Publisher.Endpoints;
 using IronMonkey.ApiService.Users.Endpoints;
 
 namespace IronMonkey.ApiService;

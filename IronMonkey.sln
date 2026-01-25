@@ -7,6 +7,10 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IronMonkey.ServiceDefaults", "IronMonkey.ServiceDefaults\IronMonkey.ServiceDefaults.csproj", "{A690F05A-72D3-41C6-9EF7-94332EAAB5AB}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IronMonkey.ApiService", "IronMonkey.ApiService\IronMonkey.ApiService.csproj", "{1C993012-6943-454A-8ED2-30A439F6DCF1}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E2F5A1D1-1E8F-5A1D-1E8F-5A1D1E8F5A1D} = {E2F5A1D1-1E8F-5A1D-1E8F-5A1D1E8F5A1D}
+		{D1E8F5A1-5C3E-4F8A-9A1E-2E8F5A1D1E8F} = {D1E8F5A1-5C3E-4F8A-9A1E-2E8F5A1D1E8F}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IronMonkey.Web", "IronMonkey.Web\IronMonkey.Web.csproj", "{341D689F-3142-4F0A-9105-748D638BD29E}"
 EndProject
