@@ -2,10 +2,10 @@ using IronMonkey.Data.Abstractions;
 
 namespace IronMonkey.Data.Entities;
 
-public sealed class Tenant : Entity
+public sealed class Tenant : BaseTenantEntity
 {
     private Tenant(Guid id, string name, string slug, string subscriptionPlan, string status)
-        : base(id, id) // OrganizationId is same as Id for Tenant
+        : base(id, id)
     {
         Name = name;
         Slug = slug;

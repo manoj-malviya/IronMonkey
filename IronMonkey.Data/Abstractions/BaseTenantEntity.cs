@@ -6,7 +6,7 @@ namespace IronMonkey.Data.Abstractions;
 public abstract class BaseTenantEntity : Entity
 {
     protected BaseTenantEntity(Guid id, Guid tenantId)
-        : base(id, tenantId)
+        : base(id)
     {
         TenantId = tenantId;
     }
