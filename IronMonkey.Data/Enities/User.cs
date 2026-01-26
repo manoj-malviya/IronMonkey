@@ -2,21 +2,21 @@ using Microsoft.AspNetCore.Identity;
 using IronMonkey.Common;
 using IronMonkey.Data.Abstractions;
 
-namespace IronMonkey.Data.Types;
+namespace IronMonkey.Data.Entities;
 
-public sealed class User : Entity
+public sealed class User : BaseTenantEntity
 {
     private readonly List<Role> _roles = new();
 
-    private User(Guid id, string name, string email, string password)
-        : base(id)
+    private User(Guid tenantId, Guid id, string name, string email, string password)
+        : base(id, tenantId: tenantId)
     {
         Name = name;
         Email = email;
         Password = password;
     }
 
-    private User()
+    public User()
     {
     }
 
@@ -28,9 +28,9 @@ public sealed class User : Entity
 
     public IReadOnlyCollection<Role> Roles => _roles.ToList(); //shadow property
 
-    public static User Create(string name, string email, string password, Role role)
+    public static User Create(Guid tenantId, string name, string email, string password, Role role)
     {
-        var user = new User(Guid.NewGuid(), name, email, password);
+        var user = new User(tenantId, Guid.NewGuid(), name, email, password);
 
         //user.RaiseDomainEvent(new UserCreatedDomainEvent(user.Id));
 

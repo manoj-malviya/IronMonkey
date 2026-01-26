@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using IronMonkey.ApiService.Authentication.Endpoints;
 using IronMonkey.ApiService.Common;
 using Microsoft.OpenApi;
+using Microsoft.AspNetCore.OpenApi;
+using IronMonkey.Data.Entities;
 
 namespace IronMonkey.ApiService;
 
@@ -10,59 +12,84 @@ public static class Endpoints
     public static void MapEndpoints(this WebApplication app)
     {
         var endpoints = app.MapGroup("")
-            // .AddEndpointFilter<RequestLoggingFilter>()
-            .WithOpenApi();
+            .AddOpenApiOperationTransformer((operation, context, ct) =>
+            {
+                // Customize OpenAPI operation here if needed
+                return Task.CompletedTask;
+            });
 
         endpoints.MapAuthenticationEndpoints();
         endpoints.MapUserEndpoints();
         endpoints.MapHealthCheckEndpoints();
-        endpoints.MapUserEndpoints();
+        endpoints.MapTenantEndpoints();
     }
     
-    private static void MapHealthCheckEndpoints(this IEndpointRouteBuilder app)
+    extension(IEndpointRouteBuilder app)
     {
-        app.MapGet("/health", () => TypedResults.Ok())
-            .WithName("HealthCheck")
-            .WithTags("Health")
-            .WithOpenApi();
-    }
-    
-    private static void MapAuthenticationEndpoints(this IEndpointRouteBuilder app)
-    {
-        var endpoints = app.MapGroup("/auth")
-            .WithTags("Authentication");
-            
-        endpoints.MapPublicGroup()
-            .MapEndpoint<Signup>()
-            .MapEndpoint<Login>()
-            .MapEndpoint<ConfirmEmail>();
-    }
+        private void MapHealthCheckEndpoints()
+        {
+            app.MapGet("/health", () => TypedResults.Ok())
+                .WithName("HealthCheck")
+                .WithTags("Health")
+                .AddOpenApiOperationTransformer((operation, context, ct) =>
+                {
+                    // Customize OpenAPI operation here if needed
+                    return Task.CompletedTask;
+                });
+        }
 
-    private static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var endpoints = app.MapGroup("/user")
-            .WithTags("User");
+        private void MapAuthenticationEndpoints()
+        {
+            var endpoints = app.MapGroup("/auth")
+                .WithTags("Authentication");
 
-        // endpoints.MapAuthorizedGroup()
-        //     .MapEndpoint<Forecast>();
-    }
+            endpoints.MapIdentityApi<User>();
+        }
 
-    private static RouteGroupBuilder MapPublicGroup(this IEndpointRouteBuilder app, string? prefix = null)
-    {
-        return app.MapGroup(prefix ?? string.Empty)
-            .AllowAnonymous()
-            .WithOpenApi();
-    }
-    private static IEndpointRouteBuilder MapEndpoint<TEndpoint>(this IEndpointRouteBuilder app) where TEndpoint : IEndpoint
-    {
-        TEndpoint.Map(app);
-        return app;
-    }
-    
-    private static RouteGroupBuilder MapAuthorizedGroup(this IEndpointRouteBuilder app, string? prefix = null)
-    {
-        return app.MapGroup(prefix ?? string.Empty)
-            .RequireAuthorization()
-            .WithOpenApi();
+        private void MapUserEndpoints()
+        {
+            var endpoints = app.MapGroup("/user")
+                .WithTags("User");
+
+            // endpoints.MapAuthorizedGroup()
+            //     .MapEndpoint<Forecast>();
+        }
+
+        private void MapTenantEndpoints()
+        {
+            var endpoints = app.MapGroup("/tenant")
+                .WithTags("Tenant");
+
+            endpoints.MapPublicGroup()
+                .MapEndpoint<CreateTenant>();
+        }
+
+        private RouteGroupBuilder MapPublicGroup(string? prefix = null)
+        {
+            return app.MapGroup(prefix ?? string.Empty)
+                .AllowAnonymous()
+                .AddOpenApiOperationTransformer((operation, context, ct) =>
+                {
+                    // Customize OpenAPI operation here if needed
+                    return Task.CompletedTask;
+                });
+        }
+
+        private IEndpointRouteBuilder MapEndpoint<TEndpoint>() where TEndpoint : IEndpoint
+        {
+            TEndpoint.Map(app);
+            return app;
+        }
+
+        private RouteGroupBuilder MapAuthorizedGroup(string? prefix = null)
+        {
+            return app.MapGroup(prefix ?? string.Empty)
+                .RequireAuthorization()
+                .AddOpenApiOperationTransformer((operation, context, ct) =>
+                {
+                    // Customize OpenAPI operation here if needed
+                    return Task.CompletedTask;
+                });
+        }
     }
 }

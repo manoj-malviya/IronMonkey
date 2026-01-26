@@ -1,4 +1,4 @@
-namespace IronMonkey.Data.Types;
+namespace IronMonkey.Data.Entities;
 
 public sealed class RolePermission
 {

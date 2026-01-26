@@ -1,10 +1,10 @@
-namespace IronMonkey.Data.Types;
+namespace IronMonkey.Data.Entities;
 
 public sealed class Role
 {
     public static readonly Role Admin = new(1, "Admin");
-    public static readonly Role Writer = new(2, "Writer");
-    public static readonly Role Publisher = new(3, "Publisher");
+    public static readonly Role Owner = new(2, "Owner");
+    public static readonly Role TeleCaller = new(3, "TeleCaller");
 
     public Role(int id, string name)
     {
