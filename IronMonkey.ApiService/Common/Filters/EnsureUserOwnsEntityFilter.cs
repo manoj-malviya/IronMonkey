@@ -1,6 +1,6 @@
 // using Microsoft.EntityFrameworkCore;
 // using IronMonkey.Data;
-// using IronMonkey.Data.Types;
+// using IronMonkey.Data.Entities;
 
 // namespace IronMonkey.ApiService.Common.Filters;
 // public class EnsureUserOwnsEntityFilter<TRequest, TEntity>(AppDbContext database, Func<TRequest, int> idSelector) : IEndpointFilter

@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using IronMonkey.Data.Types;
+using IronMonkey.Data.Entities;
 
 namespace IronMonkey.Data.Extensions;
 

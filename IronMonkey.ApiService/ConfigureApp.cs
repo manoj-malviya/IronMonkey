@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using IronMonkey.Data;
-using IronMonkey.Data.Types;
+using IronMonkey.Data.Entities;
 using Serilog;
 
 namespace IronMonkey.ApiService;

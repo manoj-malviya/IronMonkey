@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using IronMonkey.Data.Types;
+using IronMonkey.Data.Entities;
 
 namespace IronMonkey.Data.Configurations;
 
@@ -15,7 +15,7 @@ internal sealed class RolePermissionConfiguration : IEntityTypeConfiguration<Rol
         builder.HasData(
             new RolePermission
             {
-                RoleId = Role.Publisher.Id,
+                RoleId = Role.Owner.Id,
                 PermissionId = Permission.UsersRead.Id
             });
     }

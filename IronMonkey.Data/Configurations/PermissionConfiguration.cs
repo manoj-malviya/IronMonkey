@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using IronMonkey.Data.Types;
+using IronMonkey.Data.Entities;
 
 namespace IronMonkey.Data.Configurations;
 

@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using IronMonkey.Data.Types;
+using IronMonkey.Data.Entities;
 
 namespace IronMonkey.Data.Configurations;
 
@@ -18,8 +18,8 @@ internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
 
         builder.HasData([
             Role.Admin,
-            Role.Writer,
-            Role.Publisher
+            Role.Owner,
+            Role.TeleCaller
         ]);
     }
 }

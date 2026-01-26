@@ -2,7 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.IdentityModel.JsonWebTokens;
 using IronMonkey.ApiService.Common.Extensions;
-using IronMonkey.Data.Types;
+using IronMonkey.Data.Entities;
 
 namespace IronMonkey.ApiService.Common.Auth;
 

@@ -1,6 +1,6 @@
 using IronMonkey.ApiService.Common.Cache;
 using IronMonkey.Data;
-using IronMonkey.Data.Types;
+using IronMonkey.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace IronMonkey.ApiService.Common.Auth;

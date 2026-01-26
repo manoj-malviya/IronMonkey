@@ -4,26 +4,25 @@ using IronMonkey.Data.Abstractions;
 
 namespace IronMonkey.Data.Entities;
 
-public sealed class User : BaseTenantEntity
+public sealed class User : IdentityUser<Guid>
 {
     private readonly List<Role> _roles = new();
 
     private User(Guid tenantId, Guid id, string name, string email, string password)
-        : base(id, tenantId: tenantId)
+        : base(id.ToString())
     {
-        Name = name;
+        TenantId = tenantId;
+        UserName = name;
         Email = email;
-        Password = password;
+        UserName = email;
+        PasswordHash = password;
     }
 
     public User()
     {
     }
 
-    public string Name { get; private set; }
-    public string Email { get; private set; }
-    public string Password { get; private set; }
-
+    public Guid TenantId { get; }
     public string IdentityId { get; private set; } = string.Empty;
 
     public IReadOnlyCollection<Role> Roles => _roles.ToList(); //shadow property
@@ -32,7 +31,7 @@ public sealed class User : BaseTenantEntity
     {
         var user = new User(tenantId, Guid.NewGuid(), name, email, password);
 
-        //user.RaiseDomainEvent(new UserCreatedDomainEvent(user.Id));
+        // user.RaiseDomainEvent(new UserCreatedDomainEvent(user.Id));
 
         user._roles.Add(role);
 

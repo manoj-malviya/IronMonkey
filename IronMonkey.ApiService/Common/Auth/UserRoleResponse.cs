@@ -1,4 +1,4 @@
-using IronMonkey.Data.Types;
+using IronMonkey.Data.Entities;
 
 namespace IronMonkey.ApiService.Common.Auth;
 

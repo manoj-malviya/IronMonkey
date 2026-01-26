@@ -45,7 +45,7 @@ namespace IronMonkey.Data.Migrations
                     b.ToTable("outbox_messages", (string)null);
                 });
 
-            modelBuilder.Entity("IronMonkey.Data.Types.ContentTemplate", b =>
+            modelBuilder.Entity("IronMonkey.Data.Entities.ContentTemplate", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -79,7 +79,7 @@ namespace IronMonkey.Data.Migrations
                     b.ToTable("content_templates", (string)null);
                 });
 
-            modelBuilder.Entity("IronMonkey.Data.Types.Permission", b =>
+            modelBuilder.Entity("IronMonkey.Data.Entities.Permission", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -101,7 +101,7 @@ namespace IronMonkey.Data.Migrations
                         });
                 });
 
-            modelBuilder.Entity("IronMonkey.Data.Types.Role", b =>
+            modelBuilder.Entity("IronMonkey.Data.Entities.Role", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -133,7 +133,7 @@ namespace IronMonkey.Data.Migrations
                         });
                 });
 
-            modelBuilder.Entity("IronMonkey.Data.Types.RolePermission", b =>
+            modelBuilder.Entity("IronMonkey.Data.Entities.RolePermission", b =>
                 {
                     b.Property<int>("RoleId")
                         .HasColumnType("INTEGER");
@@ -155,7 +155,7 @@ namespace IronMonkey.Data.Migrations
                         });
                 });
 
-            modelBuilder.Entity("IronMonkey.Data.Types.User", b =>
+            modelBuilder.Entity("IronMonkey.Data.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -202,7 +202,7 @@ namespace IronMonkey.Data.Migrations
                     b.ToTable("users", (string)null);
                 });
 
-            modelBuilder.Entity("IronMonkey.Data.Types.WriterConnection", b =>
+            modelBuilder.Entity("IronMonkey.Data.Entities.WriterConnection", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -244,7 +244,7 @@ namespace IronMonkey.Data.Migrations
                     b.ToTable("writer_connections", (string)null);
                 });
 
-            modelBuilder.Entity("IronMonkey.Data.Types.WriterInvitation", b =>
+            modelBuilder.Entity("IronMonkey.Data.Entities.WriterInvitation", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -309,24 +309,24 @@ namespace IronMonkey.Data.Migrations
                     b.ToTable("RoleUser", (string)null);
                 });
 
-            modelBuilder.Entity("IronMonkey.Data.Types.RolePermission", b =>
+            modelBuilder.Entity("IronMonkey.Data.Entities.RolePermission", b =>
                 {
-                    b.HasOne("IronMonkey.Data.Types.Permission", null)
+                    b.HasOne("IronMonkey.Data.Entities.Permission", null)
                         .WithMany()
                         .HasForeignKey("PermissionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("IronMonkey.Data.Types.Role", null)
+                    b.HasOne("IronMonkey.Data.Entities.Role", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("IronMonkey.Data.Types.WriterInvitation", b =>
+            modelBuilder.Entity("IronMonkey.Data.Entities.WriterInvitation", b =>
                 {
-                    b.HasOne("IronMonkey.Data.Types.User", "Publisher")
+                    b.HasOne("IronMonkey.Data.Entities.User", "Publisher")
                         .WithMany()
                         .HasForeignKey("PublisherId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -337,13 +337,13 @@ namespace IronMonkey.Data.Migrations
 
             modelBuilder.Entity("RoleUser", b =>
                 {
-                    b.HasOne("IronMonkey.Data.Types.Role", null)
+                    b.HasOne("IronMonkey.Data.Entities.Role", null)
                         .WithMany()
                         .HasForeignKey("RolesId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("IronMonkey.Data.Types.User", null)
+                    b.HasOne("IronMonkey.Data.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UsersId")
                         .OnDelete(DeleteBehavior.Cascade)

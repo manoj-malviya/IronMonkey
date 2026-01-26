@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
@@ -28,6 +29,9 @@ public static class ConfigureServices
             builder.AddAuthorization();
             builder.AddCache();
             builder.AddEmailServices();
+            
+            builder.addApiVersioning();
+            builder.addCors();
         }
 
         private void AddSerilog()
@@ -119,6 +123,29 @@ public static class ConfigureServices
         {
             builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));
             builder.Services.AddScoped<IEmailService, EmailService>();
+        }
+        
+        private void addApiVersioning()
+        {
+            builder.Services.AddApiVersioning(options =>
+            {
+                options.DefaultApiVersion = new ApiVersion(1, 0);
+                options.AssumeDefaultVersionWhenUnspecified = true;
+                options.ReportApiVersions = true;
+            });
+        }
+        
+        private void addCors()
+        {
+            builder.Services.AddCors(options =>
+            {
+                options.AddDefaultPolicy(policy =>
+                {
+                    policy.AllowAnyOrigin()
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                });
+            });
         }
     }
 }
