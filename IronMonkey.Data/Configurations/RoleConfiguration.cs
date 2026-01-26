@@ -17,6 +17,7 @@ internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
             .UsingEntity<RolePermission>();
 
         builder.HasData([
+            Role.SuperAdmin,
             Role.Admin,
             Role.Owner,
             Role.TeleCaller

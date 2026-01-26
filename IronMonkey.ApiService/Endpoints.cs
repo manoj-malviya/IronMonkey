@@ -22,6 +22,7 @@ public static class Endpoints
         endpoints.MapUserEndpoints();
         endpoints.MapHealthCheckEndpoints();
         endpoints.MapTenantEndpoints();
+        endpoints.MapUserManagementEndpoints();
     }
     
     extension(IEndpointRouteBuilder app)
@@ -43,16 +44,16 @@ public static class Endpoints
             var endpoints = app.MapGroup("/auth")
                 .WithTags("Authentication");
 
-            endpoints.MapIdentityApi<User>();
+            // endpoints.MapIdentityApi<User>();
         }
 
         private void MapUserEndpoints()
         {
-            var endpoints = app.MapGroup("/user")
-                .WithTags("User");
+            var endpoints = app.MapGroup("/users")
+                .WithTags("Users");
 
-            // endpoints.MapAuthorizedGroup()
-            //     .MapEndpoint<Forecast>();
+            endpoints.MapPublicGroup()
+                .MapEndpoint<CreateUser>();
         }
 
         private void MapTenantEndpoints()
@@ -62,6 +63,19 @@ public static class Endpoints
 
             endpoints.MapPublicGroup()
                 .MapEndpoint<CreateTenant>();
+        }
+
+        private void MapUserManagementEndpoints()
+        {
+            var endpoints = app.MapGroup("/user-management")
+                .WithTags("User Management");
+
+            endpoints.MapPublicGroup()
+                .MapEndpoint<CreateRole>()
+                .MapEndpoint<ListRoles>()
+                .MapEndpoint<CreatePermission>()
+                .MapEndpoint<ListRolePermissions>()
+                .MapEndpoint<AttachPermissionsToRole>();
         }
 
         private RouteGroupBuilder MapPublicGroup(string? prefix = null)

@@ -75,12 +75,12 @@ public static class ConfigureServices
             });
             builder.Services.AddAuthorization();
         
-            builder.Services.AddIdentityApiEndpoints<User>(options =>
-            {
-                options.User.RequireUniqueEmail = true;
-                options.SignIn.RequireConfirmedEmail = true;
-            })
-            .AddEntityFrameworkStores<AppDbContext>();
+            // builder.Services.AddIdentityApiEndpoints<User>(options =>
+            // {
+            //     options.User.RequireUniqueEmail = true;
+            //     options.SignIn.RequireConfirmedEmail = true;
+            // })
+            // .AddEntityFrameworkStores<AppDbContext>();
             //
             // builder.Services.AddIdentity<User, IdentityRole>(options =>
             //     {

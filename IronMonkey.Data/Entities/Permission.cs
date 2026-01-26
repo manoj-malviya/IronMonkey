@@ -13,4 +13,9 @@ public sealed class Permission
     public int Id { get; init; }
 
     public string Name { get; init; }
+
+    public static Permission Create(int id, string name)
+    {
+        return new Permission(id, name);
+    }
 }

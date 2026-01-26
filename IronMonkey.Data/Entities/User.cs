@@ -4,25 +4,21 @@ using IronMonkey.Data.Abstractions;
 
 namespace IronMonkey.Data.Entities;
 
-public sealed class User : IdentityUser<Guid>
+public sealed class User : BaseTenantEntity
 {
     private readonly List<Role> _roles = new();
 
     private User(Guid tenantId, Guid id, string name, string email, string password)
-        : base(id.ToString())
+        : base(id, tenantId: tenantId)
     {
-        TenantId = tenantId;
         UserName = name;
         Email = email;
-        UserName = email;
         PasswordHash = password;
     }
 
-    public User()
-    {
-    }
-
-    public Guid TenantId { get; }
+    public string UserName { get; private set; }
+    public string Email { get; private set; }
+    public string PasswordHash { get; private set; }
     public string IdentityId { get; private set; } = string.Empty;
 
     public IReadOnlyCollection<Role> Roles => _roles.ToList(); //shadow property
