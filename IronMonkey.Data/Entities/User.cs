@@ -11,14 +11,14 @@ public sealed class User : BaseTenantEntity
     private User(Guid tenantId, Guid id, string name, string email, string password)
         : base(id, tenantId: tenantId)
     {
-        UserName = name;
+        Name = name;
         Email = email;
-        PasswordHash = password;
+        Password = password;
     }
 
-    public string UserName { get; private set; }
+    public string Name { get; private set; }
     public string Email { get; private set; }
-    public string PasswordHash { get; private set; }
+    public string Password { get; private set; }
     public string IdentityId { get; private set; } = string.Empty;
 
     public IReadOnlyCollection<Role> Roles => _roles.ToList(); //shadow property

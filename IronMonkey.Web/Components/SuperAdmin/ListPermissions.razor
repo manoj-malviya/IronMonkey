@@ -1,0 +1,39 @@
+@page "/superadmin/list-permissions"
+
+<h1>List Permissions</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (permissions != null)
+        {
+            @foreach (var permission in permissions)
+            {
+                <tr>
+                    <td>@permission.PermissionId</td>
+                    <td>@permission.PermissionName</td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Permission> permissions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        permissions = await ApiClient.GetAsync<List<Permission>>("/api/user-management/permissions");
+    }
+
+    public class Permission
+    {
+        public int PermissionId { get; set; }
+        public string PermissionName { get; set; }
+    }
+}

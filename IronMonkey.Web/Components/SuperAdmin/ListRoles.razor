@@ -1,0 +1,39 @@
+@page "/superadmin/list-roles"
+
+<h1>List Roles</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (roles != null)
+        {
+            @foreach (var role in roles)
+            {
+                <tr>
+                    <td>@role.RoleId</td>
+                    <td>@role.RoleName</td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Role> roles;
+
+    protected override async Task OnInitializedAsync()
+    {
+        roles = await ApiClient.GetAsync<List<Role>>("/api/user-management/roles");
+    }
+
+    public class Role
+    {
+        public int RoleId { get; set; }
+        public string RoleName { get; set; }
+    }
+}
