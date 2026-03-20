@@ -43,11 +43,13 @@ public class TenantIsolationTests : IClassFixture<PostgreSqlFixture>
         // Seed one User in Tenant A's DB
         var userA = User.Create(tenantAId, "Alice", "alice@a.com", "hashed_pw", teleCallerA);
         dbASeed.Users.Add(userA);
+        dbASeed.Entry(teleCallerA).State = Microsoft.EntityFrameworkCore.EntityState.Unchanged;
         await dbASeed.SaveChangesAsync();
 
         // Seed one User in Tenant B's DB
         var userB = User.Create(tenantBId, "Bob", "bob@b.com", "hashed_pw", teleCallerB);
         dbBSeed.Users.Add(userB);
+        dbBSeed.Entry(teleCallerB).State = Microsoft.EntityFrameworkCore.EntityState.Unchanged;
         await dbBSeed.SaveChangesAsync();
 
         // Act: open a fresh Tenant A context and query all users
@@ -77,6 +79,7 @@ public class TenantIsolationTests : IClassFixture<PostgreSqlFixture>
         // Act: create a user and save
         var user = User.Create(tenantId, "Charlie", "charlie@c.com", "hashed_pw", teleCaller);
         dbSeed.Users.Add(user);
+        dbSeed.Entry(teleCaller).State = Microsoft.EntityFrameworkCore.EntityState.Unchanged;
         await dbSeed.SaveChangesAsync();
 
         // Assert: User.TenantId == tenantId (verified from fresh context after save)
