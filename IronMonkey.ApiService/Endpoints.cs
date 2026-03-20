@@ -41,10 +41,8 @@ public static class Endpoints
 
         private void MapAuthenticationEndpoints()
         {
-            var endpoints = app.MapGroup("/auth")
-                .WithTags("Authentication");
-
-            // endpoints.MapIdentityApi<User>();
+            app.MapPublicGroup()
+                .MapEndpoint<LoginEndpoint>();
         }
 
         private void MapUserEndpoints()

@@ -14,11 +14,21 @@ public class CentralDbContext(DbContextOptions<CentralDbContext> options) : DbCo
 {
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<SignupRequest> SignupRequests => Set<SignupRequest>();
+    public DbSet<UserTenantIndex> UserTenantIndex => Set<UserTenantIndex>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new TenantConfiguration());
         modelBuilder.ApplyConfiguration(new SignupRequestConfiguration());
+
+        modelBuilder.Entity<UserTenantIndex>(b =>
+        {
+            b.ToTable("UserTenantIndex");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => x.Email);
+            b.Property(x => x.Email).IsRequired().HasMaxLength(320);
+        });
+
         base.OnModelCreating(modelBuilder);
     }
 

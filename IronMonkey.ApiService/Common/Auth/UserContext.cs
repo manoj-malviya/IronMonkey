@@ -24,4 +24,11 @@ internal sealed class UserContext : IUserContext
             .User
             .GetIdentityId() ??
         throw new ApplicationException("User context is unavailable");
+
+    public Guid TenantId =>
+        _httpContextAccessor
+            .HttpContext?
+            .User
+            .GetTenantId() ??
+        throw new ApplicationException("Tenant context is unavailable");
 }

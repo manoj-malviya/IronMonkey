@@ -99,6 +99,7 @@ public static class ConfigureServices
             builder.Services.AddHttpContextAccessor();
 
             builder.Services.AddScoped<IUserContext, UserContext>();
+            builder.Services.AddScoped<ITenantService, TenantService>();
         }
 
         private void AddAuthorization()
