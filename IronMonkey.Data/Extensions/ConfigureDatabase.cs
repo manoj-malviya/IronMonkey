@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using IronMonkey.Data.Entities;
 
 namespace IronMonkey.Data.Extensions;
 
@@ -12,7 +11,7 @@ public static class ConfigureDatabase
         services.AddDbContext<AppDbContext>(options =>
         {
             var conn = configuration.GetConnectionString("DefaultConnection");
-            options.UseSqlite(conn);
+            options.UseNpgsql(conn);
         });
     }
 }
