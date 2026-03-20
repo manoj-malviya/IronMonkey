@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
+using IronMonkey.ApiService.Authentication.Services;
 using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Common.Cache;
 using IronMonkey.ApiService.Common.Services;
@@ -32,6 +33,8 @@ public static class ConfigureServices
             
             builder.addApiVersioning();
             builder.addCors();
+
+            builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
         }
 
         private void AddSerilog()
