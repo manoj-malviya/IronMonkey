@@ -23,6 +23,7 @@ public static class Endpoints
         endpoints.MapHealthCheckEndpoints();
         endpoints.MapTenantEndpoints();
         endpoints.MapUserManagementEndpoints();
+        endpoints.MapPlatformAdminEndpoints();
     }
     
     extension(IEndpointRouteBuilder app)
@@ -42,7 +43,20 @@ public static class Endpoints
         private void MapAuthenticationEndpoints()
         {
             app.MapPublicGroup()
-                .MapEndpoint<LoginEndpoint>();
+                .MapEndpoint<LoginEndpoint>()
+                .MapEndpoint<SignupRequestEndpoint>();
+        }
+
+        private void MapPlatformAdminEndpoints()
+        {
+            var endpoints = app.MapGroup("/admin")
+                .WithTags("Platform Admin")
+                .RequireAuthorization();
+
+            endpoints.MapEndpoint<ApproveTenantEndpoint>();
+            endpoints.MapEndpoint<RejectTenantEndpoint>();
+            endpoints.MapEndpoint<ListSignupRequestsEndpoint>();
+            endpoints.MapEndpoint<ProvisionTenantEndpoint>();
         }
 
         private void MapUserEndpoints()
