@@ -1,12 +1,11 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var apiService = builder.AddProject<Projects.IronMonkey_ApiService>("apiservice")
-    .WithHttpHealthCheck("/health");
+var postgres = builder.AddPostgres("postgres");
+var centralDb = postgres.AddDatabase("CentralDb");
 
-// builder.AddProject<Projects.IronMonkey_Web>("webfrontend")
-//     .WithExternalHttpEndpoints()
-//     .WithHttpHealthCheck("/health")
-//     .WithReference(apiService)
-//     .WaitFor(apiService);
+var apiService = builder.AddProject<Projects.IronMonkey_ApiService>("apiservice")
+    .WithReference(centralDb)
+    .WaitFor(centralDb)
+    .WithHttpHealthCheck("/health");
 
 builder.Build().Run();

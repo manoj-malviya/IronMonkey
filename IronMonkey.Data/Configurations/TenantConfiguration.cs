@@ -36,5 +36,19 @@ internal sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
 
         builder.Property(tenant => tenant.ThemeSettings)
             .HasColumnType("jsonb");
+
+        builder.Property(tenant => tenant.ApprovalStatus)
+            .IsRequired()
+            .HasMaxLength(50)
+            .HasDefaultValue("Pending");
+
+        builder.Property(tenant => tenant.ApprovalNote)
+            .HasMaxLength(1000);
+
+        builder.Property(tenant => tenant.IsProvisioned)
+            .HasDefaultValue(false);
+
+        builder.Property(tenant => tenant.ApprovedAt);
+        builder.Property(tenant => tenant.ProvisionedAt);
     }
 }
