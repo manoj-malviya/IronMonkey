@@ -66,7 +66,9 @@ Each task was committed atomically:
 
 1. **Task 1: Fix PendingModelChangesWarning + achieve green test suite** - `3751aa8` (fix)
 
-**Plan metadata:** (pending — docs commit after checkpoint)
+2. **Checkpoint fix: prevent Role re-insertion in TenantIsolationTests** - `0de021c` (fix)
+
+**Plan metadata:** (docs commit after checkpoint)
 
 ## Files Created/Modified
 - `IronMonkey.Data/Migrations/Tenant/20260320105659_AddOutboxMessagePublished.cs` - EF migration adding Published boolean column (default false) to outbox_messages
@@ -90,8 +92,18 @@ Each task was committed atomically:
 
 ---
 
-**Total deviations:** 1 auto-fixed (Rule 1 - missing migration = runtime bug)
-**Impact on plan:** Auto-fix was the only work needed. All test files were already fully implemented from Plans 02-05.
+**2. [Rule 1 - Bug] Fixed Role re-insertion causing unique constraint violation in TenantIsolationTests**
+- **Found during:** Task 2 (human-verify checkpoint — 2 tests failing)
+- **Issue:** TenantIsolationTests.SeedAsync called `db.Roles.Add(new Role("Admin"))` unconditionally after `MigrateAsync()` had already seeded the Admin role. On the second test database creation the unique constraint fired.
+- **Fix:** Changed seed to load-or-insert: `await db.Roles.FirstOrDefaultAsync(r => r.Name == "Admin") ?? new Role("Admin")`
+- **Files modified:** IronMonkey.Tests/Integration/TenantIsolationTests.cs
+- **Verification:** All 10 tests pass with 0 failed, 0 skipped
+- **Committed in:** 0de021c (post-checkpoint fix)
+
+---
+
+**Total deviations:** 2 auto-fixed (2x Rule 1 - runtime bugs)
+**Impact on plan:** Both auto-fixes required for test idempotency and correctness. No scope creep.
 
 ## Issues Encountered
 - Tests were written in Plans 02-05 but not yet run end-to-end. The `Published` property gap was invisible until `TenantProvisioningService.ProvisionTenantAsync()` ran `MigrateAsync()` in a real test container.

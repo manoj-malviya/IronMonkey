@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: "Completed 01-multi-tenancy-foundation/01-06-PLAN.md (checkpoint:human-verify pending)"
-last_updated: "2026-03-20T10:59:45.872Z"
+stopped_at: Completed 01-multi-tenancy-foundation/01-06-PLAN.md
+last_updated: "2026-03-20T11:08:37.531Z"
 last_activity: 2026-03-19 — Roadmap created, all 20 v1 requirements mapped to 5 phases
 progress:
   total_phases: 5
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-multi-tenancy-foundation P04 | 7 | 3 tasks | 9 files |
 | Phase 01-multi-tenancy-foundation P05 | 428 | 2 tasks | 10 files |
 | Phase 01-multi-tenancy-foundation P06 | 15 | 1 tasks | 3 files |
+| Phase 01-multi-tenancy-foundation P06 | 15 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,7 @@ Recent decisions affecting current work:
 - [Phase 01-05]: OutboxMessage.Published property added alongside ProcessedOnUtc — MarkAsPublished() sets both
 - [Phase 01-05]: MigrateAllTenantsEndpoint continues on partial failure — returns FailedCount and per-tenant error list
 - [Phase 01-multi-tenancy-foundation]: OutboxMessage.Published migration added inline — MigrateAsync() in TenantProvisioningService requires full migration history alignment
+- [Phase 01-multi-tenancy-foundation]: TenantIsolationTests load-or-insert role seeding: EF migration seeds roles during MigrateAsync() — test seed must check before inserting to avoid unique constraint violation
 
 ### Pending Todos
 
@@ -91,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T10:59:45.868Z
-Stopped at: Completed 01-multi-tenancy-foundation/01-06-PLAN.md (checkpoint:human-verify pending)
+Last session: 2026-03-20T11:08:37.525Z
+Stopped at: Completed 01-multi-tenancy-foundation/01-06-PLAN.md
 Resume file: None
