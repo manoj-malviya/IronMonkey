@@ -1,8 +1,11 @@
 using Asp.Versioning;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using IronMonkey.ApiService.Authentication.Services;
+using IronMonkey.ApiService.BackgroundJobs;
 using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Common.Cache;
 using IronMonkey.ApiService.Common.Services;
@@ -35,6 +38,7 @@ public static class ConfigureServices
             builder.addCors();
 
             builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
+            builder.AddHangfire();
         }
 
         private void AddSerilog()
@@ -150,6 +154,27 @@ public static class ConfigureServices
                         .AllowAnyMethod();
                 });
             });
+        }
+
+        private void AddHangfire()
+        {
+            var connectionString = builder.Configuration.GetConnectionString("CentralDb")
+                ?? throw new InvalidOperationException("CentralDb connection string required for Hangfire.");
+
+            builder.Services.AddHangfire(config => config
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UsePostgreSqlStorage(c => c.UseNpgsqlConnection(connectionString))
+            );
+
+            builder.Services.AddHangfireServer(options =>
+            {
+                options.WorkerCount = Environment.ProcessorCount * 2;
+                options.Queues = ["default", "tenant"];
+            });
+
+            builder.Services.AddScoped<ITenantRegistry, TenantRegistry>();
         }
     }
 }

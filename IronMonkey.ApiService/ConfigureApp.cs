@@ -1,3 +1,5 @@
+using Hangfire;
+using Hangfire.Dashboard;
 using Microsoft.EntityFrameworkCore;
 using IronMonkey.Data;
 using Serilog;
@@ -15,7 +17,13 @@ public static class ConfigureApp
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapEndpoints();
-        
+
+        app.UseHangfireDashboard("/hangfire", new DashboardOptions
+        {
+            Authorization = [new HangfireAdminOnlyAuthFilter()],
+            IsReadOnlyFunc = ctx => false
+        });
+
         await app.EnsureDatabaseCreated();
     }
 
@@ -24,5 +32,18 @@ public static class ConfigureApp
         using var scope = app.Services.CreateScope();
         var centralDb = scope.ServiceProvider.GetRequiredService<CentralDbContext>();
         await centralDb.Database.MigrateAsync();
+    }
+}
+
+/// <summary>
+/// Restricts the Hangfire dashboard to authenticated users with Admin or SuperAdmin role.
+/// </summary>
+public class HangfireAdminOnlyAuthFilter : IDashboardAuthorizationFilter
+{
+    public bool Authorize(DashboardContext context)
+    {
+        var httpContext = context.GetHttpContext();
+        return httpContext.User.Identity?.IsAuthenticated == true
+            && (httpContext.User.IsInRole("Admin") || httpContext.User.IsInRole("SuperAdmin"));
     }
 }
