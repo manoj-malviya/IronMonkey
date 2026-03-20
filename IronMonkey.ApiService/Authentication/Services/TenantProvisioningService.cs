@@ -95,9 +95,10 @@ public class TenantProvisioningService : ITenantProvisioningService
         SignupRequest signupRequest,
         CancellationToken cancellationToken)
     {
-        // Seed admin role
-        var adminRole = Role.Create(201, "Admin");
-        db.Roles.Add(adminRole);
+        // Roles are already seeded by EF migration (SuperAdmin=1, Admin=201, Owner=301, TeleCaller=302)
+        // Look up the Admin role from the migrated DB — do not re-insert
+        var adminRole = await db.Roles
+            .SingleAsync(r => r.Name == "Admin", cancellationToken);
 
         // Seed admin user with BCrypt-hashed password from signup request
         // Note: AdminPasswordHash in SignupRequest is already BCrypt-hashed
