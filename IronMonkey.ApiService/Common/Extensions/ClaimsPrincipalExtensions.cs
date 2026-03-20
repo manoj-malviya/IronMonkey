@@ -19,4 +19,10 @@ internal static class ClaimsPrincipalExtensions
         return principal?.FindFirstValue(ClaimTypes.NameIdentifier) ??
                throw new ApplicationException("User identity is unavailable");
     }
+
+    public static Guid? GetTenantId(this ClaimsPrincipal? principal)
+    {
+        var value = principal?.FindFirst("tenant_id")?.Value;
+        return value is not null ? Guid.Parse(value) : null;
+    }
 }
