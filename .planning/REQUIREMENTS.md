@@ -9,8 +9,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Multi-Tenancy
 
-- [ ] **TNCY-01**: System provisions isolated database per tenant on signup
-- [ ] **TNCY-02**: All queries enforce tenant isolation — no cross-tenant data leakage
+- [x] **TNCY-01**: System provisions isolated database per tenant on signup
+- [x] **TNCY-02**: All queries enforce tenant isolation — no cross-tenant data leakage
 
 ### Lead Data
 
@@ -89,8 +89,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TNCY-01 | Phase 1 | Pending |
-| TNCY-02 | Phase 1 | Pending |
+| TNCY-01 | Phase 1 | Complete |
+| TNCY-02 | Phase 1 | Complete |
 | LEAD-01 | Phase 2 | Pending |
 | LEAD-02 | Phase 2 | Pending |
 | LEAD-03 | Phase 2 | Pending |
