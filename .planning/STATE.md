@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 01-multi-tenancy-foundation 01-01-PLAN.md
-last_updated: "2026-03-20T09:46:53.608Z"
+stopped_at: Completed 01-multi-tenancy-foundation/01-02-PLAN.md
+last_updated: "2026-03-20T10:04:53.011Z"
 last_activity: 2026-03-19 — Roadmap created, all 20 v1 requirements mapped to 5 phases
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 6
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -51,6 +51,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 01-multi-tenancy-foundation P01 | 10 | 2 tasks | 7 files |
+| Phase 01-multi-tenancy-foundation P02 | 28 | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -62,6 +63,9 @@ Recent decisions affecting current work:
 - DB-per-tenant isolation: Maximum data isolation, compliance-friendly (pending resolution)
 - Billing model: Deferred — not finalized (pending resolution)
 - [Phase 01-multi-tenancy-foundation]: xUnit 2.9.3 test project with TestContainers PostgreSQL fixture (postgres:15-alpine) and Fact(Skip) stubs as Wave 0 test scaffold
+- [Phase 01-02]: Npgsql 10.0.1 used (not 9.x) — 9.x binary-incompatible with EF Core 10.x at runtime
+- [Phase 01-02]: AppDbContext kept as CentralDbContext shim for backward compat during endpoint migration
+- [Phase 01-02]: EF Core upgraded to 10.0.5 to match dotnet-ef tool version, avoiding migration generation errors
 
 ### Pending Todos
 
@@ -74,6 +78,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T09:46:53.600Z
-Stopped at: Completed 01-multi-tenancy-foundation 01-01-PLAN.md
+Last session: 2026-03-20T10:04:53.008Z
+Stopped at: Completed 01-multi-tenancy-foundation/01-02-PLAN.md
 Resume file: None
