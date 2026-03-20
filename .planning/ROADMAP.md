@@ -29,7 +29,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. A user authenticated to Tenant A cannot retrieve any data belonging to Tenant B — verified by integration tests that attempt cross-tenant reads
   3. All API requests resolve the correct tenant database from JWT claims without any explicit per-request configuration
   4. Background jobs that touch tenant data carry tenant context — no job can run against a tenant database without that tenant being set in scope
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+- [ ] 01-01-PLAN.md — Test scaffold (xUnit + TestContainers)
+- [ ] 01-02-PLAN.md — Data layer: PostgreSQL, CentralDbContext, TenantDbContext
+- [ ] 01-03-PLAN.md — Auth pipeline: JWT TenantId, ITenantService, LoginEndpoint
+- [ ] 01-04-PLAN.md — Tenant provisioning workflow
+- [ ] 01-05-PLAN.md — Hangfire background jobs + migration orchestration
+- [ ] 01-06-PLAN.md — Final test completion + human verification
 
 ### Phase 2: Configurable Lead Model
 **Goal**: A tenant can fully configure the shape of their lead and pipeline data — custom fields, stages, and duplicate rules — before any leads are created
@@ -84,7 +91,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Multi-Tenancy Foundation | 0/TBD | Not started | - |
+| 1. Multi-Tenancy Foundation | 0/6 | Not started | - |
 | 2. Configurable Lead Model | 0/TBD | Not started | - |
 | 3. Lead Ingestion | 0/TBD | Not started | - |
 | 4. Pipeline & Workflow Engine | 0/TBD | Not started | - |
