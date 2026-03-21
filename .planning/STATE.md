@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 03-lead-ingestion/03-02-PLAN.md
-last_updated: "2026-03-21T18:26:16.751Z"
+stopped_at: Completed 03-lead-ingestion/03-03-PLAN.md
+last_updated: "2026-03-21T18:35:49.722Z"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 19
-  completed_plans: 14
+  completed_plans: 15
 ---
 
 # Project State
@@ -61,6 +61,7 @@ Plan: Not started
 | Phase 02-configurable-lead-model P05 | 15 | 2 tasks | 6 files |
 | Phase 03-lead-ingestion P01 | 4 | 2 tasks | 7 files |
 | Phase 03-lead-ingestion P02 | 6 | 2 tasks | 9 files |
+| Phase 03-lead-ingestion P03 | 6 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,7 @@ Recent decisions affecting current work:
 - [Phase 03-lead-ingestion]: 03-06-PLAN chosen as implementation target for all Phase 3 stubs — consistent with Phase 1 and Phase 2 naming convention
 - [Phase 03-lead-ingestion]: ApiKey in CentralDbContext for O(1) tenant lookup by key hash without prior tenant context
 - [Phase 03-lead-ingestion]: WebForm in CentralDbContext so form token lookup works before tenant is resolved
+- [Phase 03-lead-ingestion]: CreateLeadViaApiEndpoint uses AllowAnonymous + X-Api-Key header (not JWT RequireAuthorization) — external callers have no JWT; tenant resolved via IApiKeyService
 
 ### Pending Todos
 
@@ -115,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T18:26:16.748Z
-Stopped at: Completed 03-lead-ingestion/03-02-PLAN.md
+Last session: 2026-03-21T18:35:49.716Z
+Stopped at: Completed 03-lead-ingestion/03-03-PLAN.md
 Resume file: None
