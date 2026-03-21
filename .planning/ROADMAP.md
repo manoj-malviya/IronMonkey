@@ -55,7 +55,7 @@ Plans:
 - [x] 02-03-PLAN.md — API endpoints: custom fields CRUD, pipeline stage CRUD, lead creation with source
 - [x] 02-04-PLAN.md — Duplicate detection service (FuzzySharp) + lead merge service with audit
 - [x] 02-05-PLAN.md — Integration test implementation + human verification
-- [ ] 02-06-PLAN.md — Gap closure: register CheckDuplicatesEndpoint and MergeLeadsEndpoint in Endpoints.cs
+- [x] 02-06-PLAN.md — Gap closure: register CheckDuplicatesEndpoint and MergeLeadsEndpoint in Endpoints.cs
 
 ### Phase 3: Lead Ingestion
 **Goal**: Leads can enter the system through any channel — manual entry, bulk import, REST API, or web form — with consistent validation and source tracking
