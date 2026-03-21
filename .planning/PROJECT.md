@@ -19,14 +19,15 @@ Any business can configure their complete lead management workflow — fields, s
 - ✓ ASP.NET Identity authentication foundation — existing
 - ✓ Fluent Validation for request validation — existing
 - ✓ Domain event outbox pattern — existing
+- ✓ Multi-tenancy with DB-per-tenant isolation — Validated in Phase 1
+- ✓ Configurable lead fields (custom fields per tenant) — Validated in Phase 2 (LEAD-01)
+- ✓ Configurable lead statuses and pipelines — Validated in Phase 2 (LEAD-02, LEAD-03)
+- ✓ Duplicate detection and lead merge — Validated in Phase 2 (LEAD-04, LEAD-05)
 
 ### Active
 
-- [ ] Multi-tenancy with DB-per-tenant isolation
 - [ ] Tenant onboarding with industry recipe/template selection
-- [ ] Configurable lead fields (custom fields per tenant)
 - [ ] Configurable customer fields (custom fields per tenant)
-- [ ] Configurable lead statuses and pipelines
 - [ ] State machine for lead lifecycle transitions
 - [ ] Workflow engine with triggers and conditional logic
 - [ ] Auto-actions (assign, notify, schedule follow-up)
@@ -76,4 +77,4 @@ The system must be truly domain-agnostic — the data model for leads, statuses,
 | Billing model deferred | Not finalized — will decide between subscription tiers, usage-based, or hybrid | — Pending |
 
 ---
-*Last updated: 2026-03-19 after initialization*
+*Last updated: 2026-03-21 after Phase 2 completion*
