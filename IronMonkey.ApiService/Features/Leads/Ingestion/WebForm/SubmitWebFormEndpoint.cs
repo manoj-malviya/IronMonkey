@@ -13,7 +13,8 @@ public class SubmitWebFormEndpoint : IEndpoint
         .WithSummary("Accept web form submission")
         .WithTags("Web Forms")
         .AllowAnonymous()
-        .DisableAntiforgery();  // Public endpoint, form-data POST
+        .DisableAntiforgery()  // Public endpoint, form-data POST
+        .RequireRateLimiting("form-token-limit");
 
     // Fields mapped from HTML form inputs
     public record SubmissionRequest(

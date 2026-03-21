@@ -14,7 +14,8 @@ public class CreateLeadViaApiEndpoint : IEndpoint
         .MapPost("/api/external/leads", Handle)
         .WithSummary("Create a lead via external REST API using X-Api-Key authentication")
         .WithTags("External API")
-        .AllowAnonymous();  // Auth is X-Api-Key header, not JWT
+        .AllowAnonymous()  // Auth is X-Api-Key header, not JWT
+        .RequireRateLimiting("api-key-limit");
 
     public record Request(
         string FirstName,

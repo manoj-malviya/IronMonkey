@@ -33,6 +33,7 @@ public static class Endpoints
         endpoints.MapUserManagementEndpoints();
         endpoints.MapPlatformAdminEndpoints();
         endpoints.MapLeadsEndpoints();
+        endpoints.MapIngestionEndpoints();
     }
     
     extension(IEndpointRouteBuilder app)
@@ -110,21 +111,28 @@ public static class Endpoints
             CreateLeadEndpoint.Map(app);
             CheckDuplicatesEndpoint.Map(app);
             MergeLeadsEndpoint.Map(app);
-            // API key management endpoints (require JWT auth)
+        }
+
+        private void MapIngestionEndpoints()
+        {
+            // API key management (authenticated, for tenant admins)
             GenerateApiKeyEndpoint.Map(app);
             ListApiKeysEndpoint.Map(app);
             DeleteApiKeyEndpoint.Map(app);
-            // External lead ingestion (X-Api-Key auth, no JWT)
+
+            // External REST API lead creation (X-Api-Key auth, rate limited)
             CreateLeadViaApiEndpoint.Map(app);
-            // Web form endpoints
-            CreateWebFormEndpoint.Map(app);
-            GetWebFormPageEndpoint.Map(app);
-            SubmitWebFormEndpoint.Map(app);
-            DeleteWebFormEndpoint.Map(app);
-            // CSV bulk import endpoints
+
+            // CSV import (authenticated)
             UploadLeadsFromCsvEndpoint.Map(app);
             GetImportStatusEndpoint.Map(app);
             GetImportErrorsEndpoint.Map(app);
+
+            // Web forms (create/delete: authenticated; get/submit: anonymous)
+            CreateWebFormEndpoint.Map(app);
+            DeleteWebFormEndpoint.Map(app);
+            GetWebFormPageEndpoint.Map(app);
+            SubmitWebFormEndpoint.Map(app);
         }
 
         private RouteGroupBuilder MapPublicGroup(string? prefix = null)
