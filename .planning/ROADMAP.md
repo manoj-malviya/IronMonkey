@@ -63,10 +63,18 @@ Plans:
 **Requirements**: INGST-01, INGST-02, INGST-03, INGST-04
 **Success Criteria** (what must be TRUE):
   1. User can create a lead by filling in a form in the UI and the lead appears in the pipeline immediately after saving
-  2. User can upload a CSV or Excel file, map columns to lead fields, see validation errors before committing, and import valid rows in bulk
+  2. User can upload a CSV file, see validation errors before committing, and import valid rows in bulk with bad rows skipped
   3. An external system can POST to the REST API with lead data and receive a created lead ID in response — the lead appears in the pipeline
   4. Tenant admin can generate an embeddable web form that, when submitted on an external website, creates a lead in the tenant's pipeline
-**Plans**: TBD
+**Plans**: 7 plans
+Plans:
+- [ ] 03-01-PLAN.md — Wave 0 test stubs (7 test files for all INGST requirements)
+- [ ] 03-02-PLAN.md — Data layer: ApiKey, WebForm (central), ImportBatch (tenant) entities + EF migrations
+- [ ] 03-03-PLAN.md — API key service + REST API ingestion endpoint (INGST-03)
+- [ ] 03-04-PLAN.md — CSV import service + Hangfire job + import endpoints (INGST-02)
+- [ ] 03-05-PLAN.md — Web form service + hosted page + submission endpoint (INGST-04)
+- [ ] 03-06-PLAN.md — Wire all: DI registrations, endpoint registration, rate limiting, manual entry duplicate warning (INGST-01)
+- [ ] 03-07-PLAN.md — Integration test implementation + human verification of hosted form page
 
 ### Phase 4: Pipeline & Workflow Engine
 **Goal**: Users can manage leads through a visual pipeline with task tracking, assignment routing, and automated rules that act on lead state changes
@@ -100,6 +108,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Multi-Tenancy Foundation | 6/6 | Complete   | 2026-03-20 |
 | 2. Configurable Lead Model | 5/6 | Gap closure | - |
-| 3. Lead Ingestion | 0/TBD | Not started | - |
+| 3. Lead Ingestion | 0/7 | Not started | - |
 | 4. Pipeline & Workflow Engine | 0/TBD | Not started | - |
 | 5. Activity & Reporting | 0/TBD | Not started | - |
