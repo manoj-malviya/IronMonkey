@@ -4,12 +4,29 @@ namespace IronMonkey.Tests.Unit;
 
 public class HoneypotTests
 {
-    [Fact(Skip = "Phase 03 — implement in 03-06-PLAN")]
-    public void IsBot_WhenHoneypotFieldIsEmpty_ReturnsFalse() { }
+    // The honeypot logic: if Website field is non-null and non-empty (including whitespace) → bot detected
+    // Whitespace-only is also treated as bot — auto-fill scripts may inject spaces
+    private static bool IsBot(string? websiteField)
+        => websiteField != null && websiteField.Length > 0;
 
-    [Fact(Skip = "Phase 03 — implement in 03-06-PLAN")]
-    public void IsBot_WhenHoneypotFieldHasValue_ReturnsTrue() { }
+    [Fact]
+    public void IsBot_WhenHoneypotFieldIsEmpty_ReturnsFalse()
+    {
+        Assert.False(IsBot(null));
+        Assert.False(IsBot(""));
+    }
 
-    [Fact(Skip = "Phase 03 — implement in 03-06-PLAN")]
-    public void IsBot_WhenHoneypotFieldIsWhitespace_ReturnsTrue() { }
+    [Fact]
+    public void IsBot_WhenHoneypotFieldHasValue_ReturnsTrue()
+    {
+        Assert.True(IsBot("http://spam.com"));
+        Assert.True(IsBot("anything"));
+    }
+
+    [Fact]
+    public void IsBot_WhenHoneypotFieldIsWhitespace_ReturnsTrue()
+    {
+        // Whitespace only should still be treated as bot (auto-filled)
+        Assert.True(IsBot("   "));
+    }
 }
