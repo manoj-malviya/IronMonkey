@@ -1,4 +1,0 @@
-{
-    "dotnet.defaultSolution": "iron-monkey.sln",
-    "aws.telemetry": false
-}

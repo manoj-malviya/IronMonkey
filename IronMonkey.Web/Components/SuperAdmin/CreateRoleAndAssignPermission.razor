@@ -1,0 +1,63 @@
+@page "/superadmin/create-role"
+
+<h1>Create Role and Assign Permissions</h1>
+
+<div class="form-group">
+    <label for="roleName">Role Name:</label>
+    <input type="text" id="roleName" @bind="roleName" class="form-control" />
+</div>
+
+<h2>Permissions</h2>
+<div>
+    @if (permissions != null)
+    {
+        @foreach (var permission in permissions)
+        {
+            <div>
+                <input type="checkbox" @bind="permission.Selected" /> @permission.PermissionName
+            </div>
+        }
+    }
+</div>
+
+<button class="btn btn-primary" @onclick="CreateRole">Create Role</button>
+
+@code {
+    private string roleName;
+    private List<Permission> permissions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        permissions = await ApiClient.GetAsync<List<Permission>>("/api/user-management/permissions");
+    }
+
+    private async Task CreateRole()
+    {
+        var response = await ApiClient.PostAsync("/api/user-management/roles", new { RoleName = roleName });
+        if (response.IsSuccessStatusCode)
+        {
+            var role = await response.Content.ReadFromJsonAsync<Role>();
+            var selectedPermissions = permissions.Where(p => p.Selected).Select(p => p.PermissionId).ToList();
+
+            await ApiClient.PostAsync($"/api/user-management/roles/{role.RoleId}/permissions", new { PermissionIds = selectedPermissions });
+            await JSRuntime.InvokeVoidAsync("alert", "Role and permissions created successfully!");
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Failed to create role.");
+        }
+    }
+
+    public class Permission
+    {
+        public int PermissionId { get; set; }
+        public string PermissionName { get; set; }
+        public bool Selected { get; set; }
+    }
+
+    public class Role
+    {
+        public int RoleId { get; set; }
+        public string RoleName { get; set; }
+    }
+}

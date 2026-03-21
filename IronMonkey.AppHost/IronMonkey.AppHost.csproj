@@ -1,0 +1,16 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.1.0">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>5431a824-64d2-42b2-b043-b95a56fa7784</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\IronMonkey.ApiService\IronMonkey.ApiService.csproj" />
+    <ProjectReference Include="..\IronMonkey.Web\IronMonkey.Web.csproj" />
+  </ItemGroup>
+
+</Project>
