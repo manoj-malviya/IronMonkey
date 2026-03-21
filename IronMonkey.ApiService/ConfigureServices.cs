@@ -11,6 +11,7 @@ using IronMonkey.ApiService.Common.Cache;
 using IronMonkey.ApiService.Common.Services;
 using IronMonkey.ApiService.Features.Leads.Duplicates;
 using IronMonkey.ApiService.Features.Leads.Merge;
+using IronMonkey.ApiService.Features.Leads.Ingestion.WebForm;
 using IronMonkey.Common.Auth;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
@@ -42,6 +43,7 @@ public static class ConfigureServices
             builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
             builder.Services.AddScoped<IDuplicateDetectionService, DuplicateDetectionService>();
             builder.Services.AddScoped<ILeadMergeService, LeadMergeService>();
+            builder.Services.AddScoped<IWebFormService, WebFormService>();
             builder.AddHangfire();
         }
 
