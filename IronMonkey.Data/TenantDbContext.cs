@@ -30,6 +30,9 @@ public class TenantDbContext : DbContext
     public DbSet<Contact> Contacts => Set<Contact>();
     public DbSet<Opportunity> Opportunities => Set<Opportunity>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<PipelineStage> PipelineStages => Set<PipelineStage>();
+    public DbSet<CustomFieldDefinition> CustomFieldDefinitions => Set<CustomFieldDefinition>();
+    public DbSet<LeadMerge> LeadMerges => Set<LeadMerge>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -42,6 +45,9 @@ public class TenantDbContext : DbContext
         modelBuilder.Entity<Lead>().HasQueryFilter(l => l.TenantId == _tenantId && !l.IsDeleted);
         modelBuilder.Entity<Contact>().HasQueryFilter(c => c.TenantId == _tenantId && !c.IsDeleted);
         modelBuilder.Entity<Opportunity>().HasQueryFilter(o => o.TenantId == _tenantId && !o.IsDeleted);
+        modelBuilder.Entity<PipelineStage>().HasQueryFilter(p => p.TenantId == _tenantId && !p.IsDeleted);
+        modelBuilder.Entity<CustomFieldDefinition>().HasQueryFilter(c => c.TenantId == _tenantId && !c.IsDeleted);
+        modelBuilder.Entity<LeadMerge>().HasQueryFilter(m => m.TenantId == _tenantId);
 
         base.OnModelCreating(modelBuilder);
     }

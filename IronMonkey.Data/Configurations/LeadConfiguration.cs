@@ -28,12 +28,24 @@ internal sealed class LeadConfiguration : IEntityTypeConfiguration<Lead>
             .IsRequired()
             .HasMaxLength(256);
 
-        builder.Property(lead => lead.LeadSource)
-            .IsRequired()
-            .HasMaxLength(100);
+        builder.Property(lead => lead.Source)
+            .HasConversion<string>()
+            .HasDefaultValue(LeadSource.Manual);
 
         builder.Property(lead => lead.IsConverted)
             .IsRequired();
+
+        builder.Property(l => l.CustomFields)
+            .HasColumnName("custom_field_values")
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
+                v => System.Text.Json.JsonSerializer.Deserialize<CustomFieldValues>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new());
+
+        builder.HasOne(l => l.Stage)
+            .WithMany()
+            .HasForeignKey(l => l.PipelineStageId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(lead => lead.TenantId);
 
