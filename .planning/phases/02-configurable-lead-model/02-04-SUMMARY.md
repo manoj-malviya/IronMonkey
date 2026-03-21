@@ -75,7 +75,7 @@ completed: 2026-03-21
 1. **Task 1: Duplicate detection service and endpoint** - `0a54046` (feat)
 2. **Task 2: Lead merge service, endpoint, and DI registrations** - `55d57ad` (feat)
 
-**Plan metadata:** (docs commit — see below)
+**Plan metadata:** `f9db2d9` (docs: complete plan)
 
 ## Files Created/Modified
 
