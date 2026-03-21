@@ -50,7 +50,7 @@ Plans:
   5. User can merge two duplicate lead records into one, with the surviving record retaining the complete history of both
 **Plans**: 5 plans
 Plans:
-- [ ] 02-01-PLAN.md — Wave 0 test stubs (5 integration test files for all LEAD requirements)
+- [x] 02-01-PLAN.md — Wave 0 test stubs (5 integration test files for all LEAD requirements)
 - [ ] 02-02-PLAN.md — Data layer: Lead entity upgrade, PipelineStage, CustomFieldDefinition, LeadMerge entities + EF migration
 - [ ] 02-03-PLAN.md — API endpoints: custom fields CRUD, pipeline stage CRUD, lead creation with source
 - [ ] 02-04-PLAN.md — Duplicate detection service (FuzzySharp) + lead merge service with audit
@@ -98,7 +98,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Multi-Tenancy Foundation | 6/6 | Complete   | 2026-03-20 |
-| 2. Configurable Lead Model | 0/5 | Not started | - |
+| 2. Configurable Lead Model | 1/5 | In Progress|  |
 | 3. Lead Ingestion | 0/TBD | Not started | - |
 | 4. Pipeline & Workflow Engine | 0/TBD | Not started | - |
 | 5. Activity & Reporting | 0/TBD | Not started | - |

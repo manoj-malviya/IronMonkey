@@ -14,11 +14,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Lead Data
 
-- [ ] **LEAD-01**: Tenant can define custom fields on lead records (text, number, date, dropdown, multi-select, currency, boolean)
-- [ ] **LEAD-02**: Tenant can configure pipeline stages with custom names, ordering, and metadata
-- [ ] **LEAD-03**: Each lead tracks its source (manual, import, API, web form)
-- [ ] **LEAD-04**: System detects duplicate leads by fuzzy matching on email, phone, and name
-- [ ] **LEAD-05**: User can merge duplicate lead records
+- [x] **LEAD-01**: Tenant can define custom fields on lead records (text, number, date, dropdown, multi-select, currency, boolean)
+- [x] **LEAD-02**: Tenant can configure pipeline stages with custom names, ordering, and metadata
+- [x] **LEAD-03**: Each lead tracks its source (manual, import, API, web form)
+- [x] **LEAD-04**: System detects duplicate leads by fuzzy matching on email, phone, and name
+- [x] **LEAD-05**: User can merge duplicate lead records
 
 ### Lead Ingestion
 
@@ -91,11 +91,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | TNCY-01 | Phase 1 | Complete |
 | TNCY-02 | Phase 1 | Complete |
-| LEAD-01 | Phase 2 | Pending |
-| LEAD-02 | Phase 2 | Pending |
-| LEAD-03 | Phase 2 | Pending |
-| LEAD-04 | Phase 2 | Pending |
-| LEAD-05 | Phase 2 | Pending |
+| LEAD-01 | Phase 2 | Complete |
+| LEAD-02 | Phase 2 | Complete |
+| LEAD-03 | Phase 2 | Complete |
+| LEAD-04 | Phase 2 | Complete |
+| LEAD-05 | Phase 2 | Complete |
 | INGST-01 | Phase 3 | Pending |
 | INGST-02 | Phase 3 | Pending |
 | INGST-03 | Phase 3 | Pending |
