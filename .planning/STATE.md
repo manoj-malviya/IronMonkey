@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 03-lead-ingestion/03-03-PLAN.md
-last_updated: "2026-03-21T18:35:49.722Z"
+stopped_at: Completed 03-lead-ingestion/03-05-PLAN.md
+last_updated: "2026-03-21T18:36:29.146Z"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 19
-  completed_plans: 15
+  completed_plans: 16
 ---
 
 # Project State
@@ -62,6 +62,7 @@ Plan: Not started
 | Phase 03-lead-ingestion P01 | 4 | 2 tasks | 7 files |
 | Phase 03-lead-ingestion P02 | 6 | 2 tasks | 9 files |
 | Phase 03-lead-ingestion P03 | 6 | 2 tasks | 8 files |
+| Phase 03-lead-ingestion P05 | 8 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,8 @@ Recent decisions affecting current work:
 - [Phase 03-lead-ingestion]: ApiKey in CentralDbContext for O(1) tenant lookup by key hash without prior tenant context
 - [Phase 03-lead-ingestion]: WebForm in CentralDbContext so form token lookup works before tenant is resolved
 - [Phase 03-lead-ingestion]: CreateLeadViaApiEndpoint uses AllowAnonymous + X-Api-Key header (not JWT RequireAuthorization) — external callers have no JWT; tenant resolved via IApiKeyService
+- [Phase 03-lead-ingestion]: ITenantRegistry used for GetTenantConnectionStringAsync in WebFormService instead of direct Tenant entity access
+- [Phase 03-lead-ingestion]: FromForm attribute required on SubmitWebFormEndpoint SubmissionRequest to bind HTML form POST data in Minimal API
 
 ### Pending Todos
 
@@ -117,6 +120,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T18:35:49.716Z
-Stopped at: Completed 03-lead-ingestion/03-03-PLAN.md
+Last session: 2026-03-21T18:36:29.134Z
+Stopped at: Completed 03-lead-ingestion/03-05-PLAN.md
 Resume file: None
