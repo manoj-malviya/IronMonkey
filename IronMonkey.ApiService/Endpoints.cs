@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using IronMonkey.ApiService.Authentication.Endpoints;
 using IronMonkey.ApiService.Common;
+using IronMonkey.ApiService.Features.Leads;
+using IronMonkey.ApiService.Features.Leads.CustomFields;
+using IronMonkey.ApiService.Features.Leads.PipelineStages;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
 using IronMonkey.Data.Entities;
@@ -24,6 +27,7 @@ public static class Endpoints
         endpoints.MapTenantEndpoints();
         endpoints.MapUserManagementEndpoints();
         endpoints.MapPlatformAdminEndpoints();
+        endpoints.MapLeadsEndpoints();
     }
     
     extension(IEndpointRouteBuilder app)
@@ -89,6 +93,16 @@ public static class Endpoints
                 .MapEndpoint<CreatePermission>()
                 .MapEndpoint<ListRolePermissions>()
                 .MapEndpoint<AttachPermissionsToRole>();
+        }
+
+        private void MapLeadsEndpoints()
+        {
+            CreateCustomFieldEndpoint.Map(app);
+            ListCustomFieldsEndpoint.Map(app);
+            CreatePipelineStageEndpoint.Map(app);
+            ListPipelineStagesEndpoint.Map(app);
+            UpdatePipelineStageEndpoint.Map(app);
+            CreateLeadEndpoint.Map(app);
         }
 
         private RouteGroupBuilder MapPublicGroup(string? prefix = null)
