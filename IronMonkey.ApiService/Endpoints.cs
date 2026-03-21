@@ -6,6 +6,7 @@ using IronMonkey.ApiService.Features.Leads.CustomFields;
 using IronMonkey.ApiService.Features.Leads.PipelineStages;
 using IronMonkey.ApiService.Features.Leads.Duplicates;
 using IronMonkey.ApiService.Features.Leads.Ingestion.Api;
+using IronMonkey.ApiService.Features.Leads.Ingestion.Csv;
 using IronMonkey.ApiService.Features.Leads.Ingestion.WebForm;
 using IronMonkey.ApiService.Features.Leads.Merge;
 using Microsoft.OpenApi;
@@ -120,6 +121,10 @@ public static class Endpoints
             GetWebFormPageEndpoint.Map(app);
             SubmitWebFormEndpoint.Map(app);
             DeleteWebFormEndpoint.Map(app);
+            // CSV bulk import endpoints
+            UploadLeadsFromCsvEndpoint.Map(app);
+            GetImportStatusEndpoint.Map(app);
+            GetImportErrorsEndpoint.Map(app);
         }
 
         private RouteGroupBuilder MapPublicGroup(string? prefix = null)
