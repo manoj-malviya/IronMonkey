@@ -57,6 +57,9 @@ public class LeadMergeService : ILeadMergeService
             }
         }
 
+        // HasConversion JSONB value converters don't support change tracking — mark property modified explicitly
+        db.Entry(source).Property(l => l.CustomFields).IsModified = true;
+
         // Soft-delete target
         target.IsDeleted = true;
         target.DeletedAt = DateTime.UtcNow;
