@@ -5,6 +5,8 @@ using IronMonkey.ApiService.Features.Leads;
 using IronMonkey.ApiService.Features.Leads.CustomFields;
 using IronMonkey.ApiService.Features.Leads.PipelineStages;
 using IronMonkey.ApiService.Features.Leads.Duplicates;
+using IronMonkey.ApiService.Features.Leads.Ingestion.Api;
+using IronMonkey.ApiService.Features.Leads.Ingestion.WebForm;
 using IronMonkey.ApiService.Features.Leads.Merge;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
@@ -107,6 +109,17 @@ public static class Endpoints
             CreateLeadEndpoint.Map(app);
             CheckDuplicatesEndpoint.Map(app);
             MergeLeadsEndpoint.Map(app);
+            // API key management endpoints (require JWT auth)
+            GenerateApiKeyEndpoint.Map(app);
+            ListApiKeysEndpoint.Map(app);
+            DeleteApiKeyEndpoint.Map(app);
+            // External lead ingestion (X-Api-Key auth, no JWT)
+            CreateLeadViaApiEndpoint.Map(app);
+            // Web form endpoints
+            CreateWebFormEndpoint.Map(app);
+            GetWebFormPageEndpoint.Map(app);
+            SubmitWebFormEndpoint.Map(app);
+            DeleteWebFormEndpoint.Map(app);
         }
 
         private RouteGroupBuilder MapPublicGroup(string? prefix = null)

@@ -10,6 +10,8 @@ using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Common.Cache;
 using IronMonkey.ApiService.Common.Services;
 using IronMonkey.ApiService.Features.Leads.Duplicates;
+using IronMonkey.ApiService.Features.Leads.Ingestion.Api;
+using IronMonkey.ApiService.Features.Leads.Ingestion.Csv;
 using IronMonkey.ApiService.Features.Leads.Merge;
 using IronMonkey.ApiService.Features.Leads.Ingestion.WebForm;
 using IronMonkey.Common.Auth;
@@ -44,6 +46,8 @@ public static class ConfigureServices
             builder.Services.AddScoped<IDuplicateDetectionService, DuplicateDetectionService>();
             builder.Services.AddScoped<ILeadMergeService, LeadMergeService>();
             builder.Services.AddScoped<IWebFormService, WebFormService>();
+            builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
+            builder.Services.AddScoped<CsvImportService>();
             builder.AddHangfire();
         }
 
