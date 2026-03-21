@@ -1,25 +1,26 @@
 {
   "format": 1,
   "restore": {
-    "D:\\sources\\IronMonkey\\IronMonkey.Data\\IronMonkey.Data.csproj": {}
+    "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Data/IronMonkey.Data.csproj": {}
   },
   "projects": {
-    "D:\\sources\\IronMonkey\\IronMonkey.Common\\IronMonkey.Common.csproj": {
+    "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Common/IronMonkey.Common.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\sources\\IronMonkey\\IronMonkey.Common\\IronMonkey.Common.csproj",
+        "projectUniqueName": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Common/IronMonkey.Common.csproj",
         "projectName": "IronMonkey.Common",
-        "projectPath": "D:\\sources\\IronMonkey\\IronMonkey.Common\\IronMonkey.Common.csproj",
-        "packagesPath": "C:\\Users\\Manoj Kumar\\.nuget\\packages\\",
-        "outputPath": "D:\\sources\\IronMonkey\\IronMonkey.Common\\obj\\",
+        "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Common/IronMonkey.Common.csproj",
+        "packagesPath": "/home/manoj/.nuget/packages/",
+        "outputPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Common/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\Manoj Kumar\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/home/manoj/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
+          "/usr/lib/dotnet/library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -69,7 +70,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.102/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.104/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
@@ -347,30 +348,31 @@
         }
       }
     },
-    "D:\\sources\\IronMonkey\\IronMonkey.Data\\IronMonkey.Data.csproj": {
+    "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Data/IronMonkey.Data.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\sources\\IronMonkey\\IronMonkey.Data\\IronMonkey.Data.csproj",
+        "projectUniqueName": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Data/IronMonkey.Data.csproj",
         "projectName": "IronMonkey.Data",
-        "projectPath": "D:\\sources\\IronMonkey\\IronMonkey.Data\\IronMonkey.Data.csproj",
-        "packagesPath": "C:\\Users\\Manoj Kumar\\.nuget\\packages\\",
-        "outputPath": "D:\\sources\\IronMonkey\\IronMonkey.Data\\obj\\",
+        "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Data/IronMonkey.Data.csproj",
+        "packagesPath": "/home/manoj/.nuget/packages/",
+        "outputPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Data/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\Manoj Kumar\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/home/manoj/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
+          "/usr/lib/dotnet/library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
             "targetAlias": "net10.0",
             "projectReferences": {
-              "D:\\sources\\IronMonkey\\IronMonkey.Common\\IronMonkey.Common.csproj": {
-                "projectPath": "D:\\sources\\IronMonkey\\IronMonkey.Common\\IronMonkey.Common.csproj"
+              "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Common/IronMonkey.Common.csproj": {
+                "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Common/IronMonkey.Common.csproj"
               }
             }
           }
@@ -391,27 +393,39 @@
         "net10.0": {
           "targetAlias": "net10.0",
           "dependencies": {
+            "FuzzySharp": {
+              "target": "Package",
+              "version": "[2.0.0, )"
+            },
             "Microsoft.AspNetCore.Identity.EntityFrameworkCore": {
               "target": "Package",
-              "version": "[10.0.2, )"
+              "version": "[10.0.5, )"
+            },
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[10.0.5, )"
             },
             "Microsoft.EntityFrameworkCore.Design": {
               "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
               "suppressParent": "All",
               "target": "Package",
-              "version": "[10.0.2, )"
+              "version": "[10.0.5, )"
             },
             "Microsoft.EntityFrameworkCore.InMemory": {
               "target": "Package",
-              "version": "[10.0.2, )"
+              "version": "[10.0.5, )"
             },
-            "Microsoft.EntityFrameworkCore.Sqlite": {
+            "Microsoft.EntityFrameworkCore.Relational": {
               "target": "Package",
-              "version": "[10.0.2, )"
+              "version": "[10.0.5, )"
             },
             "Newtonsoft.Json": {
               "target": "Package",
               "version": "[13.0.3, )"
+            },
+            "Npgsql.EntityFrameworkCore.PostgreSQL": {
+              "target": "Package",
+              "version": "[10.0.1, )"
             }
           },
           "imports": [
@@ -430,7 +444,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.102/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.104/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",

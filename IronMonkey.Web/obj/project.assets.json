@@ -2,7 +2,7 @@
   "version": 3,
   "targets": {
     "net10.0": {
-      "Microsoft.AspNetCore.App.Internal.Assets/10.0.2": {
+      "Microsoft.AspNetCore.App.Internal.Assets/10.0.4": {
         "type": "package",
         "build": {
           "build/Microsoft.AspNetCore.App.Internal.Assets.props": {},
@@ -402,10 +402,10 @@
     }
   },
   "libraries": {
-    "Microsoft.AspNetCore.App.Internal.Assets/10.0.2": {
-      "sha512": "fMAqrUm+aspxRAsCJ6Hlgs96XSHwNIr9HBNt7wyBAzQkPlfE7w+0C4NzDoJnso5YZyDI0VcRtEXxG9odt3KiZA==",
+    "Microsoft.AspNetCore.App.Internal.Assets/10.0.4": {
+      "sha512": "M942X5Vy726SlvFBuoAC4cDczEMlPAFt1mmyFlrkw/QcpdVwVU0DkF4P9JabxX6eWNm9RvaYZHe25FN7oXoxpQ==",
       "type": "package",
-      "path": "microsoft.aspnetcore.app.internal.assets/10.0.2",
+      "path": "microsoft.aspnetcore.app.internal.assets/10.0.4",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -421,7 +421,7 @@
         "build/Microsoft.AspNetCore.App.Internal.Assets.targets",
         "buildMultiTargeting/Microsoft.AspNetCore.App.Internal.Assets.targets",
         "buildTransitive/Microsoft.AspNetCore.App.Internal.Assets.targets",
-        "microsoft.aspnetcore.app.internal.assets.10.0.2.nupkg.sha512",
+        "microsoft.aspnetcore.app.internal.assets.10.0.4.nupkg.sha512",
         "microsoft.aspnetcore.app.internal.assets.nuspec"
       ]
     },
@@ -1011,36 +1011,37 @@
   "projectFileDependencyGroups": {
     "net10.0": [
       "IronMonkey.ServiceDefaults >= 1.0.0",
-      "Microsoft.AspNetCore.App.Internal.Assets >= 10.0.2"
+      "Microsoft.AspNetCore.App.Internal.Assets >= 10.0.4"
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Manoj Kumar\\.nuget\\packages\\": {}
+    "/home/manoj/.nuget/packages/": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\sources\\IronMonkey\\IronMonkey.Web\\IronMonkey.Web.csproj",
+      "projectUniqueName": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Web/IronMonkey.Web.csproj",
       "projectName": "IronMonkey.Web",
-      "projectPath": "D:\\sources\\IronMonkey\\IronMonkey.Web\\IronMonkey.Web.csproj",
-      "packagesPath": "C:\\Users\\Manoj Kumar\\.nuget\\packages\\",
-      "outputPath": "D:\\sources\\IronMonkey\\IronMonkey.Web\\obj\\",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Web/IronMonkey.Web.csproj",
+      "packagesPath": "/home/manoj/.nuget/packages/",
+      "outputPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Web/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\Manoj Kumar\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "/home/manoj/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0"
       ],
       "sources": {
+        "/usr/lib/dotnet/library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
         "net10.0": {
           "targetAlias": "net10.0",
           "projectReferences": {
-            "D:\\sources\\IronMonkey\\IronMonkey.ServiceDefaults\\IronMonkey.ServiceDefaults.csproj": {
-              "projectPath": "D:\\sources\\IronMonkey\\IronMonkey.ServiceDefaults\\IronMonkey.ServiceDefaults.csproj"
+            "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj": {
+              "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj"
             }
           }
         }
@@ -1064,7 +1065,7 @@
           "Microsoft.AspNetCore.App.Internal.Assets": {
             "suppressParent": "All",
             "target": "Package",
-            "version": "[10.0.2, )",
+            "version": "[10.0.4, )",
             "autoReferenced": true
           }
         },
@@ -1087,7 +1088,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.102/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.104/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.AspNetCore": "(,10.0.32767]",
           "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",

@@ -1,25 +1,26 @@
 {
   "format": 1,
   "restore": {
-    "D:\\sources\\IronMonkey\\IronMonkey.Web\\IronMonkey.Web.csproj": {}
+    "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Web/IronMonkey.Web.csproj": {}
   },
   "projects": {
-    "D:\\sources\\IronMonkey\\IronMonkey.ServiceDefaults\\IronMonkey.ServiceDefaults.csproj": {
+    "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\sources\\IronMonkey\\IronMonkey.ServiceDefaults\\IronMonkey.ServiceDefaults.csproj",
+        "projectUniqueName": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj",
         "projectName": "IronMonkey.ServiceDefaults",
-        "projectPath": "D:\\sources\\IronMonkey\\IronMonkey.ServiceDefaults\\IronMonkey.ServiceDefaults.csproj",
-        "packagesPath": "C:\\Users\\Manoj Kumar\\.nuget\\packages\\",
-        "outputPath": "D:\\sources\\IronMonkey\\IronMonkey.ServiceDefaults\\obj\\",
+        "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj",
+        "packagesPath": "/home/manoj/.nuget/packages/",
+        "outputPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\Manoj Kumar\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/home/manoj/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
+          "/usr/lib/dotnet/library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -92,7 +93,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.102/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.104/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
             "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",
@@ -510,30 +511,31 @@
         }
       }
     },
-    "D:\\sources\\IronMonkey\\IronMonkey.Web\\IronMonkey.Web.csproj": {
+    "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Web/IronMonkey.Web.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\sources\\IronMonkey\\IronMonkey.Web\\IronMonkey.Web.csproj",
+        "projectUniqueName": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Web/IronMonkey.Web.csproj",
         "projectName": "IronMonkey.Web",
-        "projectPath": "D:\\sources\\IronMonkey\\IronMonkey.Web\\IronMonkey.Web.csproj",
-        "packagesPath": "C:\\Users\\Manoj Kumar\\.nuget\\packages\\",
-        "outputPath": "D:\\sources\\IronMonkey\\IronMonkey.Web\\obj\\",
+        "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Web/IronMonkey.Web.csproj",
+        "packagesPath": "/home/manoj/.nuget/packages/",
+        "outputPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Web/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\Manoj Kumar\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/home/manoj/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
+          "/usr/lib/dotnet/library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
             "targetAlias": "net10.0",
             "projectReferences": {
-              "D:\\sources\\IronMonkey\\IronMonkey.ServiceDefaults\\IronMonkey.ServiceDefaults.csproj": {
-                "projectPath": "D:\\sources\\IronMonkey\\IronMonkey.ServiceDefaults\\IronMonkey.ServiceDefaults.csproj"
+              "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj": {
+                "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj"
               }
             }
           }
@@ -557,7 +559,7 @@
             "Microsoft.AspNetCore.App.Internal.Assets": {
               "suppressParent": "All",
               "target": "Package",
-              "version": "[10.0.2, )",
+              "version": "[10.0.4, )",
               "autoReferenced": true
             }
           },
@@ -580,7 +582,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.102/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.104/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
             "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",

@@ -478,24 +478,25 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Manoj Kumar\\.nuget\\packages\\": {}
+    "/home/manoj/.nuget/packages/": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\sources\\IronMonkey\\IronMonkey.Common\\IronMonkey.Common.csproj",
+      "projectUniqueName": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Common/IronMonkey.Common.csproj",
       "projectName": "IronMonkey.Common",
-      "projectPath": "D:\\sources\\IronMonkey\\IronMonkey.Common\\IronMonkey.Common.csproj",
-      "packagesPath": "C:\\Users\\Manoj Kumar\\.nuget\\packages\\",
-      "outputPath": "D:\\sources\\IronMonkey\\IronMonkey.Common\\obj\\",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Common/IronMonkey.Common.csproj",
+      "packagesPath": "/home/manoj/.nuget/packages/",
+      "outputPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Common/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\Manoj Kumar\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "/home/manoj/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0"
       ],
       "sources": {
+        "/usr/lib/dotnet/library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -545,7 +546,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.102/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.104/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.CSharp": "(,4.7.32767]",
           "Microsoft.VisualBasic": "(,10.4.32767]",

@@ -1,25 +1,26 @@
 {
   "format": 1,
   "restore": {
-    "D:\\sources\\IronMonkey\\IronMonkey.AppHost\\IronMonkey.AppHost.csproj": {}
+    "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj": {}
   },
   "projects": {
-    "D:\\sources\\IronMonkey\\IronMonkey.AppHost\\IronMonkey.AppHost.csproj": {
+    "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\sources\\IronMonkey\\IronMonkey.AppHost\\IronMonkey.AppHost.csproj",
+        "projectUniqueName": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
         "projectName": "IronMonkey.AppHost",
-        "projectPath": "D:\\sources\\IronMonkey\\IronMonkey.AppHost\\IronMonkey.AppHost.csproj",
-        "packagesPath": "C:\\Users\\Manoj Kumar\\.nuget\\packages\\",
-        "outputPath": "D:\\sources\\IronMonkey\\IronMonkey.AppHost\\obj\\",
+        "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+        "packagesPath": "/home/manoj/.nuget/packages/",
+        "outputPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\Manoj Kumar\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/home/manoj/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
+          "/usr/lib/dotnet/library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -44,7 +45,7 @@
         "net10.0": {
           "targetAlias": "net10.0",
           "dependencies": {
-            "Aspire.Dashboard.Sdk.win-x64": {
+            "Aspire.Dashboard.Sdk.linux-x64": {
               "target": "Package",
               "version": "[13.1.0, )",
               "autoReferenced": true
@@ -54,7 +55,7 @@
               "version": "[13.1.0, )",
               "autoReferenced": true
             },
-            "Aspire.Hosting.Orchestration.win-x64": {
+            "Aspire.Hosting.Orchestration.linux-x64": {
               "target": "Package",
               "version": "[13.1.0, )",
               "autoReferenced": true
@@ -76,7 +77,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.102/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.104/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
