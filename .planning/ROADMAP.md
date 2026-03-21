@@ -53,7 +53,7 @@ Plans:
 - [x] 02-01-PLAN.md — Wave 0 test stubs (5 integration test files for all LEAD requirements)
 - [x] 02-02-PLAN.md — Data layer: Lead entity upgrade, PipelineStage, CustomFieldDefinition, LeadMerge entities + EF migration
 - [x] 02-03-PLAN.md — API endpoints: custom fields CRUD, pipeline stage CRUD, lead creation with source
-- [ ] 02-04-PLAN.md — Duplicate detection service (FuzzySharp) + lead merge service with audit
+- [x] 02-04-PLAN.md — Duplicate detection service (FuzzySharp) + lead merge service with audit
 - [ ] 02-05-PLAN.md — Integration test implementation + human verification
 
 ### Phase 3: Lead Ingestion
