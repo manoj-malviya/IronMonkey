@@ -15,6 +15,8 @@ public class CentralDbContext(DbContextOptions<CentralDbContext> options) : DbCo
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<SignupRequest> SignupRequests => Set<SignupRequest>();
     public DbSet<UserTenantIndex> UserTenantIndex => Set<UserTenantIndex>();
+    public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
+    public DbSet<WebForm> WebForms => Set<WebForm>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -27,6 +29,29 @@ public class CentralDbContext(DbContextOptions<CentralDbContext> options) : DbCo
             b.HasKey(x => x.Id);
             b.HasIndex(x => x.Email);
             b.Property(x => x.Email).IsRequired().HasMaxLength(320);
+        });
+
+        modelBuilder.Entity<ApiKey>(b =>
+        {
+            b.ToTable("ApiKeys");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => x.TenantId);
+            b.Property(x => x.KeyHash).IsRequired().HasMaxLength(100);
+            b.Property(x => x.KeyPrefix).IsRequired().HasMaxLength(16);
+            b.Property(x => x.IsActive).IsRequired();
+        });
+
+        modelBuilder.Entity<WebForm>(b =>
+        {
+            b.ToTable("WebForms");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => x.FormToken).IsUnique();
+            b.HasIndex(x => x.TenantId);
+            b.Property(x => x.FormName).IsRequired().HasMaxLength(200);
+            b.Property(x => x.FormToken).IsRequired().HasMaxLength(64);
+            b.Property(x => x.FieldNamesJson).IsRequired();
+            b.Property(x => x.IsActive).IsRequired();
+            b.Property(x => x.PostSubmissionRedirectUrl).HasMaxLength(2000);
         });
 
         base.OnModelCreating(modelBuilder);
