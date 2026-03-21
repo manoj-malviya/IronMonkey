@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 03-lead-ingestion/03-04-PLAN.md
-last_updated: "2026-03-21T18:38:03.606Z"
+stopped_at: Completed 03-lead-ingestion/03-06-PLAN.md
+last_updated: "2026-03-21T18:44:42.731Z"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 19
-  completed_plans: 17
+  completed_plans: 18
 ---
 
 # Project State
@@ -64,6 +64,7 @@ Plan: Not started
 | Phase 03-lead-ingestion P03 | 6 | 2 tasks | 8 files |
 | Phase 03-lead-ingestion P05 | 8 | 2 tasks | 8 files |
 | Phase 03-lead-ingestion P04 | 9 | 2 tasks | 7 files |
+| Phase 03-lead-ingestion P06 | 10 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,8 @@ Recent decisions affecting current work:
 - [Phase 03-lead-ingestion]: FromForm attribute required on SubmitWebFormEndpoint SubmissionRequest to bind HTML form POST data in Minimal API
 - [Phase 03-lead-ingestion]: Fail-fast CSV header validation in upload endpoint (not in job) — rejects malformed files before enqueueing
 - [Phase 03-lead-ingestion]: CSV import creates all rows, flags duplicates with IsPotentialDuplicate=true per D-14
+- [Phase 03-lead-ingestion]: MapIngestionEndpoints extracted from MapLeadsEndpoints for clarity — ingestion endpoints are a distinct concern
+- [Phase 03-lead-ingestion]: Rate limiting uses HttpContext.Request.RouteValues for token partition key (not HttpContext.RouteValues which does not exist)
 
 ### Pending Todos
 
@@ -123,6 +126,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T18:37:58.933Z
-Stopped at: Completed 03-lead-ingestion/03-04-PLAN.md
+Last session: 2026-03-21T18:44:42.728Z
+Stopped at: Completed 03-lead-ingestion/03-06-PLAN.md
 Resume file: None
