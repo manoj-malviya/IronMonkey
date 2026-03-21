@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 02-configurable-lead-model/02-04-PLAN.md
-last_updated: "2026-03-21T07:46:06.193Z"
+stopped_at: Completed 02-configurable-lead-model/02-05-PLAN.md
+last_updated: "2026-03-21T07:55:05.150Z"
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 11
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -57,6 +57,7 @@ Plan: 5 of 5
 | Phase 02-configurable-lead-model P02 | 16 | 2 tasks | 12 files |
 | Phase 02-configurable-lead-model P03 | 3 | 2 tasks | 7 files |
 | Phase 02-configurable-lead-model P04 | 35 | 2 tasks | 8 files |
+| Phase 02-configurable-lead-model P05 | 15 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase 02-configurable-lead-model]: FuzzySharp 2.0.0 used for fuzzy name matching — 1.11.0 does not exist on NuGet
 - [Phase 02-configurable-lead-model]: Fuzzy name match uses IgnoreQueryFilters with explicit TenantId+IsDeleted filter — prevents cross-tenant data exposure
 - [Phase 02-configurable-lead-model]: Snapshot-before-mutation pattern for LeadMerge audit — serialize source/target before any field changes
+- [Phase 02-configurable-lead-model]: Moq ITenantService stub for service-layer integration tests — returns test DB connection string enabling direct invocation of DuplicateDetectionService and LeadMergeService against real PostgreSQL
+- [Phase 02-configurable-lead-model]: LeadMergeService JSONB IsModified fix — HasConversion value converters require db.Entry(entity).Property(...).IsModified = true after mutating dictionary reference
 
 ### Pending Todos
 
@@ -102,6 +105,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T07:46:06.191Z
-Stopped at: Completed 02-configurable-lead-model/02-04-PLAN.md
+Last session: 2026-03-21T07:55:05.144Z
+Stopped at: Completed 02-configurable-lead-model/02-05-PLAN.md
 Resume file: None
