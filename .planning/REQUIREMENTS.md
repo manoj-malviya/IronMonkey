@@ -22,10 +22,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Lead Ingestion
 
-- [ ] **INGST-01**: User can create leads manually through the UI
-- [ ] **INGST-02**: User can bulk import leads via CSV/Excel with field mapping and validation
-- [ ] **INGST-03**: Leads can be created via REST API
-- [ ] **INGST-04**: Tenant can generate embeddable web forms that create leads on submission
+- [x] **INGST-01**: User can create leads manually through the UI
+- [x] **INGST-02**: User can bulk import leads via CSV/Excel with field mapping and validation
+- [x] **INGST-03**: Leads can be created via REST API
+- [x] **INGST-04**: Tenant can generate embeddable web forms that create leads on submission
 
 ### Pipeline & Workflow
 
@@ -96,10 +96,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LEAD-03 | Phase 2 | Complete |
 | LEAD-04 | Phase 2 | Complete |
 | LEAD-05 | Phase 2 | Complete |
-| INGST-01 | Phase 3 | Pending |
-| INGST-02 | Phase 3 | Pending |
-| INGST-03 | Phase 3 | Pending |
-| INGST-04 | Phase 3 | Pending |
+| INGST-01 | Phase 3 | Complete |
+| INGST-02 | Phase 3 | Complete |
+| INGST-03 | Phase 3 | Complete |
+| INGST-04 | Phase 3 | Complete |
 | PIPE-01 | Phase 4 | Pending |
 | PIPE-02 | Phase 4 | Pending |
 | PIPE-03 | Phase 4 | Pending |

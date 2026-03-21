@@ -68,7 +68,7 @@ Plans:
   4. Tenant admin can generate an embeddable web form that, when submitted on an external website, creates a lead in the tenant's pipeline
 **Plans**: 7 plans
 Plans:
-- [ ] 03-01-PLAN.md — Wave 0 test stubs (7 test files for all INGST requirements)
+- [x] 03-01-PLAN.md — Wave 0 test stubs (7 test files for all INGST requirements)
 - [ ] 03-02-PLAN.md — Data layer: ApiKey, WebForm (central), ImportBatch (tenant) entities + EF migrations
 - [ ] 03-03-PLAN.md — API key service + REST API ingestion endpoint (INGST-03)
 - [ ] 03-04-PLAN.md — CSV import service + Hangfire job + import endpoints (INGST-02)
@@ -108,6 +108,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Multi-Tenancy Foundation | 6/6 | Complete   | 2026-03-20 |
 | 2. Configurable Lead Model | 5/6 | Gap closure | - |
-| 3. Lead Ingestion | 0/7 | Not started | - |
+| 3. Lead Ingestion | 1/7 | In Progress|  |
 | 4. Pipeline & Workflow Engine | 0/TBD | Not started | - |
 | 5. Activity & Reporting | 0/TBD | Not started | - |
