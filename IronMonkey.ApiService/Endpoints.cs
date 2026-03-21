@@ -4,6 +4,8 @@ using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Features.Leads;
 using IronMonkey.ApiService.Features.Leads.CustomFields;
 using IronMonkey.ApiService.Features.Leads.PipelineStages;
+using IronMonkey.ApiService.Features.Leads.Duplicates;
+using IronMonkey.ApiService.Features.Leads.Merge;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
 using IronMonkey.Data.Entities;
@@ -103,6 +105,8 @@ public static class Endpoints
             ListPipelineStagesEndpoint.Map(app);
             UpdatePipelineStageEndpoint.Map(app);
             CreateLeadEndpoint.Map(app);
+            CheckDuplicatesEndpoint.Map(app);
+            MergeLeadsEndpoint.Map(app);
         }
 
         private RouteGroupBuilder MapPublicGroup(string? prefix = null)
