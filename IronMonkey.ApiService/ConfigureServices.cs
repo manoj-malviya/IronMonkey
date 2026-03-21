@@ -9,6 +9,8 @@ using IronMonkey.ApiService.BackgroundJobs;
 using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Common.Cache;
 using IronMonkey.ApiService.Common.Services;
+using IronMonkey.ApiService.Features.Leads.Duplicates;
+using IronMonkey.ApiService.Features.Leads.Merge;
 using IronMonkey.Common.Auth;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
@@ -38,6 +40,8 @@ public static class ConfigureServices
             builder.addCors();
 
             builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
+            builder.Services.AddScoped<IDuplicateDetectionService, DuplicateDetectionService>();
+            builder.Services.AddScoped<ILeadMergeService, LeadMergeService>();
             builder.AddHangfire();
         }
 
