@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 02-configurable-lead-model/02-01-PLAN.md
-last_updated: "2026-03-21T07:22:43.567Z"
+stopped_at: Completed 02-configurable-lead-model/02-02-PLAN.md
+last_updated: "2026-03-21T07:31:50.644Z"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 11
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 02 (configurable-lead-model) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Plan: 2 of 5
 | Phase 01-multi-tenancy-foundation P06 | 15 | 1 tasks | 3 files |
 | Phase 01-multi-tenancy-foundation P06 | 15 | 2 tasks | 4 files |
 | Phase 02-configurable-lead-model P01 | 8 | 2 tasks | 5 files |
+| Phase 02-configurable-lead-model P02 | 16 | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,9 @@ Recent decisions affecting current work:
 - [Phase 01-multi-tenancy-foundation]: OutboxMessage.Published migration added inline — MigrateAsync() in TenantProvisioningService requires full migration history alignment
 - [Phase 01-multi-tenancy-foundation]: TenantIsolationTests load-or-insert role seeding: EF migration seeds roles during MigrateAsync() — test seed must check before inserting to avoid unique constraint violation
 - [Phase 02-configurable-lead-model]: Wave 0 stub plan: 02-06 chosen as implementation target for all 17 Phase 2 stubs, consistent with Phase 1 naming convention
+- [Phase 02-configurable-lead-model]: CustomFieldValues stored via HasConversion JSONB value converter (not OwnsOne.ToJson) — EF Core 10 ToJson does not support Dictionary<string,object?> navigation properties
+- [Phase 02-configurable-lead-model]: FuzzySharp 2.0.0 used (not 1.11.0) — 1.11.0 does not exist on NuGet; 2.0.0 resolved automatically
+- [Phase 02-configurable-lead-model]: LeadSource enum stored as string via HasConversion<string>() for human-readable DB values and migration safety
 
 ### Pending Todos
 
@@ -91,6 +95,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T07:22:43.564Z
-Stopped at: Completed 02-configurable-lead-model/02-01-PLAN.md
+Last session: 2026-03-21T07:31:50.640Z
+Stopped at: Completed 02-configurable-lead-model/02-02-PLAN.md
 Resume file: None
