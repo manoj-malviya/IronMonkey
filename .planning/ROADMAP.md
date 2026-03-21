@@ -74,7 +74,7 @@ Plans:
 - [x] 03-04-PLAN.md — CSV import service + Hangfire job + import endpoints (INGST-02)
 - [x] 03-05-PLAN.md — Web form service + hosted page + submission endpoint (INGST-04)
 - [x] 03-06-PLAN.md — Wire all: DI registrations, endpoint registration, rate limiting, manual entry duplicate warning (INGST-01)
-- [ ] 03-07-PLAN.md — Integration test implementation + human verification of hosted form page
+- [x] 03-07-PLAN.md — Integration test implementation + human verification of hosted form page
 
 ### Phase 4: Pipeline & Workflow Engine
 **Goal**: Users can manage leads through a visual pipeline with task tracking, assignment routing, and automated rules that act on lead state changes
