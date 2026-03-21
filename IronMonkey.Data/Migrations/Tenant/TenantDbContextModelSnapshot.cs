@@ -111,6 +111,61 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.ToTable("custom_field_definitions", (string)null);
                 });
 
+            modelBuilder.Entity("IronMonkey.Data.Entities.ImportBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DefaultPipelineStageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ErrorDetailsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FailureReason")
+                        .HasColumnType("text");
+
+                    b.Property<int>("ImportedRows")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("SkippedRows")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TempFilePath")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TotalRows")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ImportBatches");
+                });
+
             modelBuilder.Entity("IronMonkey.Data.Entities.Lead", b =>
                 {
                     b.Property<Guid>("Id")
@@ -153,6 +208,9 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsPotentialDuplicate")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -164,6 +222,9 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .HasColumnType("character varying(20)");
 
                     b.Property<Guid>("PipelineStageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PotentialDuplicateLeadId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Source")
