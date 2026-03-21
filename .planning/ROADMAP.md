@@ -71,7 +71,7 @@ Plans:
 - [x] 03-01-PLAN.md — Wave 0 test stubs (7 test files for all INGST requirements)
 - [x] 03-02-PLAN.md — Data layer: ApiKey, WebForm (central), ImportBatch (tenant) entities + EF migrations
 - [x] 03-03-PLAN.md — API key service + REST API ingestion endpoint (INGST-03)
-- [ ] 03-04-PLAN.md — CSV import service + Hangfire job + import endpoints (INGST-02)
+- [x] 03-04-PLAN.md — CSV import service + Hangfire job + import endpoints (INGST-02)
 - [x] 03-05-PLAN.md — Web form service + hosted page + submission endpoint (INGST-04)
 - [ ] 03-06-PLAN.md — Wire all: DI registrations, endpoint registration, rate limiting, manual entry duplicate warning (INGST-01)
 - [ ] 03-07-PLAN.md — Integration test implementation + human verification of hosted form page
@@ -108,6 +108,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Multi-Tenancy Foundation | 6/6 | Complete   | 2026-03-20 |
 | 2. Configurable Lead Model | 5/6 | Gap closure | - |
-| 3. Lead Ingestion | 4/7 | In Progress|  |
+| 3. Lead Ingestion | 5/7 | In Progress|  |
 | 4. Pipeline & Workflow Engine | 0/TBD | Not started | - |
 | 5. Activity & Reporting | 0/TBD | Not started | - |
