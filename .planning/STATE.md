@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 03-lead-ingestion/03-01-PLAN.md
-last_updated: "2026-03-21T18:25:35.981Z"
+stopped_at: Completed 03-lead-ingestion/03-02-PLAN.md
+last_updated: "2026-03-21T18:26:16.751Z"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 19
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State
@@ -60,6 +60,7 @@ Plan: Not started
 | Phase 02-configurable-lead-model P05 | 15 | 2 tasks | 6 files |
 | Phase 02-configurable-lead-model P05 | 15 | 2 tasks | 6 files |
 | Phase 03-lead-ingestion P01 | 4 | 2 tasks | 7 files |
+| Phase 03-lead-ingestion P02 | 6 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,8 @@ Recent decisions affecting current work:
 - [Phase 02-configurable-lead-model]: LeadMergeService.CustomFields.IsModified fix — HasConversion JSONB value converters require explicit db.Entry(entity).Property(...).IsModified = true after mutating dictionary reference
 - [Phase 02-configurable-lead-model]: ListPipelineStages active filter uses explicit .Where(p => p.IsActive) — global query filter only covers IsDeleted; IsActive is a separate business concept from soft-delete
 - [Phase 03-lead-ingestion]: 03-06-PLAN chosen as implementation target for all Phase 3 stubs — consistent with Phase 1 and Phase 2 naming convention
+- [Phase 03-lead-ingestion]: ApiKey in CentralDbContext for O(1) tenant lookup by key hash without prior tenant context
+- [Phase 03-lead-ingestion]: WebForm in CentralDbContext so form token lookup works before tenant is resolved
 
 ### Pending Todos
 
@@ -112,6 +115,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T18:25:35.978Z
-Stopped at: Completed 03-lead-ingestion/03-01-PLAN.md
+Last session: 2026-03-21T18:26:16.748Z
+Stopped at: Completed 03-lead-ingestion/03-02-PLAN.md
 Resume file: None
