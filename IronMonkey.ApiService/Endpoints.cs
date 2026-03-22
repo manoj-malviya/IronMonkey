@@ -11,6 +11,8 @@ using IronMonkey.ApiService.Features.Leads.Ingestion.WebForm;
 using IronMonkey.ApiService.Features.Leads.Merge;
 using IronMonkey.ApiService.Features.Leads.Pipeline.Tasks;
 using IronMonkey.ApiService.Features.Leads.Pipeline.Routing;
+using IronMonkey.ApiService.Features.Leads.Pipeline.States;
+using IronMonkey.ApiService.Features.Leads.Pipeline.Kanban;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
 using IronMonkey.Data.Entities;
@@ -118,6 +120,10 @@ public static class Endpoints
             UpdateTaskEndpoint.Map(app);
             ConfigureRoutingEndpoint.Map(app);
             GetRoutingConfigEndpoint.Map(app);
+            ConfigureTransitionsEndpoint.Map(app);
+            ListTransitionsEndpoint.Map(app);
+            GetKanbanBoardEndpoint.Map(app);
+            MoveLeadEndpoint.Map(app);
         }
 
         private void MapIngestionEndpoints()
