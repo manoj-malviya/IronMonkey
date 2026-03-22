@@ -9,6 +9,8 @@ using IronMonkey.ApiService.Features.Leads.Ingestion.Api;
 using IronMonkey.ApiService.Features.Leads.Ingestion.Csv;
 using IronMonkey.ApiService.Features.Leads.Ingestion.WebForm;
 using IronMonkey.ApiService.Features.Leads.Merge;
+using IronMonkey.ApiService.Features.Leads.Pipeline.Tasks;
+using IronMonkey.ApiService.Features.Leads.Pipeline.Routing;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
 using IronMonkey.Data.Entities;
@@ -111,6 +113,11 @@ public static class Endpoints
             CreateLeadEndpoint.Map(app);
             CheckDuplicatesEndpoint.Map(app);
             MergeLeadsEndpoint.Map(app);
+            CreateTaskEndpoint.Map(app);
+            ListTasksEndpoint.Map(app);
+            UpdateTaskEndpoint.Map(app);
+            ConfigureRoutingEndpoint.Map(app);
+            GetRoutingConfigEndpoint.Map(app);
         }
 
         private void MapIngestionEndpoints()
