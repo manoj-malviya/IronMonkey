@@ -29,11 +29,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Pipeline & Workflow
 
-- [ ] **PIPE-01**: User can view leads in a Kanban-style pipeline board with drag-drop between stages
-- [ ] **PIPE-02**: User can create tasks with due dates, priority, and assignment linked to leads
-- [ ] **PIPE-03**: System supports manual lead assignment and rule-based routing (round-robin, territory)
-- [ ] **PIPE-04**: Tenant can define workflow rules: triggers (field change, status change, time-based) with conditions and auto-actions
-- [ ] **PIPE-05**: Lead lifecycle follows a configurable state machine with allowed transitions per tenant
+- [x] **PIPE-01**: User can view leads in a Kanban-style pipeline board with drag-drop between stages
+- [x] **PIPE-02**: User can create tasks with due dates, priority, and assignment linked to leads
+- [x] **PIPE-03**: System supports manual lead assignment and rule-based routing (round-robin, territory)
+- [x] **PIPE-04**: Tenant can define workflow rules: triggers (field change, status change, time-based) with conditions and auto-actions
+- [x] **PIPE-05**: Lead lifecycle follows a configurable state machine with allowed transitions per tenant
 
 ### Reporting
 
@@ -100,11 +100,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INGST-02 | Phase 3 | Complete |
 | INGST-03 | Phase 3 | Complete |
 | INGST-04 | Phase 3 | Complete |
-| PIPE-01 | Phase 4 | Pending |
-| PIPE-02 | Phase 4 | Pending |
-| PIPE-03 | Phase 4 | Pending |
-| PIPE-04 | Phase 4 | Pending |
-| PIPE-05 | Phase 4 | Pending |
+| PIPE-01 | Phase 4 | Complete |
+| PIPE-02 | Phase 4 | Complete |
+| PIPE-03 | Phase 4 | Complete |
+| PIPE-04 | Phase 4 | Complete |
+| PIPE-05 | Phase 4 | Complete |
 | REPT-01 | Phase 5 | Pending |
 | REPT-02 | Phase 5 | Pending |
 | REPT-03 | Phase 5 | Pending |

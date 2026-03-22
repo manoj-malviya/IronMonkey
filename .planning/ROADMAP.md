@@ -88,8 +88,8 @@ Plans:
   5. The system enforces configured state machine transitions — attempting an invalid lead status transition is rejected with a clear error
 **Plans**: 6 plans
 Plans:
-- [ ] 04-01-PLAN.md — Wave 0 test stubs (6 test files for all PIPE requirements)
-- [ ] 04-02-PLAN.md — Data layer: LeadTask, WorkflowRule, StageTransition, Notification, RoutingConfig entities + EF migration
+- [x] 04-01-PLAN.md — Wave 0 test stubs (6 test files for all PIPE requirements)
+- [x] 04-02-PLAN.md — Data layer: LeadTask, WorkflowRule, StageTransition, Notification, RoutingConfig entities + EF migration
 - [ ] 04-03-PLAN.md — State machine validation + Kanban board endpoints (PIPE-01, PIPE-05)
 - [ ] 04-04-PLAN.md — Task management endpoints + lead routing service (PIPE-02, PIPE-03)
 - [ ] 04-05-PLAN.md — Workflow rule engine + background jobs + DI/endpoint wiring (PIPE-04)
@@ -116,5 +116,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Multi-Tenancy Foundation | 6/6 | Complete   | 2026-03-20 |
 | 2. Configurable Lead Model | 5/6 | Gap closure | - |
 | 3. Lead Ingestion | 6/7 | In Progress|  |
-| 4. Pipeline & Workflow Engine | 0/6 | Not started | - |
+| 4. Pipeline & Workflow Engine | 2/6 | In Progress|  |
 | 5. Activity & Reporting | 0/TBD | Not started | - |

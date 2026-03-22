@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 03-lead-ingestion/03-07-PLAN.md
-last_updated: "2026-03-21T20:07:27.058Z"
+stopped_at: Completed 04-pipeline-workflow-engine/04-01-PLAN.md
+last_updated: "2026-03-22T05:16:59.779Z"
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 19
-  completed_plans: 19
+  total_plans: 25
+  completed_plans: 21
 ---
 
 # Project State
@@ -66,6 +66,8 @@ Plan: Not started
 | Phase 03-lead-ingestion P04 | 9 | 2 tasks | 7 files |
 | Phase 03-lead-ingestion P06 | 10 | 2 tasks | 6 files |
 | Phase 03-lead-ingestion P07 | 45 | 3 tasks | 9 files |
+| Phase 04-pipeline-workflow-engine P02 | 278 | 2 tasks | 14 files |
+| Phase 04-pipeline-workflow-engine P01 | 4 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -117,6 +119,10 @@ Recent decisions affecting current work:
 - [Phase 03-lead-ingestion]: Rate limiting uses HttpContext.Request.RouteValues for token partition key (not HttpContext.RouteValues which does not exist)
 - [Phase 03-lead-ingestion]: EF Core model snapshot drift fixed inline during test implementation — MigrateAsync() requires snapshots to match all registered entities
 - [Phase 03-lead-ingestion]: Integration tests invoke services directly (not via HTTP) — eliminates WebApplicationFactory complexity while testing against real PostgreSQL
+- [Phase 04-pipeline-workflow-engine]: StageTransitionEntityConfiguration class name used to avoid naming conflict with Stateless service planned in 04-03
+- [Phase 04-pipeline-workflow-engine]: Global query filters added for all 5 new Phase 4 entity types in TenantDbContext for automatic tenant isolation
+- [Phase 04-pipeline-workflow-engine]: RulesEngine 6.0.0 used instead of 5.1.2 — 5.1.2 not published on NuGet; 6.0.0 resolves cleanly
+- [Phase 04-pipeline-workflow-engine]: Wave 0 stub plan: 04-06 chosen as implementation target for all Phase 4 stubs (consistent with Phase 1-3 naming convention)
 
 ### Pending Todos
 
@@ -129,6 +135,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T20:01:38.276Z
-Stopped at: Completed 03-lead-ingestion/03-07-PLAN.md
+Last session: 2026-03-22T05:16:59.775Z
+Stopped at: Completed 04-pipeline-workflow-engine/04-01-PLAN.md
 Resume file: None
