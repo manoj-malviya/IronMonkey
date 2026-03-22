@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 04-pipeline-workflow-engine/04-03-PLAN.md
-last_updated: "2026-03-22T05:25:20.192Z"
+stopped_at: Completed 04-pipeline-workflow-engine/04-05-PLAN.md
+last_updated: "2026-03-22T05:36:16.043Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 25
-  completed_plans: 23
+  completed_plans: 24
 ---
 
 # Project State
@@ -70,6 +70,7 @@ Plan: Not started
 | Phase 04-pipeline-workflow-engine P01 | 4 | 2 tasks | 8 files |
 | Phase 04-pipeline-workflow-engine P04 | 4 | 2 tasks | 9 files |
 | Phase 04-pipeline-workflow-engine P03 | 350 | 2 tasks | 8 files |
+| Phase 04 P05 | 8 | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -127,6 +128,9 @@ Recent decisions affecting current work:
 - [Phase 04-pipeline-workflow-engine]: Wave 0 stub plan: 04-06 chosen as implementation target for all Phase 4 stubs (consistent with Phase 1-3 naming convention)
 - [Phase 04-pipeline-workflow-engine]: IStateValidationService uses separate DB context from mutation for thread safety
 - [Phase 04-pipeline-workflow-engine]: StateValidationService returns null on success, error string on failure — enables inline error propagation
+- [Phase 04-pipeline-workflow-engine]: WorkflowRuleEngine uses JsonDocument for condition evaluation in Phase 4 v1 — full RulesEngine integration deferred to Phase 5
+- [Phase 04-pipeline-workflow-engine]: NotificationService creates in-app notifications only — no email delivery per D-10
+- [Phase 04-pipeline-workflow-engine]: MapPipelineEndpoints() added to Endpoints.cs as separate method for Phase 4 workflow rule endpoints
 
 ### Pending Todos
 
@@ -139,6 +143,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T05:25:20.189Z
-Stopped at: Completed 04-pipeline-workflow-engine/04-03-PLAN.md
+Last session: 2026-03-22T05:36:16.040Z
+Stopped at: Completed 04-pipeline-workflow-engine/04-05-PLAN.md
 Resume file: None
