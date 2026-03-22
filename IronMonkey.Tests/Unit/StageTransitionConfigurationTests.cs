@@ -1,3 +1,4 @@
+using IronMonkey.Data.Entities;
 using Xunit;
 
 namespace IronMonkey.Tests.Unit;
@@ -5,24 +6,35 @@ namespace IronMonkey.Tests.Unit;
 // PIPE-05: State machine graph setup unit tests
 public class StageTransitionConfigurationTests
 {
-    [Fact(Skip = "Stub: implement in 04-06")]
-    public void BuildStateMachine_WithTransitions_CanPermitConfiguredTransitions()
+    [Fact]
+    public void StageType_Default_IsActive()
     {
-        // TODO: Build Stateless StateMachine with stages [New, Qualified, ClosedWon],
-        // transitions [New->Qualified, Qualified->ClosedWon],
-        // verify machine.CanFire(New->Qualified)=true, machine.CanFire(New->ClosedWon)=false
+        var stage = PipelineStage.Create(Guid.NewGuid(), "Test", 1);
+        Assert.Equal(StageType.Active, stage.StageType);
+        Assert.False(stage.IsTerminal);
     }
 
-    [Fact(Skip = "Stub: implement in 04-06")]
-    public void BuildStateMachine_NoTransitionsConfigured_CannotFireAnyTransition()
+    [Fact]
+    public void StageType_ClosedWon_IsTerminal()
     {
-        // TODO: Build StateMachine with 2 stages, no transitions added,
-        // verify machine.CanFire() returns false for any target
+        var stage = PipelineStage.Create(Guid.NewGuid(), "Won", 1);
+        stage.SetStageType(StageType.ClosedWon);
+        Assert.True(stage.IsTerminal);
     }
 
-    [Fact(Skip = "Stub: implement in 04-06")]
-    public void StageType_ClosedWon_MarkedAsTerminalState()
+    [Fact]
+    public void StageType_ClosedLost_IsTerminal()
     {
-        // TODO: Create PipelineStage with StageType.ClosedWon, verify IsTerminal property returns true
+        var stage = PipelineStage.Create(Guid.NewGuid(), "Lost", 1);
+        stage.SetStageType(StageType.ClosedLost);
+        Assert.True(stage.IsTerminal);
+    }
+
+    [Fact]
+    public void StageType_Entry_IsNotTerminal()
+    {
+        var stage = PipelineStage.Create(Guid.NewGuid(), "Entry", 1);
+        stage.SetStageType(StageType.Entry);
+        Assert.False(stage.IsTerminal);
     }
 }
