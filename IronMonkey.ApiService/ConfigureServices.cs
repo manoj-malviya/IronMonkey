@@ -15,6 +15,8 @@ using IronMonkey.ApiService.Features.Leads.Ingestion.Api;
 using IronMonkey.ApiService.Features.Leads.Ingestion.Csv;
 using IronMonkey.ApiService.Features.Leads.Merge;
 using IronMonkey.ApiService.Features.Leads.Ingestion.WebForm;
+using IronMonkey.ApiService.Features.Leads.Pipeline.Routing;
+using IronMonkey.ApiService.Features.Leads.Pipeline.States;
 using IronMonkey.Common.Auth;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
@@ -48,6 +50,8 @@ public static class ConfigureServices
             builder.Services.AddScoped<ILeadMergeService, LeadMergeService>();
             builder.Services.AddScoped<IWebFormService, WebFormService>();
             builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
+            builder.Services.AddScoped<ILeadRoutingService, LeadRoutingService>();
+            builder.Services.AddScoped<IStateValidationService, StateValidationService>();
             builder.Services.AddScoped<CsvImportService>();
             builder.Services.AddScoped<CsvImportJob>();
             builder.AddHangfire();
