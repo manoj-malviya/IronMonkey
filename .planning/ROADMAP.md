@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Multi-Tenancy Foundation** - Isolated database per tenant with bulletproof tenant context routing (completed 2026-03-20)
 - [ ] **Phase 2: Configurable Lead Model** - Tenant-defined custom fields, pipeline stages, and duplicate detection (gap closure in progress)
 - [ ] **Phase 3: Lead Ingestion** - Manual entry, CSV import, REST API, and embeddable web forms
-- [ ] **Phase 4: Pipeline & Workflow Engine** - Kanban board, task management, lead routing, and configurable automation rules
+- [x] **Phase 4: Pipeline & Workflow Engine** - Kanban board, task management, lead routing, and configurable automation rules (completed 2026-03-22)
 - [ ] **Phase 5: Activity & Reporting** - Unified lead activity timeline and pipeline/performance dashboards
 
 ## Phase Details
@@ -93,7 +93,7 @@ Plans:
 - [x] 04-03-PLAN.md — State machine validation + Kanban board endpoints (PIPE-01, PIPE-05)
 - [x] 04-04-PLAN.md — Task management endpoints + lead routing service (PIPE-02, PIPE-03)
 - [x] 04-05-PLAN.md — Workflow rule engine + background jobs + DI/endpoint wiring (PIPE-04)
-- [ ] 04-06-PLAN.md — Integration test implementation + human verification
+- [x] 04-06-PLAN.md — Integration test implementation + human verification
 
 ### Phase 5: Activity & Reporting
 **Goal**: Users can see everything that happened on a lead in one place and understand pipeline health and team performance through dashboards
@@ -116,5 +116,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Multi-Tenancy Foundation | 6/6 | Complete   | 2026-03-20 |
 | 2. Configurable Lead Model | 5/6 | Gap closure | - |
 | 3. Lead Ingestion | 6/7 | In Progress|  |
-| 4. Pipeline & Workflow Engine | 5/6 | In Progress|  |
+| 4. Pipeline & Workflow Engine | 6/6 | Complete   | 2026-03-22 |
 | 5. Activity & Reporting | 0/TBD | Not started | - |
