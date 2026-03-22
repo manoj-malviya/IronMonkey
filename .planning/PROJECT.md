@@ -28,9 +28,12 @@ Any business can configure their complete lead management workflow — fields, s
 
 - [ ] Tenant onboarding with industry recipe/template selection
 - [ ] Configurable customer fields (custom fields per tenant)
-- [ ] State machine for lead lifecycle transitions
-- [ ] Workflow engine with triggers and conditional logic
-- [ ] Auto-actions (assign, notify, schedule follow-up)
+- ✓ State machine for lead lifecycle transitions — Validated in Phase 4 (PIPE-05)
+- ✓ Workflow engine with triggers and conditional logic — Validated in Phase 4 (PIPE-04)
+- ✓ Auto-actions (assign, notify, schedule follow-up) — Validated in Phase 4 (PIPE-04)
+- ✓ Kanban pipeline board with drag-drop — Validated in Phase 4 (PIPE-01)
+- ✓ Task management linked to leads — Validated in Phase 4 (PIPE-02)
+- ✓ Lead routing (round-robin, territory) — Validated in Phase 4 (PIPE-03)
 - [ ] Custom roles with granular permissions per tenant
 - [ ] Employee/team management within tenant
 - ✓ Lead ingestion: manual entry with duplicate warning — Validated in Phase 3 (INGST-01)
@@ -78,4 +81,4 @@ The system must be truly domain-agnostic — the data model for leads, statuses,
 | Billing model deferred | Not finalized — will decide between subscription tiers, usage-based, or hybrid | — Pending |
 
 ---
-*Last updated: 2026-03-21 after Phase 3 completion*
+*Last updated: 2026-03-22 after Phase 4 completion*
