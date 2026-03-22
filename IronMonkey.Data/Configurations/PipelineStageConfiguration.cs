@@ -18,6 +18,8 @@ internal sealed class PipelineStageConfiguration : IEntityTypeConfiguration<Pipe
 
         builder.Property(p => p.Order).IsRequired();
 
+        builder.Property(p => p.StageType).HasConversion<string>().IsRequired();
+
         builder.HasIndex(p => new { p.TenantId, p.Order }).IsUnique();
     }
 }

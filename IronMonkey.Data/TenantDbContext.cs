@@ -34,6 +34,11 @@ public class TenantDbContext : DbContext
     public DbSet<CustomFieldDefinition> CustomFieldDefinitions => Set<CustomFieldDefinition>();
     public DbSet<LeadMerge> LeadMerges => Set<LeadMerge>();
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
+    public DbSet<LeadTask> LeadTasks => Set<LeadTask>();
+    public DbSet<WorkflowRule> WorkflowRules => Set<WorkflowRule>();
+    public DbSet<StageTransition> StageTransitions => Set<StageTransition>();
+    public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<RoutingConfig> RoutingConfigs => Set<RoutingConfig>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -50,6 +55,11 @@ public class TenantDbContext : DbContext
         modelBuilder.Entity<CustomFieldDefinition>().HasQueryFilter(c => c.TenantId == _tenantId && !c.IsDeleted);
         modelBuilder.Entity<LeadMerge>().HasQueryFilter(m => m.TenantId == _tenantId);
         modelBuilder.Entity<ImportBatch>().HasQueryFilter(b => b.TenantId == _tenantId);
+        modelBuilder.Entity<LeadTask>().HasQueryFilter(t => t.TenantId == _tenantId && !t.IsDeleted);
+        modelBuilder.Entity<WorkflowRule>().HasQueryFilter(r => r.TenantId == _tenantId && !r.IsDeleted);
+        modelBuilder.Entity<StageTransition>().HasQueryFilter(t => t.TenantId == _tenantId);
+        modelBuilder.Entity<Notification>().HasQueryFilter(n => n.TenantId == _tenantId && !n.IsDeleted);
+        modelBuilder.Entity<RoutingConfig>().HasQueryFilter(r => r.TenantId == _tenantId);
 
         base.OnModelCreating(modelBuilder);
     }
