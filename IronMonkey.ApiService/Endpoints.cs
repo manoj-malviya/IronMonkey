@@ -13,6 +13,7 @@ using IronMonkey.ApiService.Features.Leads.Pipeline.Tasks;
 using IronMonkey.ApiService.Features.Leads.Pipeline.Routing;
 using IronMonkey.ApiService.Features.Leads.Pipeline.States;
 using IronMonkey.ApiService.Features.Leads.Pipeline.Kanban;
+using IronMonkey.ApiService.Features.Leads.Workflow.Rules;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
 using IronMonkey.Data.Entities;
@@ -38,8 +39,9 @@ public static class Endpoints
         endpoints.MapPlatformAdminEndpoints();
         endpoints.MapLeadsEndpoints();
         endpoints.MapIngestionEndpoints();
+        endpoints.MapPipelineEndpoints();
     }
-    
+
     extension(IEndpointRouteBuilder app)
     {
         private void MapHealthCheckEndpoints()
@@ -146,6 +148,14 @@ public static class Endpoints
             DeleteWebFormEndpoint.Map(app);
             GetWebFormPageEndpoint.Map(app);
             SubmitWebFormEndpoint.Map(app);
+        }
+
+        private void MapPipelineEndpoints()
+        {
+            // Workflow rules (PIPE-04)
+            CreateWorkflowRuleEndpoint.Map(app);
+            ListWorkflowRulesEndpoint.Map(app);
+            UpdateWorkflowRuleEndpoint.Map(app);
         }
 
         private RouteGroupBuilder MapPublicGroup(string? prefix = null)
