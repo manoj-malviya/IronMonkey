@@ -39,6 +39,7 @@ public class TenantDbContext : DbContext
     public DbSet<StageTransition> StageTransitions => Set<StageTransition>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<RoutingConfig> RoutingConfigs => Set<RoutingConfig>();
+    public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -60,6 +61,44 @@ public class TenantDbContext : DbContext
         modelBuilder.Entity<StageTransition>().HasQueryFilter(t => t.TenantId == _tenantId);
         modelBuilder.Entity<Notification>().HasQueryFilter(n => n.TenantId == _tenantId && !n.IsDeleted);
         modelBuilder.Entity<RoutingConfig>().HasQueryFilter(r => r.TenantId == _tenantId);
+        modelBuilder.Entity<ActivityLog>().HasQueryFilter(a => a.TenantId == _tenantId);
+
+        // ActivityLog JSONB columns and dashboard indexes
+        modelBuilder.Entity<ActivityLog>(entity =>
+        {
+            entity.Property(a => a.OldValues)
+                .HasConversion(
+                    v => v == null ? null : System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
+                    v => v == null ? null : System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object?>>(v, (System.Text.Json.JsonSerializerOptions?)null))
+                .HasColumnType("jsonb");
+
+            entity.Property(a => a.NewValues)
+                .HasConversion(
+                    v => v == null ? null : System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
+                    v => v == null ? null : System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object?>>(v, (System.Text.Json.JsonSerializerOptions?)null))
+                .HasColumnType("jsonb");
+
+            // Dashboard performance indexes per D-08
+            entity.HasIndex(a => new { a.TenantId, a.LeadId }).HasDatabaseName("IX_ActivityLogs_TenantId_LeadId");
+            entity.HasIndex(a => new { a.TenantId, a.EventType }).HasDatabaseName("IX_ActivityLogs_TenantId_EventType");
+            entity.HasIndex(a => a.CreatedAt).HasDatabaseName("IX_ActivityLogs_CreatedAt");
+        });
+
+        // Dashboard performance indexes for Lead entity (per D-08)
+        modelBuilder.Entity<Lead>(entity =>
+        {
+            entity.HasIndex(l => new { l.TenantId, l.PipelineStageId }).HasDatabaseName("IX_Leads_TenantId_PipelineStageId");
+            entity.HasIndex(l => new { l.TenantId, l.Source }).HasDatabaseName("IX_Leads_TenantId_Source");
+            entity.HasIndex(l => new { l.TenantId, l.AssignedToUserId }).HasDatabaseName("IX_Leads_TenantId_AssignedToUserId");
+            entity.HasIndex(l => new { l.TenantId, l.CreatedAt }).HasDatabaseName("IX_Leads_TenantId_CreatedAt");
+        });
+
+        // Agent performance dashboard indexes for LeadTask
+        modelBuilder.Entity<LeadTask>(entity =>
+        {
+            entity.HasIndex(t => new { t.TenantId, t.AssignedToUserId }).HasDatabaseName("IX_LeadTasks_TenantId_AssignedToUserId");
+            entity.HasIndex(t => new { t.TenantId, t.Status }).HasDatabaseName("IX_LeadTasks_TenantId_Status");
+        });
 
         base.OnModelCreating(modelBuilder);
     }
