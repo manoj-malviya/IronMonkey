@@ -44,7 +44,7 @@ Any business can configure their complete lead management workflow — fields, s
 - [ ] Omnichannel communications: email to leads
 - [ ] Omnichannel communications: SMS to leads
 - [ ] Omnichannel communications: WhatsApp Business API
-- [ ] Basic dashboards: pipeline overview, conversion rates, agent performance
+- ✓ Basic dashboards: pipeline overview, conversion rates, agent performance — Validated in Phase 5 (REPT-01, REPT-02, REPT-03)
 - [ ] Production SaaS: tenant signup and onboarding flow
 - [ ] Production SaaS: API documentation
 - [ ] Production SaaS: billing integration (model TBD)
@@ -81,4 +81,4 @@ The system must be truly domain-agnostic — the data model for leads, statuses,
 | Billing model deferred | Not finalized — will decide between subscription tiers, usage-based, or hybrid | — Pending |
 
 ---
-*Last updated: 2026-03-22 after Phase 4 completion*
+*Last updated: 2026-03-24 after Phase 5 completion — all v1.0 milestone phases complete*
