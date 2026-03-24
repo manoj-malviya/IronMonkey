@@ -14,6 +14,9 @@ using IronMonkey.ApiService.Features.Leads.Pipeline.Routing;
 using IronMonkey.ApiService.Features.Leads.Pipeline.States;
 using IronMonkey.ApiService.Features.Leads.Pipeline.Kanban;
 using IronMonkey.ApiService.Features.Leads.Workflow.Rules;
+using IronMonkey.ApiService.Features.Reports.Pipeline;
+using IronMonkey.ApiService.Features.Reports.Conversion;
+using IronMonkey.ApiService.Features.Reports.Performance;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
 using IronMonkey.Data.Entities;
@@ -40,6 +43,7 @@ public static class Endpoints
         endpoints.MapLeadsEndpoints();
         endpoints.MapIngestionEndpoints();
         endpoints.MapPipelineEndpoints();
+        endpoints.MapReportEndpoints();
     }
 
     extension(IEndpointRouteBuilder app)
@@ -156,6 +160,14 @@ public static class Endpoints
             CreateWorkflowRuleEndpoint.Map(app);
             ListWorkflowRulesEndpoint.Map(app);
             UpdateWorkflowRuleEndpoint.Map(app);
+        }
+
+        private void MapReportEndpoints()
+        {
+            // Dashboard reports (Phase 05)
+            GetPipelineDashboardEndpoint.Map(app);         // REPT-01: pipeline overview
+            GetConversionDashboardEndpoint.Map(app);       // REPT-02: conversion rates
+            GetAgentPerformanceDashboardEndpoint.Map(app); // REPT-03: agent performance
         }
 
         private RouteGroupBuilder MapPublicGroup(string? prefix = null)
