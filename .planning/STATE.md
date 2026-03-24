@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 05-02-PLAN.md - ActivityLog entity and EF migration
-last_updated: "2026-03-24T17:32:44.940Z"
+stopped_at: Completed 05-04-PLAN.md - dashboard reporting endpoints (REPT-01, REPT-02, REPT-03)
+last_updated: "2026-03-24T17:41:00.174Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 30
-  completed_plans: 27
+  completed_plans: 28
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 05 (activity-reporting) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 
 ## Performance Metrics
 
@@ -74,6 +74,7 @@ Plan: 3 of 5
 | Phase 04-pipeline-workflow-engine P06 | 9 | 2 tasks | 7 files |
 | Phase 05-activity-reporting P01 | 5 | 2 tasks | 5 files |
 | Phase 05-activity-reporting P02 | 20 | 2 tasks | 6 files |
+| Phase 05-activity-reporting P04 | 8 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -140,6 +141,8 @@ Recent decisions affecting current work:
 - [Phase 05-activity-reporting]: ActivityLog global query filter uses TenantId only (no IsDeleted) — activity logs are immutable audit records
 - [Phase 05-activity-reporting]: OldValues/NewValues use HasConversion JSONB (System.Text.Json.JsonSerializer) — consistent with Phase 2 CustomFieldValues pattern
 - [Phase 05-activity-reporting]: Opportunity.Amount defaults to 0m and is mutated via SetAmount() — Create() factory signature preserved for backward compat
+- [Phase 05-activity-reporting]: User.Name used for agent display name (User entity has single Name field, not FirstName/LastName)
+- [Phase 05-activity-reporting]: ResolvePeriod static helper pattern for preset period shortcuts established for REPT-02 and REPT-03
 
 ### Pending Todos
 
@@ -152,6 +155,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T17:32:44.936Z
-Stopped at: Completed 05-02-PLAN.md - ActivityLog entity and EF migration
+Last session: 2026-03-24T17:41:00.170Z
+Stopped at: Completed 05-04-PLAN.md - dashboard reporting endpoints (REPT-01, REPT-02, REPT-03)
 Resume file: None
