@@ -130,3 +130,13 @@ None — all three endpoints have full LINQ queries wired to real entity data. N
 ---
 *Phase: 05-activity-reporting*
 *Completed: 2026-03-24*
+
+## Self-Check: PASSED
+
+- FOUND: IronMonkey.ApiService/Features/Reports/Pipeline/GetPipelineDashboardEndpoint.cs
+- FOUND: IronMonkey.ApiService/Features/Reports/Conversion/GetConversionDashboardEndpoint.cs
+- FOUND: IronMonkey.ApiService/Features/Reports/Performance/GetAgentPerformanceDashboardEndpoint.cs
+- FOUND: .planning/phases/05-activity-reporting/05-04-SUMMARY.md
+- FOUND: commit 522dc07 (Task 1)
+- FOUND: commit 55f23a6 (Task 2)
+- BUILD: dotnet build IronMonkey.ApiService exits 0
