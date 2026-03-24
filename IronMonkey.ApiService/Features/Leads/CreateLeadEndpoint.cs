@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
+using IronMonkey.ApiService.Features.Leads.Duplicates;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
 
@@ -21,7 +22,10 @@ public class CreateLeadEndpoint : IEndpoint
         string Mobile,
         string Email,
         string Source,
-        Guid PipelineStageId);
+        Guid PipelineStageId,
+        bool ForceCreate = false);  // If true, create despite duplicates
+
+    public record DuplicateMatch(Guid LeadId, string FullName, string Email, int ConfidenceScore);
 
     public record Response(
         Guid Id,
@@ -31,12 +35,15 @@ public class CreateLeadEndpoint : IEndpoint
         string Email,
         string Source,
         Guid PipelineStageId,
-        Dictionary<string, object?> CustomFields);
+        Dictionary<string, object?> CustomFields,
+        List<DuplicateMatch> Duplicates,
+        bool WasCreated);
 
-    private static async Task<Results<Created<Response>, BadRequest<string>>> Handle(
+    private static async Task<Results<Created<Response>, Ok<Response>, BadRequest<string>>> Handle(
         Request request,
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
+        IDuplicateDetectionService duplicateDetection,
         CancellationToken cancellationToken)
     {
         if (!Enum.TryParse<LeadSource>(request.Source, ignoreCase: true, out var source))
@@ -53,6 +60,27 @@ public class CreateLeadEndpoint : IEndpoint
         if (!stageExists)
             return TypedResults.BadRequest("Invalid pipeline stage");
 
+        // Check duplicates per D-13: warn before save on manual entry
+        var duplicates = await duplicateDetection.FindCandidatesAsync(
+            tenantId, request.Email, request.Mobile,
+            $"{request.FirstName} {request.LastName}", cancellationToken);
+
+        if (duplicates.Any() && !request.ForceCreate)
+        {
+            // Return 200 with empty Id (not created) and duplicate list — caller decides what to do
+            return TypedResults.Ok(new Response(
+                Guid.Empty,
+                request.FirstName,
+                request.LastName,
+                request.Mobile,
+                request.Email,
+                request.Source,
+                request.PipelineStageId,
+                new Dictionary<string, object?>(),
+                duplicates.Select(d => new DuplicateMatch(d.LeadId, d.FullName, d.Email, d.ConfidenceScore)).ToList(),
+                WasCreated: false));
+        }
+
         var lead = Lead.Create(tenantId, request.FirstName, request.LastName, request.Mobile, request.Email, source, request.PipelineStageId);
         db.Leads.Add(lead);
         await db.SaveChangesAsync(cancellationToken);
@@ -65,7 +93,9 @@ public class CreateLeadEndpoint : IEndpoint
             lead.Email,
             lead.Source.ToString(),
             lead.PipelineStageId,
-            lead.CustomFields.Values);
+            lead.CustomFields.Values,
+            Duplicates: new List<DuplicateMatch>(),
+            WasCreated: true);
 
         return TypedResults.Created($"/api/leads/{lead.Id}", response);
     }

@@ -34,6 +34,8 @@ public sealed class Lead : BaseTenantEntity
     public Guid? ConvertedContactId { get; private set; }
     public Guid? ConvertedOpportunityId { get; private set; }
     public bool IsConverted { get; private set; }
+    public bool IsPotentialDuplicate { get; private set; }
+    public Guid? PotentialDuplicateLeadId { get; private set; }
 
     public static Lead Create(Guid tenantId, string firstName, string lastName, string mobile, string email, LeadSource source, Guid pipelineStageId)
     {
@@ -55,5 +57,11 @@ public sealed class Lead : BaseTenantEntity
         ConvertedContactId = contactId;
         ConvertedOpportunityId = opportunityId;
         IsConverted = true;
+    }
+
+    public void MarkAsPotentialDuplicate(Guid matchedLeadId)
+    {
+        IsPotentialDuplicate = true;
+        PotentialDuplicateLeadId = matchedLeadId;
     }
 }

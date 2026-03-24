@@ -16,6 +16,7 @@ public static class ConfigureApp
         app.UseHttpsRedirection();
         app.UseAuthentication();
         app.UseAuthorization();
+        app.UseRateLimiter();
         app.MapEndpoints();
 
         app.UseHangfireDashboard("/hangfire", new DashboardOptions

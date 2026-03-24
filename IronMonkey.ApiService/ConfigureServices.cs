@@ -4,13 +4,17 @@ using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
+using System.Threading.RateLimiting;
 using IronMonkey.ApiService.Authentication.Services;
 using IronMonkey.ApiService.BackgroundJobs;
 using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Common.Cache;
 using IronMonkey.ApiService.Common.Services;
 using IronMonkey.ApiService.Features.Leads.Duplicates;
+using IronMonkey.ApiService.Features.Leads.Ingestion.Api;
+using IronMonkey.ApiService.Features.Leads.Ingestion.Csv;
 using IronMonkey.ApiService.Features.Leads.Merge;
+using IronMonkey.ApiService.Features.Leads.Ingestion.WebForm;
 using IronMonkey.Common.Auth;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
@@ -42,7 +46,14 @@ public static class ConfigureServices
             builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
             builder.Services.AddScoped<IDuplicateDetectionService, DuplicateDetectionService>();
             builder.Services.AddScoped<ILeadMergeService, LeadMergeService>();
+            builder.Services.AddScoped<IWebFormService, WebFormService>();
+            builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
+            builder.Services.AddScoped<CsvImportService>();
+            builder.Services.AddScoped<CsvImportJob>();
             builder.AddHangfire();
+
+            // Phase 3: Rate limiting middleware
+            builder.AddRateLimiter();
         }
 
         private void AddSerilog()
@@ -157,6 +168,40 @@ public static class ConfigureServices
                         .AllowAnyHeader()
                         .AllowAnyMethod();
                 });
+            });
+        }
+
+        private void AddRateLimiter()
+        {
+            builder.Services.AddRateLimiter(options =>
+            {
+                // REST API rate limit: 100 leads/min per API key (D-03)
+                options.AddPolicy("api-key-limit", httpContext =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey: httpContext.Request.Headers["X-Api-Key"].ToString() is { Length: > 0 } key
+                            ? key
+                            : "anonymous-" + httpContext.Connection.RemoteIpAddress,
+                        factory: _ => new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = 100,
+                            Window = TimeSpan.FromMinutes(1),
+                            AutoReplenishment = true,
+                            QueueLimit = 0
+                        }));
+
+                // Web form rate limit: 10 submissions/min per form token (D-03)
+                options.AddPolicy("form-token-limit", httpContext =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey: httpContext.Request.RouteValues["token"]?.ToString() ?? "no-token",
+                        factory: _ => new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = 10,
+                            Window = TimeSpan.FromMinutes(1),
+                            AutoReplenishment = true,
+                            QueueLimit = 0
+                        }));
+
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             });
         }
 

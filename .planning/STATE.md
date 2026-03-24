@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 02-configurable-lead-model/02-05-PLAN.md
-last_updated: "2026-03-21T08:15:23.275Z"
+stopped_at: Completed 03-lead-ingestion/03-07-PLAN.md
+last_updated: "2026-03-21T20:07:27.058Z"
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 12
-  completed_plans: 12
+  completed_phases: 3
+  total_plans: 19
+  completed_plans: 19
 ---
 
 # Project State
@@ -23,7 +23,7 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 
 ## Current Position
 
-Phase: 3
+Phase: 4
 Plan: Not started
 
 ## Performance Metrics
@@ -59,6 +59,13 @@ Plan: Not started
 | Phase 02-configurable-lead-model P04 | 35 | 2 tasks | 8 files |
 | Phase 02-configurable-lead-model P05 | 15 | 2 tasks | 6 files |
 | Phase 02-configurable-lead-model P05 | 15 | 2 tasks | 6 files |
+| Phase 03-lead-ingestion P01 | 4 | 2 tasks | 7 files |
+| Phase 03-lead-ingestion P02 | 6 | 2 tasks | 9 files |
+| Phase 03-lead-ingestion P03 | 6 | 2 tasks | 8 files |
+| Phase 03-lead-ingestion P05 | 8 | 2 tasks | 8 files |
+| Phase 03-lead-ingestion P04 | 9 | 2 tasks | 7 files |
+| Phase 03-lead-ingestion P06 | 10 | 2 tasks | 6 files |
+| Phase 03-lead-ingestion P07 | 45 | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -98,6 +105,18 @@ Recent decisions affecting current work:
 - [Phase 02-configurable-lead-model]: Unique DB per test using GUID suffix — prevents test interference when running in parallel; each test gets its own PostgreSQL database within the shared TestContainers instance
 - [Phase 02-configurable-lead-model]: LeadMergeService.CustomFields.IsModified fix — HasConversion JSONB value converters require explicit db.Entry(entity).Property(...).IsModified = true after mutating dictionary reference
 - [Phase 02-configurable-lead-model]: ListPipelineStages active filter uses explicit .Where(p => p.IsActive) — global query filter only covers IsDeleted; IsActive is a separate business concept from soft-delete
+- [Phase 03-lead-ingestion]: 03-06-PLAN chosen as implementation target for all Phase 3 stubs — consistent with Phase 1 and Phase 2 naming convention
+- [Phase 03-lead-ingestion]: ApiKey in CentralDbContext for O(1) tenant lookup by key hash without prior tenant context
+- [Phase 03-lead-ingestion]: WebForm in CentralDbContext so form token lookup works before tenant is resolved
+- [Phase 03-lead-ingestion]: CreateLeadViaApiEndpoint uses AllowAnonymous + X-Api-Key header (not JWT RequireAuthorization) — external callers have no JWT; tenant resolved via IApiKeyService
+- [Phase 03-lead-ingestion]: ITenantRegistry used for GetTenantConnectionStringAsync in WebFormService instead of direct Tenant entity access
+- [Phase 03-lead-ingestion]: FromForm attribute required on SubmitWebFormEndpoint SubmissionRequest to bind HTML form POST data in Minimal API
+- [Phase 03-lead-ingestion]: Fail-fast CSV header validation in upload endpoint (not in job) — rejects malformed files before enqueueing
+- [Phase 03-lead-ingestion]: CSV import creates all rows, flags duplicates with IsPotentialDuplicate=true per D-14
+- [Phase 03-lead-ingestion]: MapIngestionEndpoints extracted from MapLeadsEndpoints for clarity — ingestion endpoints are a distinct concern
+- [Phase 03-lead-ingestion]: Rate limiting uses HttpContext.Request.RouteValues for token partition key (not HttpContext.RouteValues which does not exist)
+- [Phase 03-lead-ingestion]: EF Core model snapshot drift fixed inline during test implementation — MigrateAsync() requires snapshots to match all registered entities
+- [Phase 03-lead-ingestion]: Integration tests invoke services directly (not via HTTP) — eliminates WebApplicationFactory complexity while testing against real PostgreSQL
 
 ### Pending Todos
 
@@ -110,6 +129,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T07:57:19.795Z
-Stopped at: Completed 02-configurable-lead-model/02-05-PLAN.md
+Last session: 2026-03-21T20:01:38.276Z
+Stopped at: Completed 03-lead-ingestion/03-07-PLAN.md
 Resume file: None

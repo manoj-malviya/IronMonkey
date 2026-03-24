@@ -5,6 +5,9 @@ using IronMonkey.ApiService.Features.Leads;
 using IronMonkey.ApiService.Features.Leads.CustomFields;
 using IronMonkey.ApiService.Features.Leads.PipelineStages;
 using IronMonkey.ApiService.Features.Leads.Duplicates;
+using IronMonkey.ApiService.Features.Leads.Ingestion.Api;
+using IronMonkey.ApiService.Features.Leads.Ingestion.Csv;
+using IronMonkey.ApiService.Features.Leads.Ingestion.WebForm;
 using IronMonkey.ApiService.Features.Leads.Merge;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
@@ -30,6 +33,7 @@ public static class Endpoints
         endpoints.MapUserManagementEndpoints();
         endpoints.MapPlatformAdminEndpoints();
         endpoints.MapLeadsEndpoints();
+        endpoints.MapIngestionEndpoints();
     }
     
     extension(IEndpointRouteBuilder app)
@@ -107,6 +111,28 @@ public static class Endpoints
             CreateLeadEndpoint.Map(app);
             CheckDuplicatesEndpoint.Map(app);
             MergeLeadsEndpoint.Map(app);
+        }
+
+        private void MapIngestionEndpoints()
+        {
+            // API key management (authenticated, for tenant admins)
+            GenerateApiKeyEndpoint.Map(app);
+            ListApiKeysEndpoint.Map(app);
+            DeleteApiKeyEndpoint.Map(app);
+
+            // External REST API lead creation (X-Api-Key auth, rate limited)
+            CreateLeadViaApiEndpoint.Map(app);
+
+            // CSV import (authenticated)
+            UploadLeadsFromCsvEndpoint.Map(app);
+            GetImportStatusEndpoint.Map(app);
+            GetImportErrorsEndpoint.Map(app);
+
+            // Web forms (create/delete: authenticated; get/submit: anonymous)
+            CreateWebFormEndpoint.Map(app);
+            DeleteWebFormEndpoint.Map(app);
+            GetWebFormPageEndpoint.Map(app);
+            SubmitWebFormEndpoint.Map(app);
         }
 
         private RouteGroupBuilder MapPublicGroup(string? prefix = null)

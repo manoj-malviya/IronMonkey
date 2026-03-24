@@ -33,6 +33,7 @@ public class TenantDbContext : DbContext
     public DbSet<PipelineStage> PipelineStages => Set<PipelineStage>();
     public DbSet<CustomFieldDefinition> CustomFieldDefinitions => Set<CustomFieldDefinition>();
     public DbSet<LeadMerge> LeadMerges => Set<LeadMerge>();
+    public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -48,6 +49,7 @@ public class TenantDbContext : DbContext
         modelBuilder.Entity<PipelineStage>().HasQueryFilter(p => p.TenantId == _tenantId && !p.IsDeleted);
         modelBuilder.Entity<CustomFieldDefinition>().HasQueryFilter(c => c.TenantId == _tenantId && !c.IsDeleted);
         modelBuilder.Entity<LeadMerge>().HasQueryFilter(m => m.TenantId == _tenantId);
+        modelBuilder.Entity<ImportBatch>().HasQueryFilter(b => b.TenantId == _tenantId);
 
         base.OnModelCreating(modelBuilder);
     }
