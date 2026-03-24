@@ -6,6 +6,18 @@ A multi-tenant, domain-agnostic Lead Management SaaS platform. Any business — 
 
 **Current State:** v1.0 MVP shipped. Complete backend API with multi-tenancy, configurable lead model, multi-channel ingestion, pipeline workflow engine, and reporting dashboards. 207 C# files, ~19,100 LOC, 108+ integration tests against real PostgreSQL.
 
+## Current Milestone: v1.1 Tenant Onboarding with Industry Recipes
+
+**Goal:** New tenants pick an industry (or blank) at signup and get a fully pre-configured workspace — pipeline stages, custom fields, workflow rules, and default roles — as a starting point they can freely customize.
+
+**Target features:**
+- Industry recipe data model (reusable templates storing stages, fields, rules, roles)
+- Two initial recipes: Automobile Dealerships, Educational Institutions
+- Blank/Custom option for tenants without a matching industry
+- Recipe selection integrated into tenant signup/provisioning flow
+- Recipe application seeds tenant DB with pre-configured data
+- Tenant can modify all recipe-seeded data after provisioning
+
 ## Core Value
 
 Any business can configure their complete lead management workflow — fields, statuses, pipelines, automation rules — without writing code or contacting support.
@@ -38,9 +50,18 @@ Any business can configure their complete lead management workflow — fields, s
 - ✓ Basic dashboards: pipeline overview, conversion rates, agent performance — v1.0 (REPT-01, REPT-02, REPT-03)
 - ✓ Unified lead activity timeline — v1.0 (ACTV-01)
 
-### Active
+### Active (v1.1)
 
-- [ ] Tenant onboarding with industry recipe/template selection
+- [ ] Industry recipe data model with reusable templates
+- [ ] Automobile Dealership recipe (stages, fields, rules, roles)
+- [ ] Educational Institution recipe (stages, fields, rules, roles)
+- [ ] Blank/Custom option for tenants without a matching industry
+- [ ] Recipe selection during tenant signup/provisioning
+- [ ] Recipe application seeds tenant database on provisioning
+- [ ] Tenant can freely modify all recipe-seeded configuration
+
+### Future
+
 - [ ] Configurable customer fields (custom fields per tenant)
 - [ ] Custom roles with granular permissions per tenant
 - [ ] Employee/team management within tenant
@@ -80,12 +101,31 @@ The system must be truly domain-agnostic — the data model for leads, statuses,
 |----------|-----------|---------|
 | DB-per-tenant isolation | Maximum data isolation, compliance-friendly, tenant can be migrated independently | ✓ Good — working well across all phases |
 | Blazor Server (not WASM) | Simpler auth, no API duplication, real-time updates via SignalR | — Pending (frontend not yet connected) |
-| Industry recipes for onboarding | Reduces time-to-value for new tenants, avoids blank-slate problem | — Pending (deferred to v2) |
+| Industry recipes for onboarding | Reduces time-to-value for new tenants, avoids blank-slate problem | — In Progress (v1.1) |
+| Recipes as starting points, not locked | Tenant freedom to customize post-provisioning | — Pending |
+| Seed existing roles (no granular permissions) | Keep v1.1 focused; granular permissions deferred | — Pending |
 | Billing model deferred | Not finalized — will decide between subscription tiers, usage-based, or hybrid | — Pending |
 | JSONB custom fields with HasConversion | Flexible tenant-defined fields without schema changes | ✓ Good — EF Core value converters work cleanly |
 | Outbox pattern for domain events | Reliable async processing, integrated with Hangfire | ✓ Good — template for all background work |
 | ActivityLog via SaveChanges interceptor | Automatic audit trail without per-endpoint instrumentation | ✓ Good — zero-touch change tracking |
 | Direct LINQ for dashboards (no materialized views) | Simpler v1, defer optimization | — Pending (monitor at scale) |
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd:transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd:complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-03-24 after v1.0 milestone completion*
+*Last updated: 2026-03-24 after v1.1 milestone started*
