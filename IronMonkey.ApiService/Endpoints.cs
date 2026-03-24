@@ -13,6 +13,7 @@ using IronMonkey.ApiService.Features.Leads.Pipeline.Tasks;
 using IronMonkey.ApiService.Features.Leads.Pipeline.Routing;
 using IronMonkey.ApiService.Features.Leads.Pipeline.States;
 using IronMonkey.ApiService.Features.Leads.Pipeline.Kanban;
+using IronMonkey.ApiService.Features.Activity.Timeline;
 using IronMonkey.ApiService.Features.Leads.Workflow.Rules;
 using IronMonkey.ApiService.Features.Reports.Pipeline;
 using IronMonkey.ApiService.Features.Reports.Conversion;
@@ -44,6 +45,7 @@ public static class Endpoints
         endpoints.MapIngestionEndpoints();
         endpoints.MapPipelineEndpoints();
         endpoints.MapReportEndpoints();
+        endpoints.MapActivityEndpoints();
     }
 
     extension(IEndpointRouteBuilder app)
@@ -168,6 +170,13 @@ public static class Endpoints
             GetPipelineDashboardEndpoint.Map(app);         // REPT-01: pipeline overview
             GetConversionDashboardEndpoint.Map(app);       // REPT-02: conversion rates
             GetAgentPerformanceDashboardEndpoint.Map(app); // REPT-03: agent performance
+        }
+
+        private void MapActivityEndpoints()
+        {
+            // Activity timeline (ACTV-01)
+            GetLeadActivityTimelineEndpoint.Map(app);
+            AddLeadNoteEndpoint.Map(app);
         }
 
         private RouteGroupBuilder MapPublicGroup(string? prefix = null)

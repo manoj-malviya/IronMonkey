@@ -22,6 +22,9 @@ public class TenantDbContext : DbContext
         _tenantId = tenantId;
     }
 
+    /// <summary>Exposes the tenant identity for interceptors that need to create tenant-scoped activity log entries.</summary>
+    public Guid TenantId => _tenantId;
+
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();

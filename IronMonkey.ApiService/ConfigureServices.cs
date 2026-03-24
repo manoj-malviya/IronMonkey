@@ -15,9 +15,11 @@ using IronMonkey.ApiService.Features.Leads.Ingestion.Api;
 using IronMonkey.ApiService.Features.Leads.Ingestion.Csv;
 using IronMonkey.ApiService.Features.Leads.Merge;
 using IronMonkey.ApiService.Features.Leads.Ingestion.WebForm;
+using IronMonkey.ApiService.Features.Activity;
 using IronMonkey.ApiService.Features.Leads.Pipeline.Routing;
 using IronMonkey.ApiService.Features.Leads.Pipeline.States;
 using IronMonkey.ApiService.Features.Leads.Workflow.Rules;
+using IronMonkey.ApiService.Interceptors;
 using IronMonkey.ApiService.Notifications;
 using IronMonkey.Common.Auth;
 using IronMonkey.Data;
@@ -54,6 +56,10 @@ public static class ConfigureServices
             builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
             builder.Services.AddScoped<ILeadRoutingService, LeadRoutingService>();
             builder.Services.AddScoped<IStateValidationService, StateValidationService>();
+            // Phase 5: Activity tracking
+            builder.Services.AddScoped<ActivityChangeInterceptor>();
+            builder.Services.AddScoped<IActivityTrackingService, ActivityTrackingService>();
+
             // Phase 4: Workflow engine and notifications
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<IWorkflowRuleEngine, WorkflowRuleEngine>();
