@@ -13,6 +13,7 @@ using IronMonkey.ApiService.Features.Leads.Pipeline.Tasks;
 using IronMonkey.ApiService.Features.Leads.Pipeline.Routing;
 using IronMonkey.ApiService.Features.Leads.Pipeline.States;
 using IronMonkey.ApiService.Features.Leads.Pipeline.Kanban;
+using IronMonkey.ApiService.Features.Activity.Timeline;
 using IronMonkey.ApiService.Features.Leads.Workflow.Rules;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
@@ -40,6 +41,7 @@ public static class Endpoints
         endpoints.MapLeadsEndpoints();
         endpoints.MapIngestionEndpoints();
         endpoints.MapPipelineEndpoints();
+        endpoints.MapActivityEndpoints();
     }
 
     extension(IEndpointRouteBuilder app)
@@ -156,6 +158,13 @@ public static class Endpoints
             CreateWorkflowRuleEndpoint.Map(app);
             ListWorkflowRulesEndpoint.Map(app);
             UpdateWorkflowRuleEndpoint.Map(app);
+        }
+
+        private void MapActivityEndpoints()
+        {
+            // Activity timeline (ACTV-01)
+            GetLeadActivityTimelineEndpoint.Map(app);
+            AddLeadNoteEndpoint.Map(app);
         }
 
         private RouteGroupBuilder MapPublicGroup(string? prefix = null)
