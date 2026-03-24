@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 05-01-PLAN.md — Wave 0 test stubs for Phase 5
-last_updated: "2026-03-24T17:29:02.861Z"
+stopped_at: Completed 05-02-PLAN.md - ActivityLog entity and EF migration
+last_updated: "2026-03-24T17:32:44.940Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 30
-  completed_plans: 26
+  completed_plans: 27
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 05 (activity-reporting) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 
 ## Performance Metrics
 
@@ -73,6 +73,7 @@ Plan: 2 of 5
 | Phase 04 P05 | 8 | 2 tasks | 13 files |
 | Phase 04-pipeline-workflow-engine P06 | 9 | 2 tasks | 7 files |
 | Phase 05-activity-reporting P01 | 5 | 2 tasks | 5 files |
+| Phase 05-activity-reporting P02 | 20 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -136,6 +137,9 @@ Recent decisions affecting current work:
 - [Phase 04-pipeline-workflow-engine]: TaskStatus disambiguation: IronMonkey.Data.Entities.TaskStatus fully-qualified in test files to avoid System.Threading.Tasks.TaskStatus conflict
 - [Phase 04-pipeline-workflow-engine]: Round-robin test uses sorted Ids post-creation: User.Create does not accept explicit Id, agents sorted by Id after creation to match LeadRoutingService ordering
 - [Phase 05-activity-reporting]: Wave 0 stubs use primary constructor syntax for fixture injection; skip messages reference specific future plans
+- [Phase 05-activity-reporting]: ActivityLog global query filter uses TenantId only (no IsDeleted) — activity logs are immutable audit records
+- [Phase 05-activity-reporting]: OldValues/NewValues use HasConversion JSONB (System.Text.Json.JsonSerializer) — consistent with Phase 2 CustomFieldValues pattern
+- [Phase 05-activity-reporting]: Opportunity.Amount defaults to 0m and is mutated via SetAmount() — Create() factory signature preserved for backward compat
 
 ### Pending Todos
 
@@ -148,6 +152,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T17:29:02.848Z
-Stopped at: Completed 05-01-PLAN.md — Wave 0 test stubs for Phase 5
+Last session: 2026-03-24T17:32:44.936Z
+Stopped at: Completed 05-02-PLAN.md - ActivityLog entity and EF migration
 Resume file: None
