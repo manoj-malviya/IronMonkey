@@ -85,27 +85,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RCPE-01 | — | Pending |
-| RCPE-02 | — | Pending |
-| RCPE-03 | — | Pending |
-| RCPE-04 | — | Pending |
-| RCNT-01 | — | Pending |
-| RCNT-02 | — | Pending |
-| RCNT-03 | — | Pending |
-| ONBD-01 | — | Pending |
-| ONBD-02 | — | Pending |
-| ONBD-03 | — | Pending |
-| ONBD-04 | — | Pending |
-| ONBD-05 | — | Pending |
-| RADM-01 | — | Pending |
-| RADM-02 | — | Pending |
-| RADM-03 | — | Pending |
+| RCPE-01 | Phase 6 | Pending |
+| RCPE-02 | Phase 6 | Pending |
+| RCPE-03 | Phase 6 | Pending |
+| RCPE-04 | Phase 6 | Pending |
+| RCNT-01 | Phase 7 | Pending |
+| RCNT-02 | Phase 7 | Pending |
+| RCNT-03 | Phase 7 | Pending |
+| ONBD-01 | Phase 8 | Pending |
+| ONBD-02 | Phase 8 | Pending |
+| ONBD-03 | Phase 8 | Pending |
+| ONBD-04 | Phase 8 | Pending |
+| ONBD-05 | Phase 8 | Pending |
+| RADM-01 | Phase 8 | Pending |
+| RADM-02 | Phase 8 | Pending |
+| RADM-03 | Phase 8 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 15 total
-- Mapped to phases: 0
-- Unmapped: 15
+- Mapped to phases: 15
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-03-24 after initial definition*
+*Last updated: 2026-03-24 — traceability filled after roadmap creation*
