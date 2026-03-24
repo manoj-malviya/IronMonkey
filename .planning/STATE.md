@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-stopped_at: Completed 03-lead-ingestion/03-07-PLAN.md
-last_updated: "2026-03-21T20:07:27.058Z"
+status: Milestone complete
+stopped_at: Completed 05-05-PLAN.md - All Phase 5 integration tests wired and green
+last_updated: "2026-03-24T18:12:58.697Z"
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 19
-  completed_plans: 19
+  completed_phases: 5
+  total_plans: 30
+  completed_plans: 30
 ---
 
 # Project State
@@ -19,10 +19,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** Any business can configure their complete lead management workflow without writing code
-**Current focus:** Phase 02 — configurable-lead-model
+**Current focus:** Phase 05 — activity-reporting
 
 ## Current Position
 
+Phase: 05
 Phase: 4
 Plan: Not started
 
@@ -66,6 +67,17 @@ Plan: Not started
 | Phase 03-lead-ingestion P04 | 9 | 2 tasks | 7 files |
 | Phase 03-lead-ingestion P06 | 10 | 2 tasks | 6 files |
 | Phase 03-lead-ingestion P07 | 45 | 3 tasks | 9 files |
+| Phase 04-pipeline-workflow-engine P02 | 278 | 2 tasks | 14 files |
+| Phase 04-pipeline-workflow-engine P01 | 4 | 2 tasks | 8 files |
+| Phase 04-pipeline-workflow-engine P04 | 4 | 2 tasks | 9 files |
+| Phase 04-pipeline-workflow-engine P03 | 350 | 2 tasks | 8 files |
+| Phase 04 P05 | 8 | 2 tasks | 13 files |
+| Phase 04-pipeline-workflow-engine P06 | 9 | 2 tasks | 7 files |
+| Phase 05-activity-reporting P01 | 5 | 2 tasks | 5 files |
+| Phase 05-activity-reporting P02 | 20 | 2 tasks | 6 files |
+| Phase 05-activity-reporting P04 | 8 | 2 tasks | 4 files |
+| Phase 05-activity-reporting P03 | 20 | 2 tasks | 9 files |
+| Phase 05-activity-reporting P05 | 25 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -117,6 +129,27 @@ Recent decisions affecting current work:
 - [Phase 03-lead-ingestion]: Rate limiting uses HttpContext.Request.RouteValues for token partition key (not HttpContext.RouteValues which does not exist)
 - [Phase 03-lead-ingestion]: EF Core model snapshot drift fixed inline during test implementation — MigrateAsync() requires snapshots to match all registered entities
 - [Phase 03-lead-ingestion]: Integration tests invoke services directly (not via HTTP) — eliminates WebApplicationFactory complexity while testing against real PostgreSQL
+- [Phase 04-pipeline-workflow-engine]: StageTransitionEntityConfiguration class name used to avoid naming conflict with Stateless service planned in 04-03
+- [Phase 04-pipeline-workflow-engine]: Global query filters added for all 5 new Phase 4 entity types in TenantDbContext for automatic tenant isolation
+- [Phase 04-pipeline-workflow-engine]: RulesEngine 6.0.0 used instead of 5.1.2 — 5.1.2 not published on NuGet; 6.0.0 resolves cleanly
+- [Phase 04-pipeline-workflow-engine]: Wave 0 stub plan: 04-06 chosen as implementation target for all Phase 4 stubs (consistent with Phase 1-3 naming convention)
+- [Phase 04-pipeline-workflow-engine]: IStateValidationService uses separate DB context from mutation for thread safety
+- [Phase 04-pipeline-workflow-engine]: StateValidationService returns null on success, error string on failure — enables inline error propagation
+- [Phase 04-pipeline-workflow-engine]: WorkflowRuleEngine uses JsonDocument for condition evaluation in Phase 4 v1 — full RulesEngine integration deferred to Phase 5
+- [Phase 04-pipeline-workflow-engine]: NotificationService creates in-app notifications only — no email delivery per D-10
+- [Phase 04-pipeline-workflow-engine]: MapPipelineEndpoints() added to Endpoints.cs as separate method for Phase 4 workflow rule endpoints
+- [Phase 04-pipeline-workflow-engine]: TaskStatus disambiguation: IronMonkey.Data.Entities.TaskStatus fully-qualified in test files to avoid System.Threading.Tasks.TaskStatus conflict
+- [Phase 04-pipeline-workflow-engine]: Round-robin test uses sorted Ids post-creation: User.Create does not accept explicit Id, agents sorted by Id after creation to match LeadRoutingService ordering
+- [Phase 05-activity-reporting]: Wave 0 stubs use primary constructor syntax for fixture injection; skip messages reference specific future plans
+- [Phase 05-activity-reporting]: ActivityLog global query filter uses TenantId only (no IsDeleted) — activity logs are immutable audit records
+- [Phase 05-activity-reporting]: OldValues/NewValues use HasConversion JSONB (System.Text.Json.JsonSerializer) — consistent with Phase 2 CustomFieldValues pattern
+- [Phase 05-activity-reporting]: Opportunity.Amount defaults to 0m and is mutated via SetAmount() — Create() factory signature preserved for backward compat
+- [Phase 05-activity-reporting]: User.Name used for agent display name (User entity has single Name field, not FirstName/LastName)
+- [Phase 05-activity-reporting]: ResolvePeriod static helper pattern for preset period shortcuts established for REPT-02 and REPT-03
+- [Phase 05-activity-reporting]: ActivityChangeInterceptor registered as scoped — IUserContext is scoped per HTTP request, requires TenantDbContextFactory overload with IEnumerable<IInterceptor> for call-site injection
+- [Phase 05-activity-reporting]: User entity has Name property not FirstName/LastName — ActivityEventDto.ActorName uses Actor.Name
+- [Phase 05-activity-reporting]: ActivityLog.ActorId requires real User entity — non-nullable FK constraint; random Guids cause 23503 FK violations in tests
+- [Phase 05-activity-reporting]: DateTime must use DateTimeKind.Utc for Npgsql timestamptz columns — Kind=Unspecified rejected at runtime
 
 ### Pending Todos
 
@@ -129,6 +162,8 @@ None yet.
 
 ## Session Continuity
 
+Last session: 2026-03-24T18:08:28.098Z
+Stopped at: Completed 05-05-PLAN.md - All Phase 5 integration tests wired and green
 Last session: 2026-03-21T20:01:38.276Z
 Stopped at: Completed 03-lead-ingestion/03-07-PLAN.md
 Resume file: None

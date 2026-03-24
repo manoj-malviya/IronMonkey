@@ -9,6 +9,15 @@ using IronMonkey.ApiService.Features.Leads.Ingestion.Api;
 using IronMonkey.ApiService.Features.Leads.Ingestion.Csv;
 using IronMonkey.ApiService.Features.Leads.Ingestion.WebForm;
 using IronMonkey.ApiService.Features.Leads.Merge;
+using IronMonkey.ApiService.Features.Leads.Pipeline.Tasks;
+using IronMonkey.ApiService.Features.Leads.Pipeline.Routing;
+using IronMonkey.ApiService.Features.Leads.Pipeline.States;
+using IronMonkey.ApiService.Features.Leads.Pipeline.Kanban;
+using IronMonkey.ApiService.Features.Activity.Timeline;
+using IronMonkey.ApiService.Features.Leads.Workflow.Rules;
+using IronMonkey.ApiService.Features.Reports.Pipeline;
+using IronMonkey.ApiService.Features.Reports.Conversion;
+using IronMonkey.ApiService.Features.Reports.Performance;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
 using IronMonkey.Data.Entities;
@@ -34,8 +43,11 @@ public static class Endpoints
         endpoints.MapPlatformAdminEndpoints();
         endpoints.MapLeadsEndpoints();
         endpoints.MapIngestionEndpoints();
+        endpoints.MapPipelineEndpoints();
+        endpoints.MapReportEndpoints();
+        endpoints.MapActivityEndpoints();
     }
-    
+
     extension(IEndpointRouteBuilder app)
     {
         private void MapHealthCheckEndpoints()
@@ -111,6 +123,60 @@ public static class Endpoints
             CreateLeadEndpoint.Map(app);
             CheckDuplicatesEndpoint.Map(app);
             MergeLeadsEndpoint.Map(app);
+            CreateTaskEndpoint.Map(app);
+            ListTasksEndpoint.Map(app);
+            UpdateTaskEndpoint.Map(app);
+            ConfigureRoutingEndpoint.Map(app);
+            GetRoutingConfigEndpoint.Map(app);
+            ConfigureTransitionsEndpoint.Map(app);
+            ListTransitionsEndpoint.Map(app);
+            GetKanbanBoardEndpoint.Map(app);
+            MoveLeadEndpoint.Map(app);
+        }
+
+        private void MapIngestionEndpoints()
+        {
+            // API key management (authenticated, for tenant admins)
+            GenerateApiKeyEndpoint.Map(app);
+            ListApiKeysEndpoint.Map(app);
+            DeleteApiKeyEndpoint.Map(app);
+
+            // External REST API lead creation (X-Api-Key auth, rate limited)
+            CreateLeadViaApiEndpoint.Map(app);
+
+            // CSV import (authenticated)
+            UploadLeadsFromCsvEndpoint.Map(app);
+            GetImportStatusEndpoint.Map(app);
+            GetImportErrorsEndpoint.Map(app);
+
+            // Web forms (create/delete: authenticated; get/submit: anonymous)
+            CreateWebFormEndpoint.Map(app);
+            DeleteWebFormEndpoint.Map(app);
+            GetWebFormPageEndpoint.Map(app);
+            SubmitWebFormEndpoint.Map(app);
+        }
+
+        private void MapPipelineEndpoints()
+        {
+            // Workflow rules (PIPE-04)
+            CreateWorkflowRuleEndpoint.Map(app);
+            ListWorkflowRulesEndpoint.Map(app);
+            UpdateWorkflowRuleEndpoint.Map(app);
+        }
+
+        private void MapReportEndpoints()
+        {
+            // Dashboard reports (Phase 05)
+            GetPipelineDashboardEndpoint.Map(app);         // REPT-01: pipeline overview
+            GetConversionDashboardEndpoint.Map(app);       // REPT-02: conversion rates
+            GetAgentPerformanceDashboardEndpoint.Map(app); // REPT-03: agent performance
+        }
+
+        private void MapActivityEndpoints()
+        {
+            // Activity timeline (ACTV-01)
+            GetLeadActivityTimelineEndpoint.Map(app);
+            AddLeadNoteEndpoint.Map(app);
         }
 
         private void MapIngestionEndpoints()

@@ -1,6 +1,7 @@
 using Hangfire;
 using Hangfire.Dashboard;
 using Microsoft.EntityFrameworkCore;
+using IronMonkey.ApiService.BackgroundJobs;
 using IronMonkey.Data;
 using Serilog;
 
@@ -24,6 +25,12 @@ public static class ConfigureApp
             Authorization = [new HangfireAdminOnlyAuthFilter()],
             IsReadOnlyFunc = ctx => false
         });
+
+        // D-11: Hourly scan for time-elapsed workflow rules
+        RecurringJob.AddOrUpdate<TimeElapsedRuleScanJob>(
+            "time-elapsed-rule-scan",
+            job => job.ExecuteAsync(CancellationToken.None),
+            Cron.Hourly);
 
         await app.EnsureDatabaseCreated();
     }

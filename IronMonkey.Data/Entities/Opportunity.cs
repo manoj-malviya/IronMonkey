@@ -22,6 +22,7 @@ public sealed class Opportunity : BaseTenantEntity
     public DateTime ExpectedCloseDate { get; private set; }
     public string Stage { get; private set; } = string.Empty;
     public string? LossReason { get; private set; }
+    public decimal Amount { get; private set; } = 0m;
 
     // Navigation property
     public Contact Contact { get; private set; } = null!;
@@ -49,4 +50,6 @@ public sealed class Opportunity : BaseTenantEntity
     {
         Stage = stage;
     }
+
+    public void SetAmount(decimal amount) => Amount = amount;
 }

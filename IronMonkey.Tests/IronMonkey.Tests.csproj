@@ -16,6 +16,8 @@
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.3.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.2" />
+    <PackageReference Include="Stateless" Version="5.20.1" />
+    <PackageReference Include="RulesEngine" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\IronMonkey.ApiService\IronMonkey.ApiService.csproj" />

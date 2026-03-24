@@ -36,6 +36,7 @@ public sealed class Lead : BaseTenantEntity
     public bool IsConverted { get; private set; }
     public bool IsPotentialDuplicate { get; private set; }
     public Guid? PotentialDuplicateLeadId { get; private set; }
+    public Guid? AssignedToUserId { get; private set; }
 
     public static Lead Create(Guid tenantId, string firstName, string lastName, string mobile, string email, LeadSource source, Guid pipelineStageId)
     {
@@ -64,4 +65,8 @@ public sealed class Lead : BaseTenantEntity
         IsPotentialDuplicate = true;
         PotentialDuplicateLeadId = matchedLeadId;
     }
+
+    public void AssignTo(Guid? userId) => AssignedToUserId = userId;
+
+    public void MoveToPipelineStage(Guid stageId) => PipelineStageId = stageId;
 }

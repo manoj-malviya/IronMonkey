@@ -15,8 +15,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Multi-Tenancy Foundation** - Isolated database per tenant with bulletproof tenant context routing (completed 2026-03-20)
 - [ ] **Phase 2: Configurable Lead Model** - Tenant-defined custom fields, pipeline stages, and duplicate detection (gap closure in progress)
 - [ ] **Phase 3: Lead Ingestion** - Manual entry, CSV import, REST API, and embeddable web forms
-- [ ] **Phase 4: Pipeline & Workflow Engine** - Kanban board, task management, lead routing, and configurable automation rules
-- [ ] **Phase 5: Activity & Reporting** - Unified lead activity timeline and pipeline/performance dashboards
+- [x] **Phase 4: Pipeline & Workflow Engine** - Kanban board, task management, lead routing, and configurable automation rules (completed 2026-03-22)
+- [x] **Phase 5: Activity & Reporting** - Unified lead activity timeline and pipeline/performance dashboards (completed 2026-03-24)
 
 ## Phase Details
 
@@ -86,7 +86,14 @@ Plans:
   3. Admin can configure rule-based lead routing (round-robin or territory) so that newly created leads are automatically assigned to the correct agent without manual intervention
   4. Tenant admin can define a workflow rule with a trigger (field change, status change, or time elapsed), conditions, and an auto-action (assign, notify, schedule follow-up) — and that action fires automatically when the trigger condition is met
   5. The system enforces configured state machine transitions — attempting an invalid lead status transition is rejected with a clear error
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+- [x] 04-01-PLAN.md — Wave 0 test stubs (6 test files for all PIPE requirements)
+- [x] 04-02-PLAN.md — Data layer: LeadTask, WorkflowRule, StageTransition, Notification, RoutingConfig entities + EF migration
+- [x] 04-03-PLAN.md — State machine validation + Kanban board endpoints (PIPE-01, PIPE-05)
+- [x] 04-04-PLAN.md — Task management endpoints + lead routing service (PIPE-02, PIPE-03)
+- [x] 04-05-PLAN.md — Workflow rule engine + background jobs + DI/endpoint wiring (PIPE-04)
+- [x] 04-06-PLAN.md — Integration test implementation + human verification
 
 ### Phase 5: Activity & Reporting
 **Goal**: Users can see everything that happened on a lead in one place and understand pipeline health and team performance through dashboards
@@ -97,7 +104,13 @@ Plans:
   2. The pipeline dashboard shows current lead count per stage and total deal value across the pipeline — updated without a page reload
   3. The conversion dashboard shows conversion rates broken down by stage, lead source, and selectable time period
   4. The agent performance dashboard shows each team member's lead count handled, tasks completed, and conversion rate for a selected period
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [x] 05-01-PLAN.md — Wave 0 test stubs (5 integration test files for all Phase 5 requirements)
+- [x] 05-02-PLAN.md — Data layer: ActivityLog entity, Opportunity.Amount field, EF migration + dashboard indexes
+- [x] 05-03-PLAN.md — ActivityChangeInterceptor, IActivityTrackingService, timeline endpoints (ACTV-01)
+- [x] 05-04-PLAN.md — Pipeline, conversion, and agent performance dashboard endpoints (REPT-01, REPT-02, REPT-03)
+- [x] 05-05-PLAN.md — DI wiring, endpoint registration, integration test implementation + verification
 
 ## Progress
 
@@ -109,5 +122,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Multi-Tenancy Foundation | 6/6 | Complete   | 2026-03-20 |
 | 2. Configurable Lead Model | 5/6 | Gap closure | - |
 | 3. Lead Ingestion | 6/7 | In Progress|  |
-| 4. Pipeline & Workflow Engine | 0/TBD | Not started | - |
-| 5. Activity & Reporting | 0/TBD | Not started | - |
+| 4. Pipeline & Workflow Engine | 6/6 | Complete   | 2026-03-22 |
+| 5. Activity & Reporting | 5/5 | Complete   | 2026-03-24 |

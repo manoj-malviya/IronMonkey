@@ -67,6 +67,10 @@
               "target": "Package",
               "version": "[4.0.3, )"
             },
+            "CsvHelper": {
+              "target": "Package",
+              "version": "[33.1.0, )"
+            },
             "FluentValidation": {
               "target": "Package",
               "version": "[12.1.1, )"
@@ -121,9 +125,17 @@
               "target": "Package",
               "version": "[10.0.1, )"
             },
+            "RulesEngine": {
+              "target": "Package",
+              "version": "[6.0.0, )"
+            },
             "Serilog.AspNetCore": {
               "target": "Package",
               "version": "[10.0.0, )"
+            },
+            "Stateless": {
+              "target": "Package",
+              "version": "[5.20.1, )"
             },
             "Swashbuckle.AspNetCore.Filters": {
               "target": "Package",
@@ -1870,6 +1882,14 @@
             "Moq": {
               "target": "Package",
               "version": "[4.20.72, )"
+            },
+            "RulesEngine": {
+              "target": "Package",
+              "version": "[6.0.0, )"
+            },
+            "Stateless": {
+              "target": "Package",
+              "version": "[5.20.1, )"
             },
             "Testcontainers.PostgreSql": {
               "target": "Package",
