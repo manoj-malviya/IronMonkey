@@ -4,6 +4,8 @@
 
 A multi-tenant, domain-agnostic Lead Management SaaS platform. Any business — automobile dealerships, real estate agencies, insurance brokers, service providers, educational institutions — can sign up as a tenant and fully configure the system to match their lead workflow without any code changes. Built on .NET Aspire with Blazor Server frontend.
 
+**Current State:** v1.0 MVP shipped. Complete backend API with multi-tenancy, configurable lead model, multi-channel ingestion, pipeline workflow engine, and reporting dashboards. 207 C# files, ~19,100 LOC, 108+ integration tests against real PostgreSQL.
+
 ## Core Value
 
 Any business can configure their complete lead management workflow — fields, statuses, pipelines, automation rules — without writing code or contacting support.
@@ -19,32 +21,33 @@ Any business can configure their complete lead management workflow — fields, s
 - ✓ ASP.NET Identity authentication foundation — existing
 - ✓ Fluent Validation for request validation — existing
 - ✓ Domain event outbox pattern — existing
-- ✓ Multi-tenancy with DB-per-tenant isolation — Validated in Phase 1
-- ✓ Configurable lead fields (custom fields per tenant) — Validated in Phase 2 (LEAD-01)
-- ✓ Configurable lead statuses and pipelines — Validated in Phase 2 (LEAD-02, LEAD-03)
-- ✓ Duplicate detection and lead merge — Validated in Phase 2 (LEAD-04, LEAD-05)
+- ✓ Multi-tenancy with DB-per-tenant isolation — v1.0 (TNCY-01, TNCY-02)
+- ✓ Configurable lead fields (custom fields per tenant) — v1.0 (LEAD-01)
+- ✓ Configurable lead statuses and pipelines — v1.0 (LEAD-02, LEAD-03)
+- ✓ Duplicate detection and lead merge — v1.0 (LEAD-04, LEAD-05)
+- ✓ Lead ingestion: manual entry with duplicate warning — v1.0 (INGST-01)
+- ✓ Lead ingestion: REST API with tenant API keys — v1.0 (INGST-03)
+- ✓ Lead ingestion: bulk CSV import with error reporting — v1.0 (INGST-02)
+- ✓ Lead ingestion: embeddable web forms with honeypot protection — v1.0 (INGST-04)
+- ✓ State machine for lead lifecycle transitions — v1.0 (PIPE-05)
+- ✓ Workflow engine with triggers and conditional logic — v1.0 (PIPE-04)
+- ✓ Auto-actions (assign, notify, schedule follow-up) — v1.0 (PIPE-04)
+- ✓ Kanban pipeline board with drag-drop — v1.0 (PIPE-01)
+- ✓ Task management linked to leads — v1.0 (PIPE-02)
+- ✓ Lead routing (round-robin, territory) — v1.0 (PIPE-03)
+- ✓ Basic dashboards: pipeline overview, conversion rates, agent performance — v1.0 (REPT-01, REPT-02, REPT-03)
+- ✓ Unified lead activity timeline — v1.0 (ACTV-01)
 
 ### Active
 
 - [ ] Tenant onboarding with industry recipe/template selection
 - [ ] Configurable customer fields (custom fields per tenant)
-- ✓ State machine for lead lifecycle transitions — Validated in Phase 4 (PIPE-05)
-- ✓ Workflow engine with triggers and conditional logic — Validated in Phase 4 (PIPE-04)
-- ✓ Auto-actions (assign, notify, schedule follow-up) — Validated in Phase 4 (PIPE-04)
-- ✓ Kanban pipeline board with drag-drop — Validated in Phase 4 (PIPE-01)
-- ✓ Task management linked to leads — Validated in Phase 4 (PIPE-02)
-- ✓ Lead routing (round-robin, territory) — Validated in Phase 4 (PIPE-03)
 - [ ] Custom roles with granular permissions per tenant
 - [ ] Employee/team management within tenant
-- ✓ Lead ingestion: manual entry with duplicate warning — Validated in Phase 3 (INGST-01)
-- ✓ Lead ingestion: REST API with tenant API keys — Validated in Phase 3 (INGST-03)
-- ✓ Lead ingestion: bulk CSV import with error reporting — Validated in Phase 3 (INGST-02)
-- ✓ Lead ingestion: embeddable web forms with honeypot protection — Validated in Phase 3 (INGST-04)
 - [ ] Lead ingestion: auto-capture (email parsing, phone logs, social)
 - [ ] Omnichannel communications: email to leads
 - [ ] Omnichannel communications: SMS to leads
 - [ ] Omnichannel communications: WhatsApp Business API
-- ✓ Basic dashboards: pipeline overview, conversion rates, agent performance — Validated in Phase 5 (REPT-01, REPT-02, REPT-03)
 - [ ] Production SaaS: tenant signup and onboarding flow
 - [ ] Production SaaS: API documentation
 - [ ] Production SaaS: billing integration (model TBD)
@@ -60,7 +63,7 @@ Any business can configure their complete lead management workflow — fields, s
 
 ## Context
 
-The existing codebase has a .NET Aspire foundation with separate API service and Blazor Server frontend. Entity Framework Core is configured with SQLite (will need to evolve for DB-per-tenant with a production database). ASP.NET Identity is in place for authentication. The architecture follows a layered pattern with Minimal APIs, domain entities, and Fluent Validation.
+Shipped v1.0 with 19,100 LOC across 207 C# files. Tech stack: .NET 10.0, .NET Aspire 13.1, EF Core 10.0.5, PostgreSQL (Npgsql 10.0.1), Hangfire, Serilog, BCrypt, FuzzySharp, CsvHelper. 108+ integration tests using Testcontainers (postgres:15-alpine). All API endpoints are backend-only (Minimal API); Blazor Server frontend exists but is not yet wired to Phase 2-5 endpoints.
 
 The system must be truly domain-agnostic — the data model for leads, statuses, workflows, and fields is entirely tenant-defined. Industry "recipes" (automobile, real estate, insurance, etc.) provide sensible defaults but everything is customizable.
 
@@ -75,10 +78,14 @@ The system must be truly domain-agnostic — the data model for leads, statuses,
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| DB-per-tenant isolation | Maximum data isolation, compliance-friendly, tenant can be migrated independently | — Pending |
-| Blazor Server (not WASM) | Simpler auth, no API duplication, real-time updates via SignalR | — Pending |
-| Industry recipes for onboarding | Reduces time-to-value for new tenants, avoids blank-slate problem | — Pending |
+| DB-per-tenant isolation | Maximum data isolation, compliance-friendly, tenant can be migrated independently | ✓ Good — working well across all phases |
+| Blazor Server (not WASM) | Simpler auth, no API duplication, real-time updates via SignalR | — Pending (frontend not yet connected) |
+| Industry recipes for onboarding | Reduces time-to-value for new tenants, avoids blank-slate problem | — Pending (deferred to v2) |
 | Billing model deferred | Not finalized — will decide between subscription tiers, usage-based, or hybrid | — Pending |
+| JSONB custom fields with HasConversion | Flexible tenant-defined fields without schema changes | ✓ Good — EF Core value converters work cleanly |
+| Outbox pattern for domain events | Reliable async processing, integrated with Hangfire | ✓ Good — template for all background work |
+| ActivityLog via SaveChanges interceptor | Automatic audit trail without per-endpoint instrumentation | ✓ Good — zero-touch change tracking |
+| Direct LINQ for dashboards (no materialized views) | Simpler v1, defer optimization | — Pending (monitor at scale) |
 
 ---
-*Last updated: 2026-03-24 after Phase 5 completion — all v1.0 milestone phases complete*
+*Last updated: 2026-03-24 after v1.0 milestone completion*
