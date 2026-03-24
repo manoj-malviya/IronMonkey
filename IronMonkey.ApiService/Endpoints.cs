@@ -179,6 +179,28 @@ public static class Endpoints
             AddLeadNoteEndpoint.Map(app);
         }
 
+        private void MapIngestionEndpoints()
+        {
+            // API key management (authenticated, for tenant admins)
+            GenerateApiKeyEndpoint.Map(app);
+            ListApiKeysEndpoint.Map(app);
+            DeleteApiKeyEndpoint.Map(app);
+
+            // External REST API lead creation (X-Api-Key auth, rate limited)
+            CreateLeadViaApiEndpoint.Map(app);
+
+            // CSV import (authenticated)
+            UploadLeadsFromCsvEndpoint.Map(app);
+            GetImportStatusEndpoint.Map(app);
+            GetImportErrorsEndpoint.Map(app);
+
+            // Web forms (create/delete: authenticated; get/submit: anonymous)
+            CreateWebFormEndpoint.Map(app);
+            DeleteWebFormEndpoint.Map(app);
+            GetWebFormPageEndpoint.Map(app);
+            SubmitWebFormEndpoint.Map(app);
+        }
+
         private RouteGroupBuilder MapPublicGroup(string? prefix = null)
         {
             return app.MapGroup(prefix ?? string.Empty)
