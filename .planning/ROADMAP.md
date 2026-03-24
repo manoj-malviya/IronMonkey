@@ -104,7 +104,13 @@ Plans:
   2. The pipeline dashboard shows current lead count per stage and total deal value across the pipeline — updated without a page reload
   3. The conversion dashboard shows conversion rates broken down by stage, lead source, and selectable time period
   4. The agent performance dashboard shows each team member's lead count handled, tasks completed, and conversion rate for a selected period
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 05-01-PLAN.md — Wave 0 test stubs (5 integration test files for all Phase 5 requirements)
+- [ ] 05-02-PLAN.md — Data layer: ActivityLog entity, Opportunity.Amount field, EF migration + dashboard indexes
+- [ ] 05-03-PLAN.md — ActivityChangeInterceptor, IActivityTrackingService, timeline endpoints (ACTV-01)
+- [ ] 05-04-PLAN.md — Pipeline, conversion, and agent performance dashboard endpoints (REPT-01, REPT-02, REPT-03)
+- [ ] 05-05-PLAN.md — DI wiring, endpoint registration, integration test implementation + verification
 
 ## Progress
 
@@ -117,4 +123,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Configurable Lead Model | 5/6 | Gap closure | - |
 | 3. Lead Ingestion | 6/7 | In Progress|  |
 | 4. Pipeline & Workflow Engine | 6/6 | Complete   | 2026-03-22 |
-| 5. Activity & Reporting | 0/TBD | Not started | - |
+| 5. Activity & Reporting | 0/5 | Not started | - |
