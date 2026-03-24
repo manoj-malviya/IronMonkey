@@ -108,7 +108,7 @@ Plans:
 Plans:
 - [x] 05-01-PLAN.md — Wave 0 test stubs (5 integration test files for all Phase 5 requirements)
 - [x] 05-02-PLAN.md — Data layer: ActivityLog entity, Opportunity.Amount field, EF migration + dashboard indexes
-- [ ] 05-03-PLAN.md — ActivityChangeInterceptor, IActivityTrackingService, timeline endpoints (ACTV-01)
+- [x] 05-03-PLAN.md — ActivityChangeInterceptor, IActivityTrackingService, timeline endpoints (ACTV-01)
 - [x] 05-04-PLAN.md — Pipeline, conversion, and agent performance dashboard endpoints (REPT-01, REPT-02, REPT-03)
 - [ ] 05-05-PLAN.md — DI wiring, endpoint registration, integration test implementation + verification
 
@@ -123,4 +123,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Configurable Lead Model | 5/6 | Gap closure | - |
 | 3. Lead Ingestion | 6/7 | In Progress|  |
 | 4. Pipeline & Workflow Engine | 6/6 | Complete   | 2026-03-22 |
-| 5. Activity & Reporting | 3/5 | In Progress|  |
+| 5. Activity & Reporting | 4/5 | In Progress|  |

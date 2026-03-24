@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 05-04-PLAN.md - dashboard reporting endpoints (REPT-01, REPT-02, REPT-03)
-last_updated: "2026-03-24T17:41:00.174Z"
+stopped_at: Completed 05-03-PLAN.md - ActivityChangeInterceptor and timeline API
+last_updated: "2026-03-24T17:44:57.605Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 30
-  completed_plans: 28
+  completed_plans: 29
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 05 (activity-reporting) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 
 ## Performance Metrics
 
@@ -75,6 +75,7 @@ Plan: 4 of 5
 | Phase 05-activity-reporting P01 | 5 | 2 tasks | 5 files |
 | Phase 05-activity-reporting P02 | 20 | 2 tasks | 6 files |
 | Phase 05-activity-reporting P04 | 8 | 2 tasks | 4 files |
+| Phase 05-activity-reporting P03 | 20 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -143,6 +144,8 @@ Recent decisions affecting current work:
 - [Phase 05-activity-reporting]: Opportunity.Amount defaults to 0m and is mutated via SetAmount() — Create() factory signature preserved for backward compat
 - [Phase 05-activity-reporting]: User.Name used for agent display name (User entity has single Name field, not FirstName/LastName)
 - [Phase 05-activity-reporting]: ResolvePeriod static helper pattern for preset period shortcuts established for REPT-02 and REPT-03
+- [Phase 05-activity-reporting]: ActivityChangeInterceptor registered as scoped — IUserContext is scoped per HTTP request, requires TenantDbContextFactory overload with IEnumerable<IInterceptor> for call-site injection
+- [Phase 05-activity-reporting]: User entity has Name property not FirstName/LastName — ActivityEventDto.ActorName uses Actor.Name
 
 ### Pending Todos
 
@@ -155,6 +158,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T17:41:00.170Z
-Stopped at: Completed 05-04-PLAN.md - dashboard reporting endpoints (REPT-01, REPT-02, REPT-03)
+Last session: 2026-03-24T17:44:57.600Z
+Stopped at: Completed 05-03-PLAN.md - ActivityChangeInterceptor and timeline API
 Resume file: None
