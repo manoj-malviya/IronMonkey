@@ -5,7 +5,15 @@ using IronMonkey.ApiService.Features.Leads;
 using IronMonkey.ApiService.Features.Leads.CustomFields;
 using IronMonkey.ApiService.Features.Leads.PipelineStages;
 using IronMonkey.ApiService.Features.Leads.Duplicates;
+using IronMonkey.ApiService.Features.Leads.Ingestion.Api;
+using IronMonkey.ApiService.Features.Leads.Ingestion.Csv;
+using IronMonkey.ApiService.Features.Leads.Ingestion.WebForm;
 using IronMonkey.ApiService.Features.Leads.Merge;
+using IronMonkey.ApiService.Features.Leads.Pipeline.Tasks;
+using IronMonkey.ApiService.Features.Leads.Pipeline.Routing;
+using IronMonkey.ApiService.Features.Leads.Pipeline.States;
+using IronMonkey.ApiService.Features.Leads.Pipeline.Kanban;
+using IronMonkey.ApiService.Features.Leads.Workflow.Rules;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
 using IronMonkey.Data.Entities;
@@ -30,8 +38,10 @@ public static class Endpoints
         endpoints.MapUserManagementEndpoints();
         endpoints.MapPlatformAdminEndpoints();
         endpoints.MapLeadsEndpoints();
+        endpoints.MapIngestionEndpoints();
+        endpoints.MapPipelineEndpoints();
     }
-    
+
     extension(IEndpointRouteBuilder app)
     {
         private void MapHealthCheckEndpoints()
@@ -107,6 +117,45 @@ public static class Endpoints
             CreateLeadEndpoint.Map(app);
             CheckDuplicatesEndpoint.Map(app);
             MergeLeadsEndpoint.Map(app);
+            CreateTaskEndpoint.Map(app);
+            ListTasksEndpoint.Map(app);
+            UpdateTaskEndpoint.Map(app);
+            ConfigureRoutingEndpoint.Map(app);
+            GetRoutingConfigEndpoint.Map(app);
+            ConfigureTransitionsEndpoint.Map(app);
+            ListTransitionsEndpoint.Map(app);
+            GetKanbanBoardEndpoint.Map(app);
+            MoveLeadEndpoint.Map(app);
+        }
+
+        private void MapIngestionEndpoints()
+        {
+            // API key management (authenticated, for tenant admins)
+            GenerateApiKeyEndpoint.Map(app);
+            ListApiKeysEndpoint.Map(app);
+            DeleteApiKeyEndpoint.Map(app);
+
+            // External REST API lead creation (X-Api-Key auth, rate limited)
+            CreateLeadViaApiEndpoint.Map(app);
+
+            // CSV import (authenticated)
+            UploadLeadsFromCsvEndpoint.Map(app);
+            GetImportStatusEndpoint.Map(app);
+            GetImportErrorsEndpoint.Map(app);
+
+            // Web forms (create/delete: authenticated; get/submit: anonymous)
+            CreateWebFormEndpoint.Map(app);
+            DeleteWebFormEndpoint.Map(app);
+            GetWebFormPageEndpoint.Map(app);
+            SubmitWebFormEndpoint.Map(app);
+        }
+
+        private void MapPipelineEndpoints()
+        {
+            // Workflow rules (PIPE-04)
+            CreateWorkflowRuleEndpoint.Map(app);
+            ListWorkflowRulesEndpoint.Map(app);
+            UpdateWorkflowRuleEndpoint.Map(app);
         }
 
         private RouteGroupBuilder MapPublicGroup(string? prefix = null)

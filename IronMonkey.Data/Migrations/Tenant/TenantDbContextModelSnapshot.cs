@@ -22,6 +22,69 @@ namespace IronMonkey.Data.Migrations.Tenant
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("IronMonkey.Data.Entities.ActivityLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EntityId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("LeadId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NewValues")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("OldValues")
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorId");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_ActivityLogs_CreatedAt");
+
+                    b.HasIndex("LeadId");
+
+                    b.HasIndex("TenantId", "EventType")
+                        .HasDatabaseName("IX_ActivityLogs_TenantId_EventType");
+
+                    b.HasIndex("TenantId", "LeadId")
+                        .HasDatabaseName("IX_ActivityLogs_TenantId_LeadId");
+
+                    b.ToTable("ActivityLogs");
+                });
+
             modelBuilder.Entity("IronMonkey.Data.Entities.Contact", b =>
                 {
                     b.Property<Guid>("Id")
@@ -111,10 +174,68 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.ToTable("custom_field_definitions", (string)null);
                 });
 
+            modelBuilder.Entity("IronMonkey.Data.Entities.ImportBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DefaultPipelineStageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ErrorDetailsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FailureReason")
+                        .HasColumnType("text");
+
+                    b.Property<int>("ImportedRows")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("SkippedRows")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TempFilePath")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TotalRows")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ImportBatches");
+                });
+
             modelBuilder.Entity("IronMonkey.Data.Entities.Lead", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AssignedToUserId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("ConvertedAccountId")
@@ -153,6 +274,9 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsPotentialDuplicate")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -164,6 +288,9 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .HasColumnType("character varying(20)");
 
                     b.Property<Guid>("PipelineStageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PotentialDuplicateLeadId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Source")
@@ -186,7 +313,19 @@ namespace IronMonkey.Data.Migrations.Tenant
 
                     b.HasIndex("TenantId");
 
+                    b.HasIndex("TenantId", "AssignedToUserId")
+                        .HasDatabaseName("IX_Leads_TenantId_AssignedToUserId");
+
+                    b.HasIndex("TenantId", "CreatedAt")
+                        .HasDatabaseName("IX_Leads_TenantId_CreatedAt");
+
                     b.HasIndex("TenantId", "Email");
+
+                    b.HasIndex("TenantId", "PipelineStageId")
+                        .HasDatabaseName("IX_Leads_TenantId_PipelineStageId");
+
+                    b.HasIndex("TenantId", "Source")
+                        .HasDatabaseName("IX_Leads_TenantId_Source");
 
                     b.ToTable("leads", (string)null);
                 });
@@ -243,11 +382,118 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.ToTable("lead_merges", (string)null);
                 });
 
+            modelBuilder.Entity("IronMonkey.Data.Entities.LeadTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AssignedToUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("LeadId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LeadId");
+
+                    b.HasIndex("TenantId", "AssignedToUserId")
+                        .HasDatabaseName("IX_LeadTasks_TenantId_AssignedToUserId");
+
+                    b.HasIndex("TenantId", "LeadId");
+
+                    b.HasIndex("TenantId", "Status")
+                        .HasDatabaseName("IX_LeadTasks_TenantId_Status");
+
+                    b.ToTable("lead_tasks", (string)null);
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("LeadId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("RecipientUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "RecipientUserId", "IsRead");
+
+                    b.ToTable("notifications", (string)null);
+                });
+
             modelBuilder.Entity("IronMonkey.Data.Entities.Opportunity", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric");
 
                     b.Property<Guid>("ContactId")
                         .HasColumnType("uuid");
@@ -345,6 +591,10 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.Property<int>("Order")
                         .HasColumnType("integer");
 
+                    b.Property<string>("StageType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
 
@@ -418,6 +668,56 @@ namespace IronMonkey.Data.Migrations.Tenant
                             RoleId = 301,
                             PermissionId = 1
                         });
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.RoutingConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CustomFieldKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Dimension")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("RoundRobinPointer")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Strategy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TerritoryMapJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique();
+
+                    b.ToTable("routing_configs", (string)null);
                 });
 
             modelBuilder.Entity("IronMonkey.Data.Entities.SignupRequest", b =>
@@ -494,6 +794,45 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.HasIndex("AdminEmail");
 
                     b.ToTable("SignupRequests", (string)null);
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.StageTransition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FromStageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ToStageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FromStageId");
+
+                    b.HasIndex("ToStageId");
+
+                    b.HasIndex("TenantId", "FromStageId", "ToStageId")
+                        .IsUnique();
+
+                    b.ToTable("stage_transitions", (string)null);
                 });
 
             modelBuilder.Entity("IronMonkey.Data.Entities.Tenant", b =>
@@ -616,6 +955,54 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("IronMonkey.Data.Entities.WorkflowRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActionJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("ConditionJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Trigger")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "IsActive");
+
+                    b.ToTable("workflow_rules", (string)null);
+                });
+
             modelBuilder.Entity("IronMonkey.Data.Outbox.OutboxMessage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -664,6 +1051,25 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.ToTable("RoleUser", (string)null);
                 });
 
+            modelBuilder.Entity("IronMonkey.Data.Entities.ActivityLog", b =>
+                {
+                    b.HasOne("IronMonkey.Data.Entities.User", "Actor")
+                        .WithMany()
+                        .HasForeignKey("ActorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("IronMonkey.Data.Entities.Lead", "Lead")
+                        .WithMany()
+                        .HasForeignKey("LeadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Actor");
+
+                    b.Navigation("Lead");
+                });
+
             modelBuilder.Entity("IronMonkey.Data.Entities.Lead", b =>
                 {
                     b.HasOne("IronMonkey.Data.Entities.PipelineStage", "Stage")
@@ -690,6 +1096,17 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("IronMonkey.Data.Entities.LeadTask", b =>
+                {
+                    b.HasOne("IronMonkey.Data.Entities.Lead", "Lead")
+                        .WithMany()
+                        .HasForeignKey("LeadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lead");
+                });
+
             modelBuilder.Entity("IronMonkey.Data.Entities.Opportunity", b =>
                 {
                     b.HasOne("IronMonkey.Data.Entities.Contact", "Contact")
@@ -714,6 +1131,25 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.StageTransition", b =>
+                {
+                    b.HasOne("IronMonkey.Data.Entities.PipelineStage", "FromStage")
+                        .WithMany()
+                        .HasForeignKey("FromStageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("IronMonkey.Data.Entities.PipelineStage", "ToStage")
+                        .WithMany()
+                        .HasForeignKey("ToStageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("FromStage");
+
+                    b.Navigation("ToStage");
                 });
 
             modelBuilder.Entity("RoleUser", b =>

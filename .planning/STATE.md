@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-stopped_at: Completed 02-configurable-lead-model/02-05-PLAN.md
-last_updated: "2026-03-21T08:15:23.275Z"
+status: Ready to execute
+stopped_at: Completed 05-02-PLAN.md - ActivityLog entity and EF migration
+last_updated: "2026-03-24T17:32:44.940Z"
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 12
-  completed_plans: 12
+  completed_phases: 4
+  total_plans: 30
+  completed_plans: 27
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** Any business can configure their complete lead management workflow without writing code
-**Current focus:** Phase 02 — configurable-lead-model
+**Current focus:** Phase 05 — activity-reporting
 
 ## Current Position
 
-Phase: 3
-Plan: Not started
+Phase: 05 (activity-reporting) — EXECUTING
+Plan: 3 of 5
 
 ## Performance Metrics
 
@@ -59,6 +59,21 @@ Plan: Not started
 | Phase 02-configurable-lead-model P04 | 35 | 2 tasks | 8 files |
 | Phase 02-configurable-lead-model P05 | 15 | 2 tasks | 6 files |
 | Phase 02-configurable-lead-model P05 | 15 | 2 tasks | 6 files |
+| Phase 03-lead-ingestion P01 | 4 | 2 tasks | 7 files |
+| Phase 03-lead-ingestion P02 | 6 | 2 tasks | 9 files |
+| Phase 03-lead-ingestion P03 | 6 | 2 tasks | 8 files |
+| Phase 03-lead-ingestion P05 | 8 | 2 tasks | 8 files |
+| Phase 03-lead-ingestion P04 | 9 | 2 tasks | 7 files |
+| Phase 03-lead-ingestion P06 | 10 | 2 tasks | 6 files |
+| Phase 03-lead-ingestion P07 | 45 | 3 tasks | 9 files |
+| Phase 04-pipeline-workflow-engine P02 | 278 | 2 tasks | 14 files |
+| Phase 04-pipeline-workflow-engine P01 | 4 | 2 tasks | 8 files |
+| Phase 04-pipeline-workflow-engine P04 | 4 | 2 tasks | 9 files |
+| Phase 04-pipeline-workflow-engine P03 | 350 | 2 tasks | 8 files |
+| Phase 04 P05 | 8 | 2 tasks | 13 files |
+| Phase 04-pipeline-workflow-engine P06 | 9 | 2 tasks | 7 files |
+| Phase 05-activity-reporting P01 | 5 | 2 tasks | 5 files |
+| Phase 05-activity-reporting P02 | 20 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -98,6 +113,33 @@ Recent decisions affecting current work:
 - [Phase 02-configurable-lead-model]: Unique DB per test using GUID suffix — prevents test interference when running in parallel; each test gets its own PostgreSQL database within the shared TestContainers instance
 - [Phase 02-configurable-lead-model]: LeadMergeService.CustomFields.IsModified fix — HasConversion JSONB value converters require explicit db.Entry(entity).Property(...).IsModified = true after mutating dictionary reference
 - [Phase 02-configurable-lead-model]: ListPipelineStages active filter uses explicit .Where(p => p.IsActive) — global query filter only covers IsDeleted; IsActive is a separate business concept from soft-delete
+- [Phase 03-lead-ingestion]: 03-06-PLAN chosen as implementation target for all Phase 3 stubs — consistent with Phase 1 and Phase 2 naming convention
+- [Phase 03-lead-ingestion]: ApiKey in CentralDbContext for O(1) tenant lookup by key hash without prior tenant context
+- [Phase 03-lead-ingestion]: WebForm in CentralDbContext so form token lookup works before tenant is resolved
+- [Phase 03-lead-ingestion]: CreateLeadViaApiEndpoint uses AllowAnonymous + X-Api-Key header (not JWT RequireAuthorization) — external callers have no JWT; tenant resolved via IApiKeyService
+- [Phase 03-lead-ingestion]: ITenantRegistry used for GetTenantConnectionStringAsync in WebFormService instead of direct Tenant entity access
+- [Phase 03-lead-ingestion]: FromForm attribute required on SubmitWebFormEndpoint SubmissionRequest to bind HTML form POST data in Minimal API
+- [Phase 03-lead-ingestion]: Fail-fast CSV header validation in upload endpoint (not in job) — rejects malformed files before enqueueing
+- [Phase 03-lead-ingestion]: CSV import creates all rows, flags duplicates with IsPotentialDuplicate=true per D-14
+- [Phase 03-lead-ingestion]: MapIngestionEndpoints extracted from MapLeadsEndpoints for clarity — ingestion endpoints are a distinct concern
+- [Phase 03-lead-ingestion]: Rate limiting uses HttpContext.Request.RouteValues for token partition key (not HttpContext.RouteValues which does not exist)
+- [Phase 03-lead-ingestion]: EF Core model snapshot drift fixed inline during test implementation — MigrateAsync() requires snapshots to match all registered entities
+- [Phase 03-lead-ingestion]: Integration tests invoke services directly (not via HTTP) — eliminates WebApplicationFactory complexity while testing against real PostgreSQL
+- [Phase 04-pipeline-workflow-engine]: StageTransitionEntityConfiguration class name used to avoid naming conflict with Stateless service planned in 04-03
+- [Phase 04-pipeline-workflow-engine]: Global query filters added for all 5 new Phase 4 entity types in TenantDbContext for automatic tenant isolation
+- [Phase 04-pipeline-workflow-engine]: RulesEngine 6.0.0 used instead of 5.1.2 — 5.1.2 not published on NuGet; 6.0.0 resolves cleanly
+- [Phase 04-pipeline-workflow-engine]: Wave 0 stub plan: 04-06 chosen as implementation target for all Phase 4 stubs (consistent with Phase 1-3 naming convention)
+- [Phase 04-pipeline-workflow-engine]: IStateValidationService uses separate DB context from mutation for thread safety
+- [Phase 04-pipeline-workflow-engine]: StateValidationService returns null on success, error string on failure — enables inline error propagation
+- [Phase 04-pipeline-workflow-engine]: WorkflowRuleEngine uses JsonDocument for condition evaluation in Phase 4 v1 — full RulesEngine integration deferred to Phase 5
+- [Phase 04-pipeline-workflow-engine]: NotificationService creates in-app notifications only — no email delivery per D-10
+- [Phase 04-pipeline-workflow-engine]: MapPipelineEndpoints() added to Endpoints.cs as separate method for Phase 4 workflow rule endpoints
+- [Phase 04-pipeline-workflow-engine]: TaskStatus disambiguation: IronMonkey.Data.Entities.TaskStatus fully-qualified in test files to avoid System.Threading.Tasks.TaskStatus conflict
+- [Phase 04-pipeline-workflow-engine]: Round-robin test uses sorted Ids post-creation: User.Create does not accept explicit Id, agents sorted by Id after creation to match LeadRoutingService ordering
+- [Phase 05-activity-reporting]: Wave 0 stubs use primary constructor syntax for fixture injection; skip messages reference specific future plans
+- [Phase 05-activity-reporting]: ActivityLog global query filter uses TenantId only (no IsDeleted) — activity logs are immutable audit records
+- [Phase 05-activity-reporting]: OldValues/NewValues use HasConversion JSONB (System.Text.Json.JsonSerializer) — consistent with Phase 2 CustomFieldValues pattern
+- [Phase 05-activity-reporting]: Opportunity.Amount defaults to 0m and is mutated via SetAmount() — Create() factory signature preserved for backward compat
 
 ### Pending Todos
 
@@ -110,6 +152,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T07:57:19.795Z
-Stopped at: Completed 02-configurable-lead-model/02-05-PLAN.md
+Last session: 2026-03-24T17:32:44.936Z
+Stopped at: Completed 05-02-PLAN.md - ActivityLog entity and EF migration
 Resume file: None

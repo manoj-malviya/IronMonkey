@@ -7,12 +7,12 @@
     <input type="text" id="permissionName" @bind="permissionName" class="form-control" />
 </div>
 
-<button class="btn btn-primary" @onclick="CreatePermission">Create</button>
+<button class="btn btn-primary" @onclick="HandleCreatePermission">Create</button>
 
 @code {
     private string permissionName;
 
-    private async Task CreatePermission()
+    private async Task HandleCreatePermission()
     {
         var response = await ApiClient.PostAsync("/api/user-management/permissions", new { PermissionName = permissionName });
         if (response.IsSuccessStatusCode)
