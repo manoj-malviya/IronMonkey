@@ -37,13 +37,13 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Reporting
 
-- [ ] **REPT-01**: Dashboard shows pipeline overview (leads per stage, total value)
-- [ ] **REPT-02**: Dashboard shows conversion rates by stage, source, and time period
-- [ ] **REPT-03**: Dashboard shows agent performance metrics (leads handled, tasks completed, conversion rate)
+- [x] **REPT-01**: Dashboard shows pipeline overview (leads per stage, total value)
+- [x] **REPT-02**: Dashboard shows conversion rates by stage, source, and time period
+- [x] **REPT-03**: Dashboard shows agent performance metrics (leads handled, tasks completed, conversion rate)
 
 ### Activity
 
-- [ ] **ACTV-01**: Each lead has a unified activity timeline showing all interactions and changes
+- [x] **ACTV-01**: Each lead has a unified activity timeline showing all interactions and changes
 
 ## v2 Requirements
 
@@ -105,10 +105,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-03 | Phase 4 | Complete |
 | PIPE-04 | Phase 4 | Complete |
 | PIPE-05 | Phase 4 | Complete |
-| REPT-01 | Phase 5 | Pending |
-| REPT-02 | Phase 5 | Pending |
-| REPT-03 | Phase 5 | Pending |
-| ACTV-01 | Phase 5 | Pending |
+| REPT-01 | Phase 5 | Complete |
+| REPT-02 | Phase 5 | Complete |
+| REPT-03 | Phase 5 | Complete |
+| ACTV-01 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 20 total
