@@ -151,3 +151,13 @@ completed: 2026-03-24
 ---
 *Phase: 05-activity-reporting*
 *Completed: 2026-03-24*
+
+## Self-Check: PASSED
+
+- FOUND: IronMonkey.ApiService/Interceptors/ActivityChangeInterceptor.cs
+- FOUND: IronMonkey.ApiService/Features/Activity/IActivityTrackingService.cs
+- FOUND: IronMonkey.ApiService/Features/Activity/ActivityTrackingService.cs
+- FOUND: IronMonkey.ApiService/Features/Activity/Timeline/GetLeadActivityTimelineEndpoint.cs
+- FOUND: IronMonkey.ApiService/Features/Activity/Timeline/AddLeadNoteEndpoint.cs
+- FOUND: commit f9ff8ce (Task 1)
+- FOUND: commit e2f6737 (Task 2)
