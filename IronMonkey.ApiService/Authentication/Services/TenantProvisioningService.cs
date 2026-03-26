@@ -159,7 +159,40 @@ public class TenantProvisioningService : ITenantProvisioningService
             db.WorkflowRules.Add(rule);
         }
 
-        // Seed admin user (always, regardless of recipe)
+        // Flush stages, fields, and rules to DB so stageMap can resolve stage IDs
+        await db.SaveChangesAsync(cancellationToken);
+
+        // Seed sample leads from recipe (D-18: after stages are flushed to DB)
+        var sampleLeads = content?.SampleLeads ?? [];
+        if (sampleLeads.Count > 0)
+        {
+            var stageMap = await db.PipelineStages
+                .AsNoTracking()
+                .Where(s => s.TenantId == tenant.Id)
+                .ToDictionaryAsync(s => s.Name, s => s.Id, cancellationToken);
+
+            foreach (var leadDef in sampleLeads)
+            {
+                if (!stageMap.TryGetValue(leadDef.StageName, out var stageId))
+                    continue; // skip silently if stage name doesn't match
+
+                var source = Enum.TryParse<LeadSource>(leadDef.Source, out var parsedSource)
+                    ? parsedSource
+                    : LeadSource.WebForm;
+
+                var lead = Lead.Create(tenant.Id, leadDef.FirstName, leadDef.LastName,
+                    leadDef.Mobile, leadDef.Email, source, stageId);
+
+                foreach (var kvp in leadDef.CustomFieldValues)
+                {
+                    lead.CustomFields.Set(kvp.Key, kvp.Value);
+                }
+
+                db.Leads.Add(lead);
+            }
+        }
+
+        // Seed admin user and leads with stage IDs resolved from DB
         var adminUser = User.Create(
             tenant.Id,
             signupRequest.AdminEmail.Split('@')[0],
@@ -168,7 +201,6 @@ public class TenantProvisioningService : ITenantProvisioningService
             adminRole);
         db.Users.Add(adminUser);
 
-        // Single SaveChangesAsync — full atomicity per D-08
         await db.SaveChangesAsync(cancellationToken);
     }
 

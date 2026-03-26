@@ -6,6 +6,7 @@ public sealed class RecipeContentModel
     public List<CustomFieldDefinitionDto> CustomFields { get; set; } = [];
     public List<WorkflowRuleDefinition> WorkflowRules { get; set; } = [];
     public List<RoleDefinition> Roles { get; set; } = [];
+    public List<SampleLeadDefinition> SampleLeads { get; set; } = [];
 }
 
 public sealed class PipelineStageDefinition
@@ -35,4 +36,15 @@ public sealed class RoleDefinition
 {
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+}
+
+public sealed class SampleLeadDefinition
+{
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Mobile { get; set; } = string.Empty;
+    public string Source { get; set; } = "WebForm";
+    public string StageName { get; set; } = string.Empty;
+    public Dictionary<string, object?> CustomFieldValues { get; set; } = [];
 }
