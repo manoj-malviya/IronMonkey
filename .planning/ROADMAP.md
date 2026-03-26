@@ -43,7 +43,7 @@
 Plans:
 - [x] 06-01-PLAN.md — IndustryRecipe entity, RecipeContentModel DTOs, EF configuration, CentralDbContext registration, Tenant recipe tracking fields
 - [x] 06-02-PLAN.md — EF Core migrations: industry_recipes table, Tenant recipe columns, Blank/Custom recipe data seed
-- [ ] 06-03-PLAN.md — TenantProvisioningService recipe application extension and integration tests
+- [x] 06-03-PLAN.md — TenantProvisioningService recipe application extension and integration tests
 
 ### Phase 7: Recipe Content
 **Goal**: Automobile Dealership and Educational Institution recipes are fully defined and produce correct, queryable tenant data when applied
