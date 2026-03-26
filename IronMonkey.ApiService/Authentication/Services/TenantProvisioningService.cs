@@ -51,19 +51,38 @@ public class TenantProvisioningService : ITenantProvisioningService
         await using var tenantDb = _tenantContextFactory.CreateForTenant(connectionString, tenant.Id);
         await tenantDb.Database.MigrateAsync(cancellationToken);
 
+        // Step 4b: Validate recipe is active (D-12 per CONTEXT.md)
+        var effectiveRecipeId = recipeId;
+        if (effectiveRecipeId.HasValue)
+        {
+            var recipe = await _centralDb.IndustryRecipes
+                .AsNoTracking()
+                .SingleOrDefaultAsync(r => r.Id == effectiveRecipeId.Value, cancellationToken)
+                ?? throw new InvalidOperationException($"Recipe {effectiveRecipeId.Value} not found.");
+
+            if (!recipe.IsActive)
+                throw new InvalidOperationException(
+                    $"Cannot provision with deactivated recipe '{recipe.Name}'. Reactivate or select a different recipe.");
+        }
+        else
+        {
+            // Default to Blank recipe when no recipe selected (D-03)
+            effectiveRecipeId = new Guid("00000000-0000-0000-0000-000000000001");
+        }
+
         // Step 5: Seed default data
-        await SeedTenantDataAsync(tenantDb, tenant, signupRequest, recipeId, cancellationToken);
+        await SeedTenantDataAsync(tenantDb, tenant, signupRequest, effectiveRecipeId, cancellationToken);
 
         // Step 6: Mark tenant as provisioned in central DB
         tenant.MarkProvisioned(connectionString);
         signupRequest.LinkTenant(tenant.Id);
 
         // Step 6a: Track applied recipe in central DB (D-11)
-        if (recipeId.HasValue)
+        if (effectiveRecipeId.HasValue)
         {
             var appliedRecipe = await _centralDb.IndustryRecipes
                 .AsNoTracking()
-                .SingleOrDefaultAsync(r => r.Id == recipeId.Value, cancellationToken);
+                .SingleOrDefaultAsync(r => r.Id == effectiveRecipeId.Value, cancellationToken);
             if (appliedRecipe != null)
                 tenant.SetAppliedRecipe(appliedRecipe.Id, appliedRecipe.Version);
         }

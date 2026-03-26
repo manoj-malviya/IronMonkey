@@ -24,7 +24,7 @@ public class SignupRequestEndpoint : IEndpoint
         string AdminEmail,
         string AdminPassword,
         string Phone,
-        string IndustryType,
+        Guid? RecipeId,
         string CompanySize,
         string Address,
         string BillingContact);
@@ -39,7 +39,6 @@ public class SignupRequestEndpoint : IEndpoint
             RuleFor(x => x.AdminEmail).NotEmpty().EmailAddress().WithMessage("A valid admin email is required.");
             RuleFor(x => x.AdminPassword).NotEmpty().MinimumLength(8).WithMessage("Password must be at least 8 characters.");
             RuleFor(x => x.Phone).NotEmpty().WithMessage("Phone is required.");
-            RuleFor(x => x.IndustryType).NotEmpty().WithMessage("Industry type is required.");
             RuleFor(x => x.CompanySize).NotEmpty().WithMessage("Company size is required.");
             RuleFor(x => x.Address).NotEmpty().WithMessage("Address is required.");
             RuleFor(x => x.BillingContact).NotEmpty().WithMessage("Billing contact is required.");
@@ -67,7 +66,7 @@ public class SignupRequestEndpoint : IEndpoint
             request.AdminEmail,
             passwordHash,
             request.Phone,
-            request.IndustryType,
+            request.RecipeId,
             request.CompanySize,
             request.Address,
             request.BillingContact);

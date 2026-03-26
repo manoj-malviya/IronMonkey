@@ -483,11 +483,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Common/IronMonkey.Common.csproj",
+      "projectUniqueName": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.Common/IronMonkey.Common.csproj",
       "projectName": "IronMonkey.Common",
-      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Common/IronMonkey.Common.csproj",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.Common/IronMonkey.Common.csproj",
       "packagesPath": "/home/manoj/.nuget/packages/",
-      "outputPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Common/obj/",
+      "outputPath": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.Common/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/home/manoj/.nuget/NuGet/NuGet.Config"

@@ -51,7 +51,7 @@ public class BlankRecipeProvisioningTests : IClassFixture<PostgreSqlFixture>
             adminEmail: $"admin-{uniqueId}@blankrecipe.com",
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0200",
-            industryType: "Other",
+            recipeId: null,
             companySize: "1-10",
             address: "100 Blank St",
             billingContact: "billing@blankrecipe.com");
@@ -89,7 +89,7 @@ public class BlankRecipeProvisioningTests : IClassFixture<PostgreSqlFixture>
             adminEmail: $"admin-{uniqueId}@norecipe.com",
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0201",
-            industryType: "Technology",
+            recipeId: null,
             companySize: "10-50",
             address: "200 Null Ave",
             billingContact: "billing@norecipe.com");

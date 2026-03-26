@@ -50,7 +50,7 @@ public class EducationRecipeProvisioningTests : IClassFixture<PostgreSqlFixture>
             adminEmail: $"admin-{uniqueId}@edastages.com",
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0310",
-            industryType: "Education",
+            recipeId: null,
             companySize: "50-100",
             address: "100 Campus Dr",
             billingContact: "billing@edastages.com");
@@ -96,7 +96,7 @@ public class EducationRecipeProvisioningTests : IClassFixture<PostgreSqlFixture>
             adminEmail: $"admin-{uniqueId}@edafields.com",
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0311",
-            industryType: "Education",
+            recipeId: null,
             companySize: "50-100",
             address: "200 Scholar Lane",
             billingContact: "billing@edafields.com");
@@ -138,7 +138,7 @@ public class EducationRecipeProvisioningTests : IClassFixture<PostgreSqlFixture>
             adminEmail: $"admin-{uniqueId}@edarules.com",
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0312",
-            industryType: "Education",
+            recipeId: null,
             companySize: "50-100",
             address: "300 Admissions Blvd",
             billingContact: "billing@edarules.com");
@@ -176,7 +176,7 @@ public class EducationRecipeProvisioningTests : IClassFixture<PostgreSqlFixture>
             adminEmail: $"admin-{uniqueId}@edaroles.com",
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0313",
-            industryType: "Education",
+            recipeId: null,
             companySize: "50-100",
             address: "400 Faculty Row",
             billingContact: "billing@edaroles.com");
@@ -216,7 +216,7 @@ public class EducationRecipeProvisioningTests : IClassFixture<PostgreSqlFixture>
             adminEmail: $"admin-{uniqueId}@edaleads.com",
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0314",
-            industryType: "Education",
+            recipeId: null,
             companySize: "50-100",
             address: "500 Enrollment Ave",
             billingContact: "billing@edaleads.com");
@@ -263,7 +263,7 @@ public class EducationRecipeProvisioningTests : IClassFixture<PostgreSqlFixture>
             adminEmail: $"admin-{uniqueId}@edacf.com",
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0315",
-            industryType: "Education",
+            recipeId: null,
             companySize: "50-100",
             address: "600 Program St",
             billingContact: "billing@edacf.com");

@@ -62,7 +62,7 @@ public class RecipeProvisioningTests : IClassFixture<PostgreSqlFixture>
             adminEmail: $"admin-{uniqueId}@recipestages.com",
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0100",
-            industryType: "Technology",
+            recipeId: null,
             companySize: "10-50",
             address: "123 Main St",
             billingContact: "billing@recipestages.com");
@@ -111,7 +111,7 @@ public class RecipeProvisioningTests : IClassFixture<PostgreSqlFixture>
             adminEmail: $"admin-{uniqueId}@customfields.com",
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0101",
-            industryType: "Automotive",
+            recipeId: null,
             companySize: "10-50",
             address: "456 Oak Ave",
             billingContact: "billing@customfields.com");
@@ -159,7 +159,7 @@ public class RecipeProvisioningTests : IClassFixture<PostgreSqlFixture>
             adminEmail: $"admin-{uniqueId}@appliedrecipe.com",
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0102",
-            industryType: "Technology",
+            recipeId: null,
             companySize: "50-100",
             address: "789 Pine Rd",
             billingContact: "billing@appliedrecipe.com");

@@ -50,7 +50,7 @@ public class AutomobileRecipeProvisioningTests : IClassFixture<PostgreSqlFixture
             adminEmail: $"admin-{uniqueId}@autodealer.com",
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0100",
-            industryType: "Automotive",
+            recipeId: null,
             companySize: "10-50",
             address: "123 Main St",
             billingContact: $"billing-{uniqueId}@autodealer.com");
@@ -95,7 +95,7 @@ public class AutomobileRecipeProvisioningTests : IClassFixture<PostgreSqlFixture
             adminEmail: $"admin-{uniqueId}@autofields.com",
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0101",
-            industryType: "Automotive",
+            recipeId: null,
             companySize: "10-50",
             address: "456 Oak Ave",
             billingContact: $"billing-{uniqueId}@autofields.com");
@@ -134,7 +134,7 @@ public class AutomobileRecipeProvisioningTests : IClassFixture<PostgreSqlFixture
             adminEmail: $"admin-{uniqueId}@autorules.com",
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0102",
-            industryType: "Automotive",
+            recipeId: null,
             companySize: "10-50",
             address: "789 Pine Rd",
             billingContact: $"billing-{uniqueId}@autorules.com");
@@ -169,7 +169,7 @@ public class AutomobileRecipeProvisioningTests : IClassFixture<PostgreSqlFixture
             adminEmail: $"admin-{uniqueId}@autoroles.com",
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0103",
-            industryType: "Automotive",
+            recipeId: null,
             companySize: "10-50",
             address: "321 Elm St",
             billingContact: $"billing-{uniqueId}@autoroles.com");
@@ -210,7 +210,7 @@ public class AutomobileRecipeProvisioningTests : IClassFixture<PostgreSqlFixture
             adminEmail: $"admin-{uniqueId}@autoleads.com",
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0104",
-            industryType: "Automotive",
+            recipeId: null,
             companySize: "10-50",
             address: "654 Maple Ave",
             billingContact: $"billing-{uniqueId}@autoleads.com");
@@ -250,7 +250,7 @@ public class AutomobileRecipeProvisioningTests : IClassFixture<PostgreSqlFixture
             adminEmail: $"admin-{uniqueId}@autocfleads.com",
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0105",
-            industryType: "Automotive",
+            recipeId: null,
             companySize: "10-50",
             address: "987 Cedar Blvd",
             billingContact: $"billing-{uniqueId}@autocfleads.com");
