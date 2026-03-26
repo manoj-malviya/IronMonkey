@@ -13,7 +13,7 @@ public class SignupRequestConfiguration : IEntityTypeConfiguration<SignupRequest
         builder.Property(x => x.CompanyName).IsRequired().HasMaxLength(200);
         builder.Property(x => x.AdminEmail).IsRequired().HasMaxLength(320);
         builder.Property(x => x.Phone).IsRequired().HasMaxLength(50);
-        builder.Property(x => x.IndustryType).IsRequired().HasMaxLength(100);
+        builder.Property(x => x.RecipeId);
         builder.Property(x => x.CompanySize).IsRequired().HasMaxLength(50);
         builder.Property(x => x.Address).IsRequired().HasMaxLength(500);
         builder.Property(x => x.BillingContact).IsRequired().HasMaxLength(500);

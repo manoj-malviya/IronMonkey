@@ -10,7 +10,7 @@ public sealed class SignupRequest : Entity
         string adminEmail,
         string adminPasswordHash,
         string phone,
-        string industryType,
+        Guid? recipeId,
         string companySize,
         string address,
         string billingContact)
@@ -20,7 +20,7 @@ public sealed class SignupRequest : Entity
         AdminEmail = adminEmail;
         AdminPasswordHash = adminPasswordHash;
         Phone = phone;
-        IndustryType = industryType;
+        RecipeId = recipeId;
         CompanySize = companySize;
         Address = address;
         BillingContact = billingContact;
@@ -33,7 +33,7 @@ public sealed class SignupRequest : Entity
     public string AdminEmail { get; private set; } = string.Empty;
     public string AdminPasswordHash { get; private set; } = string.Empty;
     public string Phone { get; private set; } = string.Empty;
-    public string IndustryType { get; private set; } = string.Empty;
+    public Guid? RecipeId { get; private set; }
     public string CompanySize { get; private set; } = string.Empty;
     public string Address { get; private set; } = string.Empty;
     public string BillingContact { get; private set; } = string.Empty;
@@ -43,12 +43,12 @@ public sealed class SignupRequest : Entity
 
     public static SignupRequest Create(
         string companyName, string adminEmail, string adminPasswordHash,
-        string phone, string industryType, string companySize,
+        string phone, Guid? recipeId, string companySize,
         string address, string billingContact)
     {
         return new SignupRequest(
             Guid.NewGuid(), companyName, adminEmail, adminPasswordHash,
-            phone, industryType, companySize, address, billingContact);
+            phone, recipeId, companySize, address, billingContact);
     }
 
     public void Approve(string? note = null)
