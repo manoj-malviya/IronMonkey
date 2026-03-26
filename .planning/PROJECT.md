@@ -4,7 +4,7 @@
 
 A multi-tenant, domain-agnostic Lead Management SaaS platform. Any business — automobile dealerships, real estate agencies, insurance brokers, service providers, educational institutions — can sign up as a tenant and fully configure the system to match their lead workflow without any code changes. Built on .NET Aspire with Blazor Server frontend.
 
-**Current State:** v1.1 in progress. Phase 6 (Recipe Data Model) complete — IndustryRecipe entity, JSONB content storage, Blank recipe seed, provisioning integration. 117+ integration tests. Building on v1.0 MVP (multi-tenancy, configurable lead model, multi-channel ingestion, pipeline workflow engine, reporting dashboards).
+**Current State:** v1.1 complete. All 3 phases (Recipe Data Model, Recipe Content, Onboarding & Admin API) delivered. 143+ integration tests. Recipe selection at signup, 5 recipe API endpoints (list, preview, create, update, deactivate), deactivated-recipe guard, RecipeContentValidator. Building on v1.0 MVP (multi-tenancy, configurable lead model, multi-channel ingestion, pipeline workflow engine, reporting dashboards).
 
 ## Current Milestone: v1.1 Tenant Onboarding with Industry Recipes
 
@@ -57,8 +57,8 @@ Any business can configure their complete lead management workflow — fields, s
 - ✓ Recipe application seeds tenant database on provisioning — v1.1 Phase 6
 - ✓ Automobile Dealership recipe (stages, fields, rules, roles) — v1.1 Phase 7
 - ✓ Educational Institution recipe (stages, fields, rules, roles) — v1.1 Phase 7
-- [ ] Recipe selection during tenant signup/provisioning
-- [ ] Tenant can freely modify all recipe-seeded configuration
+- ✓ Recipe selection during tenant signup/provisioning — v1.1 Phase 8
+- ✓ Tenant can freely modify all recipe-seeded configuration — v1.1 Phase 8
 
 ### Future
 
@@ -128,4 +128,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-26 after Phase 7 complete*
+*Last updated: 2026-03-26 after Phase 8 complete — v1.1 milestone finished*
