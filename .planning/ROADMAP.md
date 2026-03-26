@@ -59,7 +59,7 @@ Plans:
 Plans:
 - [x] 07-01-PLAN.md — SampleLeadDefinition DTO, TenantProvisioningService lead seeding, SeedDomainRecipes migration (Automobile + Education)
 - [ ] 07-02-PLAN.md — AutomobileRecipeProvisioningTests (stages, fields, rules, roles, sample leads)
-- [ ] 07-03-PLAN.md — EducationRecipeProvisioningTests (stages, fields, rules, roles, sample leads)
+- [x] 07-03-PLAN.md — EducationRecipeProvisioningTests (stages, fields, rules, roles, sample leads)
 
 ### Phase 8: Onboarding & Admin API
 **Goal**: Users can select a recipe at signup with a preview of what it includes, and administrators can manage the recipe catalog via API
