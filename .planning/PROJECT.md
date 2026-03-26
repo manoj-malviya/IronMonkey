@@ -55,8 +55,8 @@ Any business can configure their complete lead management workflow — fields, s
 - ✓ Industry recipe data model with reusable templates — v1.1 Phase 6
 - ✓ Blank/Custom option for tenants without a matching industry — v1.1 Phase 6
 - ✓ Recipe application seeds tenant database on provisioning — v1.1 Phase 6
-- [ ] Automobile Dealership recipe (stages, fields, rules, roles)
-- [ ] Educational Institution recipe (stages, fields, rules, roles)
+- ✓ Automobile Dealership recipe (stages, fields, rules, roles) — v1.1 Phase 7
+- ✓ Educational Institution recipe (stages, fields, rules, roles) — v1.1 Phase 7
 - [ ] Recipe selection during tenant signup/provisioning
 - [ ] Tenant can freely modify all recipe-seeded configuration
 
@@ -128,4 +128,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-26 after Phase 6 complete*
+*Last updated: 2026-03-26 after Phase 7 complete*
