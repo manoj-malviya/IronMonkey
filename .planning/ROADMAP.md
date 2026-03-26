@@ -38,7 +38,12 @@
   3. A Blank/Custom recipe exists and seeds a minimal working tenant (one default stage, Admin role) on provisioning
   4. Recipes carry a version field that increments when a recipe template is updated
   5. Applying a recipe to a tenant database is transactional — any failure rolls back completely with no partial state left behind
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — IndustryRecipe entity, RecipeContentModel DTOs, EF configuration, CentralDbContext registration, Tenant recipe tracking fields
+- [ ] 06-02-PLAN.md — EF Core migrations: industry_recipes table, Tenant recipe columns, Blank/Custom recipe data seed
+- [ ] 06-03-PLAN.md — TenantProvisioningService recipe application extension and integration tests
 
 ### Phase 7: Recipe Content
 **Goal**: Automobile Dealership and Educational Institution recipes are fully defined and produce correct, queryable tenant data when applied
@@ -73,6 +78,6 @@
 | 3. Lead Ingestion | v1.0 | 7/7 | Complete | 2026-03-21 |
 | 4. Pipeline & Workflow Engine | v1.0 | 6/6 | Complete | 2026-03-22 |
 | 5. Activity & Reporting | v1.0 | 5/5 | Complete | 2026-03-24 |
-| 6. Recipe Data Model | v1.1 | 0/? | Not started | - |
+| 6. Recipe Data Model | v1.1 | 0/3 | Not started | - |
 | 7. Recipe Content | v1.1 | 0/? | Not started | - |
 | 8. Onboarding & Admin API | v1.1 | 0/? | Not started | - |
