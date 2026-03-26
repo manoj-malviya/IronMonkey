@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Tenant Onboarding with Industry Recipes
-status: Ready to execute
-stopped_at: Completed 07-01-PLAN.md — SampleLeadDefinition DTO, lead seeding, domain recipe migration
-last_updated: "2026-03-26T10:35:29.871Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 07-02-PLAN.md — AutomobileRecipeProvisioningTests (6 tests)
+last_updated: "2026-03-26T10:49:41.880Z"
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 6
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 ## Current Position
 
 Phase: 07 (recipe-content) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -46,6 +46,8 @@ Plan: 2 of 3
 | Phase 06-recipe-data-model P02 | 0 | 2 tasks | 2 files |
 | Phase 06-recipe-data-model P03 | 27 | 2 tasks | 7 files |
 | Phase 07-recipe-content P01 | 6 | 3 tasks | 3 files |
+| Phase 07-recipe-content P03 | 8 | 2 tasks | 2 files |
+| Phase 07-recipe-content P02 | 11 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -67,6 +69,10 @@ Recent decisions affecting v1.1:
 - [Phase 06-recipe-data-model]: Phase6_RecipeModel migration needed for TenantDbContext because ApplyConfigurationsFromAssembly includes all entity configs — tenant DBs mirror central DB entity shapes (pre-existing pattern)
 - [Phase 06-recipe-data-model]: TenantProvisioningService.SeedTenantDataAsync changed from static to instance method to access _centralDb for recipe loading
 - [Phase 07-recipe-content]: Split SeedTenantDataAsync SaveChangesAsync into two calls: first flushes stages/fields/rules so stageMap can resolve stage IDs for lead seeding
+- [Phase 07-recipe-content]: Domain roles (Admissions Director, Officer, Counselor) are informational only in Phase 7 — TenantProvisioningService does not process Roles section; documented in SeedsRoles test with TODO
+- [Phase 07-recipe-content]: SeedDomainRecipes migration requires Designer.cs file for EF MigrateAsync() to locate and apply it — missing Designer.cs created from SeedBlankRecipe.Designer.cs pattern
+- [Phase 07-recipe-content]: SeedDomainRecipes.Designer.cs required for EF Core migration recognition — pure data migrations still need the designer snapshot file; added with same model as previous migration
+- [Phase 07-recipe-content]: Recipe RoleDefinitions are informational only in Phase 7; only system roles created during provisioning; custom domain roles deferred to Phase 8 admin API
 
 ### Pending Todos
 
@@ -79,6 +85,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T10:35:29.867Z
-Stopped at: Completed 07-01-PLAN.md — SampleLeadDefinition DTO, lead seeding, domain recipe migration
+Last session: 2026-03-26T10:49:41.875Z
+Stopped at: Completed 07-02-PLAN.md — AutomobileRecipeProvisioningTests (6 tests)
 Resume file: None

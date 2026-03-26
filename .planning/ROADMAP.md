@@ -23,7 +23,7 @@
 **Milestone Goal:** New tenants pick an industry at signup and get a fully pre-configured workspace — pipeline stages, custom fields, workflow rules, and default roles — as a starting point they can freely customize.
 
 - [ ] **Phase 6: Recipe Data Model** - Establish the central database entities and seeding infrastructure that all recipes build on
-- [ ] **Phase 7: Recipe Content** - Define and seed the Automobile Dealership and Educational Institution recipes plus the Blank/Custom option
+- [x] **Phase 7: Recipe Content** - Define and seed the Automobile Dealership and Educational Institution recipes plus the Blank/Custom option (completed 2026-03-26)
 - [ ] **Phase 8: Onboarding & Admin API** - Wire recipe selection into tenant signup, expose recipe preview and management endpoints
 
 ## Phase Details
@@ -58,8 +58,8 @@ Plans:
 
 Plans:
 - [x] 07-01-PLAN.md — SampleLeadDefinition DTO, TenantProvisioningService lead seeding, SeedDomainRecipes migration (Automobile + Education)
-- [ ] 07-02-PLAN.md — AutomobileRecipeProvisioningTests (stages, fields, rules, roles, sample leads)
-- [ ] 07-03-PLAN.md — EducationRecipeProvisioningTests (stages, fields, rules, roles, sample leads)
+- [x] 07-02-PLAN.md — AutomobileRecipeProvisioningTests (stages, fields, rules, roles, sample leads)
+- [x] 07-03-PLAN.md — EducationRecipeProvisioningTests (stages, fields, rules, roles, sample leads)
 
 ### Phase 8: Onboarding & Admin API
 **Goal**: Users can select a recipe at signup with a preview of what it includes, and administrators can manage the recipe catalog via API
@@ -83,5 +83,5 @@ Plans:
 | 4. Pipeline & Workflow Engine | v1.0 | 6/6 | Complete | 2026-03-22 |
 | 5. Activity & Reporting | v1.0 | 5/5 | Complete | 2026-03-24 |
 | 6. Recipe Data Model | v1.1 | 2/3 | In Progress|  |
-| 7. Recipe Content | v1.1 | 0/3 | Not started | - |
+| 7. Recipe Content | v1.1 | 3/3 | Complete   | 2026-03-26 |
 | 8. Onboarding & Admin API | v1.1 | 0/? | Not started | - |
