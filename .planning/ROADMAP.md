@@ -54,8 +54,12 @@ Plans:
   2. Provisioning with the Educational Institution recipe creates the admissions funnel stages, student-specific custom fields, notification workflow rules, and admissions team roles in the tenant database
   3. After provisioning with either domain recipe, the tenant's pipeline board shows sample leads so the workspace is immediately non-empty and explorable
   4. All recipe-seeded stages, fields, rules, and roles are modifiable by the tenant after provisioning — no entity is locked or read-only
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 3 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — SampleLeadDefinition DTO, TenantProvisioningService lead seeding, SeedDomainRecipes migration (Automobile + Education)
+- [ ] 07-02-PLAN.md — AutomobileRecipeProvisioningTests (stages, fields, rules, roles, sample leads)
+- [ ] 07-03-PLAN.md — EducationRecipeProvisioningTests (stages, fields, rules, roles, sample leads)
 
 ### Phase 8: Onboarding & Admin API
 **Goal**: Users can select a recipe at signup with a preview of what it includes, and administrators can manage the recipe catalog via API
@@ -79,5 +83,5 @@ Plans:
 | 4. Pipeline & Workflow Engine | v1.0 | 6/6 | Complete | 2026-03-22 |
 | 5. Activity & Reporting | v1.0 | 5/5 | Complete | 2026-03-24 |
 | 6. Recipe Data Model | v1.1 | 2/3 | In Progress|  |
-| 7. Recipe Content | v1.1 | 0/? | Not started | - |
+| 7. Recipe Content | v1.1 | 0/3 | Not started | - |
 | 8. Onboarding & Admin API | v1.1 | 0/? | Not started | - |
