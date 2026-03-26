@@ -39,10 +39,12 @@ created: 2026-03-26
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
 | 06-01-01 | 01 | 1 | RCPE-01 | integration | `dotnet test IronMonkey.Tests --filter "FullyQualifiedName~IndustryRecipeEntityTests"` | ❌ W0 | ⬜ pending |
-| 06-01-02 | 01 | 1 | RCPE-02 | integration | `dotnet test IronMonkey.Tests --filter "FullyQualifiedName~RecipeMetadataTests"` | ❌ W0 | ⬜ pending |
+| 06-01-02 | 01 | 1 | RCPE-02 | integration | `dotnet test IronMonkey.Tests --filter "FullyQualifiedName~IndustryRecipeEntityTests"` | ❌ W0 | ⬜ pending |
 | 06-02-01 | 02 | 2 | RCPE-03 | integration | `dotnet test IronMonkey.Tests --filter "FullyQualifiedName~BlankRecipeProvisioningTests"` | ❌ W0 | ⬜ pending |
-| 06-03-01 | 03 | 2 | RCPE-04 | integration | `dotnet test IronMonkey.Tests --filter "FullyQualifiedName~RecipeVersioningTests"` | ❌ W0 | ⬜ pending |
+| 06-03-01 | 03 | 2 | RCPE-04 | integration | `dotnet test IronMonkey.Tests --filter "FullyQualifiedName~IndustryRecipeEntityTests"` | ❌ W0 | ⬜ pending |
 | 06-04-01 | 04 | 3 | RCPE-01,RCPE-03 | integration | `dotnet test IronMonkey.Tests --filter "FullyQualifiedName~RecipeProvisioningTests"` | ❌ W0 | ⬜ pending |
+
+*Note: RCPE-04 version testing is covered by `IndustryRecipeEntityTests` Test 4 (`IndustryRecipe_Version_StartsAtOne`), co-located with other entity tests in Plan 01 Task 1.*
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -50,9 +52,8 @@ created: 2026-03-26
 
 ## Wave 0 Requirements
 
-- [ ] `IronMonkey.Tests/Integration/IndustryRecipeEntityTests.cs` — stubs for RCPE-01, RCPE-02
+- [ ] `IronMonkey.Tests/Integration/IndustryRecipeEntityTests.cs` — stubs for RCPE-01, RCPE-02, and RCPE-04 versioning (Test 4)
 - [ ] `IronMonkey.Tests/Integration/BlankRecipeProvisioningTests.cs` — stubs for RCPE-03
-- [ ] `IronMonkey.Tests/Integration/RecipeVersioningTests.cs` — stubs for RCPE-04
 - [ ] `IronMonkey.Tests/Integration/RecipeProvisioningTests.cs` — stubs for recipe-driven provisioning
 
 *Existing infrastructure (PostgreSqlFixture, TenantProvisioningTests) covers test setup.*
