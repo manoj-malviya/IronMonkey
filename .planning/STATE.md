@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Tenant Onboarding with Industry Recipes
-status: Ready to execute
-stopped_at: Completed 08-02-PLAN.md (recipe API endpoints)
-last_updated: "2026-03-26T18:33:23.399Z"
+status: Milestone complete
+stopped_at: Completed 08-03-PLAN.md - All 14 RecipeEndpointTests pass
+last_updated: "2026-03-26T18:54:42.868Z"
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 9
 ---
 
 # Project State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 
 ## Current Position
 
-Phase: 08 (onboarding-admin-api) — EXECUTING
-Plan: 2 of 3
+Phase: 08
+Plan: Not started
 
 ## Performance Metrics
 
@@ -48,6 +48,8 @@ Plan: 2 of 3
 | Phase 07-recipe-content P01 | 6 | 3 tasks | 3 files |
 | Phase 07-recipe-content P03 | 8 | 2 tasks | 2 files |
 | Phase 08-onboarding-admin-api P02 | 625 | 2 tasks | 7 files |
+| Phase 08-onboarding-admin-api P01 | 45 | 2 tasks | 12 files |
+| Phase 08-onboarding-admin-api P03 | 15 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -73,6 +75,9 @@ Recent decisions affecting v1.1:
 - [Phase 07-recipe-content]: SeedDomainRecipes migration requires Designer.cs file for EF MigrateAsync() to locate and apply it — missing Designer.cs created from SeedBlankRecipe.Designer.cs pattern
 - [Phase 08-onboarding-admin-api]: Read endpoints (GET list, GET preview) are AllowAnonymous to support signup recipe browsing without auth
 - [Phase 08-onboarding-admin-api]: MapRecipeEndpoints uses two separate route groups (public/admin) over /api/recipes to apply different auth policies to same route prefix
+- [Phase 08-onboarding-admin-api]: Phase 08-01: effectiveRecipeId used in both SeedTenantDataAsync and SetAppliedRecipe to ensure Blank recipe is tracked when no RecipeId provided
+- [Phase 08-onboarding-admin-api]: Phase 08-01: ProvisionTenantEndpoint loads SignupRequest independently to return NotFound early before entering provisioning transaction
+- [Phase 08-onboarding-admin-api]: RecipeEndpointTests tests via DB/service layer directly — consistent with all other integration tests in codebase
 
 ### Pending Todos
 
@@ -85,6 +90,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T18:33:23.396Z
-Stopped at: Completed 08-02-PLAN.md (recipe API endpoints)
+Last session: 2026-03-26T18:41:05.406Z
+Stopped at: Completed 08-03-PLAN.md - All 14 RecipeEndpointTests pass
 Resume file: None

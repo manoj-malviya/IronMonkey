@@ -73,7 +73,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — SignupRequest entity RecipeId migration, SignupRequestEndpoint + ProvisionTenantEndpoint updates, deactivated-recipe guard
+- [x] 08-01-PLAN.md — SignupRequest entity RecipeId migration, SignupRequestEndpoint + ProvisionTenantEndpoint updates, deactivated-recipe guard
 - [x] 08-02-PLAN.md — 5 recipe API endpoints (GET list, GET preview, POST create, PUT update, DELETE deactivate), RecipeContentValidator, Endpoints.cs registration
 - [ ] 08-03-PLAN.md — RecipeEndpointTests integration tests (all 8 Phase 8 requirements covered)
 
@@ -88,4 +88,4 @@ Plans:
 | 5. Activity & Reporting | v1.0 | 5/5 | Complete | 2026-03-24 |
 | 6. Recipe Data Model | v1.1 | 2/3 | In Progress|  |
 | 7. Recipe Content | v1.1 | 0/3 | Not started | - |
-| 8. Onboarding & Admin API | v1.1 | 1/3 | In Progress|  |
+| 8. Onboarding & Admin API | v1.1 | 2/3 | In Progress|  |
