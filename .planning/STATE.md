@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Tenant Onboarding with Industry Recipes
-status: Ready to plan
-stopped_at: Phase 8 context gathered
-last_updated: "2026-03-26T18:02:13.541Z"
+status: Ready to execute
+stopped_at: Completed 08-02-PLAN.md (recipe API endpoints)
+last_updated: "2026-03-26T18:33:23.399Z"
 progress:
   total_phases: 3
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 9
+  completed_plans: 7
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Any business can configure their complete lead management workflow without writing code
-**Current focus:** Phase 07 — recipe-content
+**Current focus:** Phase 08 — onboarding-admin-api
 
 ## Current Position
 
-Phase: 8
-Plan: Not started
+Phase: 08 (onboarding-admin-api) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Plan: Not started
 | Phase 06-recipe-data-model P03 | 27 | 2 tasks | 7 files |
 | Phase 07-recipe-content P01 | 6 | 3 tasks | 3 files |
 | Phase 07-recipe-content P03 | 8 | 2 tasks | 2 files |
+| Phase 08-onboarding-admin-api P02 | 625 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,8 @@ Recent decisions affecting v1.1:
 - [Phase 07-recipe-content]: Split SeedTenantDataAsync SaveChangesAsync into two calls: first flushes stages/fields/rules so stageMap can resolve stage IDs for lead seeding
 - [Phase 07-recipe-content]: Domain roles (Admissions Director, Officer, Counselor) are informational only in Phase 7 — TenantProvisioningService does not process Roles section; documented in SeedsRoles test with TODO
 - [Phase 07-recipe-content]: SeedDomainRecipes migration requires Designer.cs file for EF MigrateAsync() to locate and apply it — missing Designer.cs created from SeedBlankRecipe.Designer.cs pattern
+- [Phase 08-onboarding-admin-api]: Read endpoints (GET list, GET preview) are AllowAnonymous to support signup recipe browsing without auth
+- [Phase 08-onboarding-admin-api]: MapRecipeEndpoints uses two separate route groups (public/admin) over /api/recipes to apply different auth policies to same route prefix
 
 ### Pending Todos
 
@@ -82,6 +85,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T18:02:13.536Z
-Stopped at: Phase 8 context gathered
-Resume file: .planning/phases/08-onboarding-admin-api/08-CONTEXT.md
+Last session: 2026-03-26T18:33:23.396Z
+Stopped at: Completed 08-02-PLAN.md (recipe API endpoints)
+Resume file: None
