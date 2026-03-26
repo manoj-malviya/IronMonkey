@@ -2,13 +2,14 @@ using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
+using IronMonkey.Data.RecipeContent;
 using BC = BCrypt.Net.BCrypt;
 
 namespace IronMonkey.ApiService.Authentication.Services;
 
 public interface ITenantProvisioningService
 {
-    Task ProvisionTenantAsync(Guid signupRequestId, CancellationToken cancellationToken = default);
+    Task ProvisionTenantAsync(Guid signupRequestId, Guid? recipeId = null, CancellationToken cancellationToken = default);
 }
 
 public class TenantProvisioningService : ITenantProvisioningService
@@ -27,7 +28,7 @@ public class TenantProvisioningService : ITenantProvisioningService
         _config = config;
     }
 
-    public async Task ProvisionTenantAsync(Guid signupRequestId, CancellationToken cancellationToken = default)
+    public async Task ProvisionTenantAsync(Guid signupRequestId, Guid? recipeId = null, CancellationToken cancellationToken = default)
     {
         // Step 1: Load and validate signup request
         var signupRequest = await _centralDb.SignupRequests
@@ -51,11 +52,22 @@ public class TenantProvisioningService : ITenantProvisioningService
         await tenantDb.Database.MigrateAsync(cancellationToken);
 
         // Step 5: Seed default data
-        await SeedTenantDataAsync(tenantDb, tenant, signupRequest, cancellationToken);
+        await SeedTenantDataAsync(tenantDb, tenant, signupRequest, recipeId, cancellationToken);
 
         // Step 6: Mark tenant as provisioned in central DB
         tenant.MarkProvisioned(connectionString);
         signupRequest.LinkTenant(tenant.Id);
+
+        // Step 6a: Track applied recipe in central DB (D-11)
+        if (recipeId.HasValue)
+        {
+            var appliedRecipe = await _centralDb.IndustryRecipes
+                .AsNoTracking()
+                .SingleOrDefaultAsync(r => r.Id == recipeId.Value, cancellationToken);
+            if (appliedRecipe != null)
+                tenant.SetAppliedRecipe(appliedRecipe.Id, appliedRecipe.Version);
+        }
+
         await _centralDb.SaveChangesAsync(cancellationToken);
 
         // Step 7: Register admin email in central user-tenant index for login resolution
@@ -89,27 +101,74 @@ public class TenantProvisioningService : ITenantProvisioningService
         return builder.ToString();
     }
 
-    private static async Task SeedTenantDataAsync(
+    private async Task SeedTenantDataAsync(
         TenantDbContext db,
         Tenant tenant,
         SignupRequest signupRequest,
+        Guid? recipeId,
         CancellationToken cancellationToken)
     {
         // Roles are already seeded by EF migration (SuperAdmin=1, Admin=201, Owner=301, TeleCaller=302)
-        // Look up the Admin role from the migrated DB — do not re-insert
-        var adminRole = await db.Roles
-            .SingleAsync(r => r.Name == "Admin", cancellationToken);
+        var adminRole = await db.Roles.SingleAsync(r => r.Name == "Admin", cancellationToken);
 
-        // Seed admin user with BCrypt-hashed password from signup request
-        // Note: AdminPasswordHash in SignupRequest is already BCrypt-hashed
+        // Load recipe if provided (D-06)
+        RecipeContentModel? content = null;
+        if (recipeId.HasValue)
+        {
+            var recipe = await _centralDb.IndustryRecipes
+                .AsNoTracking()
+                .SingleOrDefaultAsync(r => r.Id == recipeId.Value, cancellationToken);
+
+            if (recipe == null)
+                throw new InvalidOperationException($"Recipe {recipeId} not found.");
+
+            content = System.Text.Json.JsonSerializer.Deserialize<RecipeContentModel>(recipe.ContentJson)
+                ?? new RecipeContentModel();
+        }
+
+        // Apply pipeline stages (D-07: stages before fields and rules)
+        var stages = content?.PipelineStages ?? [];
+        foreach (var stageDef in stages)
+        {
+            var stageType = Enum.TryParse<StageType>(stageDef.StageType, out var parsed)
+                ? parsed
+                : StageType.Active;
+            var stage = PipelineStage.Create(tenant.Id, stageDef.Name, stageDef.Order, stageType);
+            db.PipelineStages.Add(stage);
+        }
+
+        // Apply custom field definitions (D-07: fields after stages)
+        var fields = content?.CustomFields ?? [];
+        foreach (var fieldDef in fields)
+        {
+            var fieldType = Enum.TryParse<CustomFieldType>(fieldDef.FieldType, out var parsedType)
+                ? parsedType
+                : CustomFieldType.Text;
+            var field = CustomFieldDefinition.Create(tenant.Id, fieldDef.FieldName, fieldType, fieldDef.IsRequired, fieldDef.Options);
+            db.CustomFieldDefinitions.Add(field);
+        }
+
+        // Apply workflow rules (D-07: rules after fields)
+        var rules = content?.WorkflowRules ?? [];
+        foreach (var ruleDef in rules)
+        {
+            var trigger = Enum.TryParse<WorkflowTrigger>(ruleDef.Trigger, out var parsedTrigger)
+                ? parsedTrigger
+                : WorkflowTrigger.FieldChange;
+            var rule = WorkflowRule.Create(tenant.Id, ruleDef.Name, trigger, ruleDef.ConditionJson, ruleDef.ActionJson);
+            db.WorkflowRules.Add(rule);
+        }
+
+        // Seed admin user (always, regardless of recipe)
         var adminUser = User.Create(
             tenant.Id,
-            signupRequest.AdminEmail.Split('@')[0],  // Name from email prefix
+            signupRequest.AdminEmail.Split('@')[0],
             signupRequest.AdminEmail,
-            signupRequest.AdminPasswordHash,  // Already hashed — store as-is
+            signupRequest.AdminPasswordHash,
             adminRole);
         db.Users.Add(adminUser);
 
+        // Single SaveChangesAsync — full atomicity per D-08
         await db.SaveChangesAsync(cancellationToken);
     }
 

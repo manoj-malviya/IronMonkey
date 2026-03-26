@@ -20,7 +20,7 @@ public class ProvisionTenantEndpoint : IEndpoint
     {
         try
         {
-            await provisioningService.ProvisionTenantAsync(id, cancellationToken);
+            await provisioningService.ProvisionTenantAsync(id, cancellationToken: cancellationToken);
             return TypedResults.Ok(new Response(id, "Tenant provisioned successfully."));
         }
         catch (InvalidOperationException ex)
