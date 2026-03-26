@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Tenant Onboarding with Industry Recipes
 status: Ready to execute
-stopped_at: Completed 06-01-PLAN.md (IndustryRecipe data model foundation)
-last_updated: "2026-03-26T06:51:01.068Z"
+stopped_at: Completed 06-02-PLAN.md (Blank recipe seed migration)
+last_updated: "2026-03-26T06:55:56.557Z"
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 ## Current Position
 
 Phase: 06 (recipe-data-model) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -43,6 +43,7 @@ Plan: 2 of 3
 
 *Updated after each plan completion*
 | Phase 06-recipe-data-model P01 | 7 | 3 tasks | 9 files |
+| Phase 06-recipe-data-model P02 | 0 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -58,6 +59,9 @@ Recent decisions affecting v1.1:
 - v1.0: DB-per-tenant isolation confirmed working well across all phases
 - [Phase 06-recipe-data-model]: Migration created in Plan 01 (not 02) because tests use MigrateAsync() which requires the migration file to exist
 - [Phase 06-recipe-data-model]: IndustryRecipe extends Entity not BaseTenantEntity — recipes are platform-level templates, no TenantId
+- [Phase 06-recipe-data-model]: Task 1 (Phase6_RecipeModel migration) was already created in Plan 01 as a blocking deviation — Plan 02 created only the seed migration
+- [Phase 06-recipe-data-model]: Fixed GUID 00000000-0000-0000-0000-000000000001 for Blank recipe makes provisioning deterministic without DB lookup
+- [Phase 06-recipe-data-model]: PascalCase JSON keys in ContentJson are critical — System.Text.Json does not apply camelCase by default
 
 ### Pending Todos
 
@@ -70,6 +74,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T06:51:01.064Z
-Stopped at: Completed 06-01-PLAN.md (IndustryRecipe data model foundation)
+Last session: 2026-03-26T06:55:56.549Z
+Stopped at: Completed 06-02-PLAN.md (Blank recipe seed migration)
 Resume file: None

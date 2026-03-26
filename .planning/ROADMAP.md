@@ -42,7 +42,7 @@
 
 Plans:
 - [x] 06-01-PLAN.md — IndustryRecipe entity, RecipeContentModel DTOs, EF configuration, CentralDbContext registration, Tenant recipe tracking fields
-- [ ] 06-02-PLAN.md — EF Core migrations: industry_recipes table, Tenant recipe columns, Blank/Custom recipe data seed
+- [x] 06-02-PLAN.md — EF Core migrations: industry_recipes table, Tenant recipe columns, Blank/Custom recipe data seed
 - [ ] 06-03-PLAN.md — TenantProvisioningService recipe application extension and integration tests
 
 ### Phase 7: Recipe Content
@@ -78,6 +78,6 @@ Plans:
 | 3. Lead Ingestion | v1.0 | 7/7 | Complete | 2026-03-21 |
 | 4. Pipeline & Workflow Engine | v1.0 | 6/6 | Complete | 2026-03-22 |
 | 5. Activity & Reporting | v1.0 | 5/5 | Complete | 2026-03-24 |
-| 6. Recipe Data Model | v1.1 | 1/3 | In Progress|  |
+| 6. Recipe Data Model | v1.1 | 2/3 | In Progress|  |
 | 7. Recipe Content | v1.1 | 0/? | Not started | - |
 | 8. Onboarding & Admin API | v1.1 | 0/? | Not started | - |

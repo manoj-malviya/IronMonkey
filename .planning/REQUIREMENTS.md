@@ -9,10 +9,10 @@ Requirements for Tenant Onboarding with Industry Recipes. Each maps to roadmap p
 
 ### Recipe Data Model
 
-- [ ] **RCPE-01**: System stores industry recipe templates with pipeline stages, custom fields, workflow rules, and default roles as reusable JSONB definitions in the central database
-- [ ] **RCPE-02**: Each recipe has metadata (name, description, icon/identifier) for display during selection
-- [ ] **RCPE-03**: A "Blank/Custom" recipe exists with minimal defaults (one default stage, Admin role) for tenants without a matching industry
-- [ ] **RCPE-04**: Recipes are versioned so changes to a recipe template can be tracked over time
+- [x] **RCPE-01**: System stores industry recipe templates with pipeline stages, custom fields, workflow rules, and default roles as reusable JSONB definitions in the central database
+- [x] **RCPE-02**: Each recipe has metadata (name, description, icon/identifier) for display during selection
+- [x] **RCPE-03**: A "Blank/Custom" recipe exists with minimal defaults (one default stage, Admin role) for tenants without a matching industry
+- [x] **RCPE-04**: Recipes are versioned so changes to a recipe template can be tracked over time
 
 ### Recipe Content
 
@@ -85,10 +85,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RCPE-01 | Phase 6 | Pending |
-| RCPE-02 | Phase 6 | Pending |
-| RCPE-03 | Phase 6 | Pending |
-| RCPE-04 | Phase 6 | Pending |
+| RCPE-01 | Phase 6 | Complete |
+| RCPE-02 | Phase 6 | Complete |
+| RCPE-03 | Phase 6 | Complete |
+| RCPE-04 | Phase 6 | Complete |
 | RCNT-01 | Phase 7 | Pending |
 | RCNT-02 | Phase 7 | Pending |
 | RCNT-03 | Phase 7 | Pending |
