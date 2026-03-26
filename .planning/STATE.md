@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Tenant Onboarding with Industry Recipes
-status: Ready to plan
-stopped_at: Phase 7 plans created and verified (3 plans, 2 waves)
-last_updated: "2026-03-26T09:53:13.030Z"
+status: Ready to execute
+stopped_at: Completed 07-01-PLAN.md — SampleLeadDefinition DTO, lead seeding, domain recipe migration
+last_updated: "2026-03-26T10:35:29.871Z"
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Any business can configure their complete lead management workflow without writing code
-**Current focus:** Phase 06 — recipe-data-model
+**Current focus:** Phase 07 — recipe-content
 
 ## Current Position
 
-Phase: 7
-Plan: Not started
+Phase: 07 (recipe-content) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -45,6 +45,7 @@ Plan: Not started
 | Phase 06-recipe-data-model P01 | 7 | 3 tasks | 9 files |
 | Phase 06-recipe-data-model P02 | 0 | 2 tasks | 2 files |
 | Phase 06-recipe-data-model P03 | 27 | 2 tasks | 7 files |
+| Phase 07-recipe-content P01 | 6 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,7 @@ Recent decisions affecting v1.1:
 - [Phase 06-recipe-data-model]: PascalCase JSON keys in ContentJson are critical — System.Text.Json does not apply camelCase by default
 - [Phase 06-recipe-data-model]: Phase6_RecipeModel migration needed for TenantDbContext because ApplyConfigurationsFromAssembly includes all entity configs — tenant DBs mirror central DB entity shapes (pre-existing pattern)
 - [Phase 06-recipe-data-model]: TenantProvisioningService.SeedTenantDataAsync changed from static to instance method to access _centralDb for recipe loading
+- [Phase 07-recipe-content]: Split SeedTenantDataAsync SaveChangesAsync into two calls: first flushes stages/fields/rules so stageMap can resolve stage IDs for lead seeding
 
 ### Pending Todos
 
@@ -77,6 +79,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T09:53:13.008Z
-Stopped at: Phase 7 plans created and verified (3 plans, 2 waves)
-Resume file: .planning/phases/07-recipe-content/07-01-PLAN.md
+Last session: 2026-03-26T10:35:29.867Z
+Stopped at: Completed 07-01-PLAN.md — SampleLeadDefinition DTO, lead seeding, domain recipe migration
+Resume file: None

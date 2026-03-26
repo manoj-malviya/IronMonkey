@@ -57,7 +57,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — SampleLeadDefinition DTO, TenantProvisioningService lead seeding, SeedDomainRecipes migration (Automobile + Education)
+- [x] 07-01-PLAN.md — SampleLeadDefinition DTO, TenantProvisioningService lead seeding, SeedDomainRecipes migration (Automobile + Education)
 - [ ] 07-02-PLAN.md — AutomobileRecipeProvisioningTests (stages, fields, rules, roles, sample leads)
 - [ ] 07-03-PLAN.md — EducationRecipeProvisioningTests (stages, fields, rules, roles, sample leads)
 

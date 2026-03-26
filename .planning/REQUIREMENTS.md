@@ -16,9 +16,9 @@ Requirements for Tenant Onboarding with Industry Recipes. Each maps to roadmap p
 
 ### Recipe Content
 
-- [ ] **RCNT-01**: Automobile Dealership recipe includes road-to-the-sale pipeline stages, vehicle-specific custom fields, follow-up workflow rules, and sales team roles
-- [ ] **RCNT-02**: Educational Institution recipe includes admissions funnel stages, student-specific custom fields, notification workflow rules, and admissions team roles
-- [ ] **RCNT-03**: Each recipe includes sample lead data so the tenant sees a working pipeline immediately after provisioning
+- [x] **RCNT-01**: Automobile Dealership recipe includes road-to-the-sale pipeline stages, vehicle-specific custom fields, follow-up workflow rules, and sales team roles
+- [x] **RCNT-02**: Educational Institution recipe includes admissions funnel stages, student-specific custom fields, notification workflow rules, and admissions team roles
+- [x] **RCNT-03**: Each recipe includes sample lead data so the tenant sees a working pipeline immediately after provisioning
 
 ### Onboarding Integration
 
@@ -89,9 +89,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RCPE-02 | Phase 6 | Complete |
 | RCPE-03 | Phase 6 | Complete |
 | RCPE-04 | Phase 6 | Complete |
-| RCNT-01 | Phase 7 | Pending |
-| RCNT-02 | Phase 7 | Pending |
-| RCNT-03 | Phase 7 | Pending |
+| RCNT-01 | Phase 7 | Complete |
+| RCNT-02 | Phase 7 | Complete |
+| RCNT-03 | Phase 7 | Complete |
 | ONBD-01 | Phase 8 | Pending |
 | ONBD-02 | Phase 8 | Pending |
 | ONBD-03 | Phase 8 | Pending |
