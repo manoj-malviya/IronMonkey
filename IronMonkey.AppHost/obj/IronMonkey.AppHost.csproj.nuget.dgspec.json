@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj": {}
+    "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.AppHost/IronMonkey.AppHost.csproj": {}
   },
   "projects": {
-    "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj": {
+    "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.AppHost/IronMonkey.AppHost.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+        "projectUniqueName": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
         "projectName": "IronMonkey.AppHost",
-        "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+        "projectPath": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
         "packagesPath": "/home/manoj/.nuget/packages/",
-        "outputPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/obj/",
+        "outputPath": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.AppHost/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/home/manoj/.nuget/NuGet/NuGet.Config"

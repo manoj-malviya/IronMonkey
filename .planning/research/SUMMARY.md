@@ -1,355 +1,251 @@
-# Project Research Summary: IronMonkey
+# Project Research Summary
 
-**Project:** IronMonkey — Multi-Tenant Configurable Lead Management SaaS
-**Domain:** B2B/B2C hybrid lead management with omnichannel communications and dynamic workflows
-**Researched:** 2026-03-19
-**Confidence:** HIGH
-
----
+**Project:** IronMonkey v1.1 (Industry Recipes)
+**Domain:** Multi-tenant Lead Management SaaS with database-per-tenant isolation
+**Researched:** 2026-03-24
+**Confidence:** HIGH (existing validated v1.0 foundation; v1.1 extensions use proven patterns)
 
 ## Executive Summary
 
-IronMonkey is a domain-agnostic multi-tenant lead management SaaS that requires careful balancing of three competing concerns: data isolation (database-per-tenant for regulatory compliance), configurable flexibility (tenant-defined fields, workflows, pipelines), and operational simplicity (shared migrations, templates). The research indicates a proven architecture pattern: **database-per-tenant for data isolation** + **shared orchestration database** for tenant metadata, recipes, and system configuration. The stack is mature and well-established (.NET 10, EF Core 10, PostgreSQL, Blazor Server), with no exotic dependencies. The critical challenge isn't technology selection but **execution discipline around multi-tenancy** — preventing data leakage, configuration drift, and permission creep requires explicit tenant context in every database query, background job, and authorization check. Success depends on building the multi-tenancy foundation correctly in Phase 1 rather than bolting it on later.
-
----
+IronMonkey v1.1 adds industry-specific recipe templates to the v1.0 multi-tenant CRM foundation, reducing tenant time-to-first-lead from 2-3 hours to 15-20 minutes. The existing .NET 10.0 + EF Core 10.0.5 + PostgreSQL stack requires **zero new external dependencies** — recipes leverage JSONB support already proven for custom fields. The core challenge is not technology, but operational correctness: recipe application must be atomically transacted, schema-consistent across industry domains, and fully customizable post-provisioning. Success depends on preventing six critical pitfalls during the provisioning foundation (idempotency, data model clarity, field-type accuracy, partial-failure handling, blank-template usability, and version management). The recommended approach is to ship two domain-specific recipes (Automobile, Education) with industry expert validation, a minimal blank/custom option, and explicit recipe versioning from day one.
 
 ## Key Findings
 
 ### Recommended Stack
 
-IronMonkey's technology stack should leverage the existing .NET Aspire + Blazor Server foundation with strategic additions for multi-tenancy, configurable data, and omnichannel communication:
+**No new dependencies required.** All v1.1 needs already exist in v1.0:
 
-**Core Infrastructure (Existing + Stable):**
-- **.NET 10.0** — Runtime (already standardized, full Aspire support)
-- **ASP.NET Core 10.0.2** — Minimal APIs for lightweight backend services
-- **Blazor Server 10.0.2** — Real-time UI with built-in SignalR and server-side state
-- **Entity Framework Core 10.0.2** — ORM with native JSON column support critical for dynamic fields
+- **Entity Framework Core 10.0.5** — JSONB support via `HasConversion()` for storing recipe schema
+- **Npgsql 10.0.1** — PostgreSQL JSONB native type mapping (critical for recipe JSON storage)
+- **PostgreSQL 15-alpine** — JSONB native support for recipe data; proven in v1.0 custom fields
+- **Newtonsoft.Json 13.0.3 + System.Text.Json** — Recipe schema serialization/deserialization
+- **.NET 10.0 Aspire 13.1.0** — No changes; orchestration layer already handles multi-tenant provisioning
+- **FluentValidation 12.1.1** — Recipe selection and seeding validation (already integrated)
 
-**Database & Multi-Tenancy:**
-- **PostgreSQL 15+** — Primary database (superior JSONB support, production-grade multi-tenant operations)
-- **Npgsql.EntityFrameworkCore.PostgreSQL 10.0.1** — PostgreSQL provider with EF Core 10 JSON complex types
-- **Custom Tenant Middleware + EF Core Global Query Filters** — Automatic tenant data isolation
+**Key additions:** Recipe entity (`IndustryRecipe`) in `CentralDbContext`, optional recipe ID parameter to `TenantProvisioningService`, recipe application service to deserialize JSONB and create tenant entities during provisioning.
 
-**Critical Features & Libraries:**
-- **Stateless 5.20.1** — State machine for lead lifecycle (simple, no persistence overhead)
-- **Twilio 7.14.3 + Twilio.AspNet.Core 8.1.2** — Unified SMS/WhatsApp/Email API
-- **MudBlazor 9.x** — Material Design components for dashboard and UI
-- **Hangfire 2025 + Hangfire.PostgreSQL** — Background job processing with persistent queue
-- **MediatR 12.x+** — Command/event pattern for decoupled workflow dispatch
-- **FluentValidation 12.1.1** — Already in use; extend for dynamic field validation
-
-**Key Migration Decision: SQLite → PostgreSQL**
-SQLite supports only limited JSON querying and poor multi-tenant operations. PostgreSQL's JSONB provides native queryability, perfect for storing tenant-specific dynamic field values. Migration path: keep SQLite for dev/test; PostgreSQL for staging/production; EF Core handles provider differences.
+**Not added:** JSON Schema validators, template engines (Liquid/Scriban), GraphQL, custom DSLs, recipe marketplace, versioning libraries. Recipes stored as immutable JSONB snapshots; deserialization + EF entity creation sufficient.
 
 ### Expected Features
 
-Research from competitive CRM analysis identifies a clear pyramid of priorities:
+**Must have (table stakes) for v1.1:**
 
-**Table Stakes (MVP — Non-Negotiable):**
-- Lead pipeline visualization (Kanban-style, customizable stages per tenant)
-- Configurable lead statuses/stages with custom field support
-- Task and follow-up management (prevent leads falling through cracks)
-- Lead assignment with basic routing (manual + rule-based)
-- Email integration (most critical communication channel)
-- SMS capability (required per PROJECT.md for omnichannel)
-- Basic dashboards (pipeline health, conversion rates, agent metrics)
-- Multi-tenant data isolation (absolute requirement, non-negotiable)
-- Manual lead entry + CSV bulk import
-- Audit logging (compliance foundation)
+- **Recipe selection at signup** — Industry dropdown (Automobile, Education, Blank) during account creation
+- **Pre-configured pipeline stages** — Automobile: Lead, Contact Attempt, Appointment, Test Drive, Negotiation, Sold, Lost (7 stages); Education: Inquiry, Application, Under Review, Interview, Interviewed, Offer, Enrolled, Rejected (8 stages)
+- **Pre-configured custom fields** — Automobile: Vehicle Interest, Budget, Trade-in Value, Financing, Insurance Provider, Test Drive Date, Finance Source; Education: Degree Program, Test Scores, Education Level, Application Status, Interview Date, Offer, Expected Term, International Student
+- **Pre-configured workflow rules** — Automobile: auto-assign leads via round-robin, email notification on stage change, schedule 24h follow-up post-test-drive, escalate 7-day negotiation stalls, auto-archive lost leads after 90 days; Education: email on status change, schedule interview 5 business days after application, escalate 30-day review bottlenecks, auto-assign by degree program, email offer letter, archive enrolled students
+- **Recipe application during provisioning** — Atomic seeding of stages, fields, rules, and roles to tenant database
+- **Full post-provisioning customization** — All seeded data (stages, fields, rules, roles) fully modifiable; recipe is starting point only, not a guardrail
+- **Blank/Custom recipe option** — Minimal starting point: one default "Lead" stage, Admin role, no fields, for industries without matching recipe
 
-**Competitive Differentiators (Phase 2+):**
-- Multi-channel communication (email + SMS + WhatsApp unified interface)
-- Workflow automation with triggers and conditional logic
-- Bulk operations with deduplication and import validation
-- Real-time notifications and alerts
-- Activity timeline (chronological interaction history)
-- Lead enrichment and advanced scoring
-- Custom report builder and ad-hoc filtering
-- Industry recipe templates (reduce onboarding friction)
+**Should have (competitive) for v1.1:**
 
-**Explicitly Defer (Not in v1):**
-- AI/ML lead scoring (requires data quality foundation first)
-- Phone integration and click-to-dial (VoIP complexity, SMS covers urgent needs)
-- Email/calendar sync and Outlook plugin (nice-to-have, low adoption for MVP)
-- Mobile native app (Blazor Server responsiveness sufficient)
-- Custom tenant code execution (use rules engine instead)
-- Marketplace for third-party integrations (REST API sufficient)
+- Recipe metadata (names, descriptions, icons) for improved discoverability
+- Role seeding during provisioning (Admin, Sales Rep, Sales Manager per industry)
+
+**Defer to v1.2+:**
+
+- Recipe documentation and preview UI
+- Sample data seeding for exploration
+- Quick-start wizard for multi-step customization
+- Recipe versioning and upgrade tooling
+- Copy existing tenant config as template
+- Industry suggestion logic at signup
+- Recipe marketplace or community templates
 
 ### Architecture Approach
 
-IronMonkey requires a three-layer architecture with explicit tenant routing at every boundary:
+Multi-tenant architecture uses three layers: **Orchestration** (CentralDbContext with Tenants, Users, IndustryRecipes, OutboxMessages), **Tenant Data** (per-tenant isolated databases with Leads, CustomFields, PipelineStages, WorkflowRules, Roles), and **Event-Driven Communication** (outbox polling, workflow trigger evaluation, omnichannel dispatch). Recipe application happens at provisioning time: load recipe template from Orchestration DB, deserialize JSONB, create tenant entities in isolated database. All recipe infrastructure already exists — seeding is the primary new code.
 
-1. **Orchestration Layer (Shared Database)** — Tenant lifecycle, user identity, system configuration, industry recipe templates. Responsibilities: tenant provisioning, user authentication, feature flags, template management.
+**Major components:**
 
-2. **Tenant Data Layer (Database-per-Tenant, Isolated)** — Lead records, custom fields, workflows, statuses, and tenant-specific events. Each tenant has a complete isolated PostgreSQL database with identical schema; connection string is resolved per request based on JWT claims.
-
-3. **Event-Driven Communication Layer (Async Processing)** — Outbox pattern for domain events (lead created, status changed), workflow trigger evaluation (rule engine), and omnichannel dispatch. Background services poll tenant Outbox tables, evaluate workflows, and dispatch messages to email/SMS/WhatsApp.
-
-**Key Architectural Patterns:**
-- **Scoped DbContext with Tenant Routing** — DbContext lifetime is per-request (Scoped); connection string resolved dynamically from ITenantService (extracted from JWT claims)
-- **Outbox Pattern** — Domain events persisted in the same transaction as business data, then processed asynchronously
-- **Hybrid Relational + EAV for Custom Fields** — Standard columns remain relational for performance; custom tenant-defined fields stored in EAV table
-- **Rule Engine for Workflows** — Workflow definitions stored as JSON; conditions evaluated at runtime against current lead state
-- **Message Adapter Pattern for Omnichannel** — Abstract communication channels behind common `IMessageAdapter` interface
-
-**Major Components:**
-1. **Tenant Provisioning Service** — Automated database creation, schema initialization, recipe application (Phase 1)
-2. **Multi-DB DbContext Factory** — Routes requests to correct tenant database based on JWT claims (Phase 1)
-3. **Configurable Lead Entity** — Supports standard columns + custom field accessors with type coercion (Phase 2)
-4. **Workflow Trigger Evaluator** — Hosted service that polls Outbox, evaluates conditions, executes actions (Phase 3)
-5. **Event Relay Service** — Polls all tenant Outbox tables, classifies events, routes to workflow engine or communication dispatcher (Phase 4)
-6. **Communication Dispatcher** — Unified interface to email/SMS/WhatsApp adapters with template substitution and delivery tracking (Phase 4)
+1. **Recipe Service** — Load recipe template from CentralDbContext, manage recipe registry and versioning
+2. **Recipe Application Service** — Deserialize recipe JSONB, create PipelineStages, CustomFieldDefinitions, WorkflowRules, Roles in tenant DB
+3. **Provisioning Service (extended)** — Accept optional `recipeId` parameter, call recipe application during tenant setup
+4. **Scoped Tenant Resolution** — Extract tenant ID from JWT, route to correct database
+5. **Hybrid Lead Entity** — Standard columns (Name, Email, Phone) + EAV table for custom fields (proven pattern from v1.0)
 
 ### Critical Pitfalls
 
-Research identified 12 critical pitfalls. The top 5 pose greatest risk:
+1. **Non-Idempotent Recipe Application** — Duplicate records or partial seeding if recipe application fails mid-transaction. **Prevention:** Wrap entire seeding sequence in single database transaction; use existence checks before each insert; track idempotency tokens; test explicit failure scenarios at each step.
 
-1. **Missing Tenant Filter in Database Queries** — A single unfiltered query exposes Tenant A's leads to Tenant B. **Prevention:** Query interceptor auto-appends tenant filter; explicit integration tests verifying cross-tenant isolation; database constraints on (TenantId, RecordId).
+2. **Recipe Data Model Confusion** — Template in central DB mutates vs instances in tenant DB diverge. **Prevention:** Document ownership upfront (CentralDbContext = immutable templates, TenantDbContext = mutable instances); forbid foreign keys from tenant entities back to recipe template; copy recipe to tenant DB at provisioning, don't reference; design allows future versioning (Tenant.RecipeVersion column).
 
-2. **Configuration Drift Across Tenants** — Custom workflows break; field naming inconsistencies (Lead_Score vs. LeadScore) cause failures. **Prevention:** Configuration schema validation at save time; configuration audit logs; versioning/rollback; field naming conventions enforced in UI.
+3. **Industry-Specific Field Type Mismatches** — Automobile recipe specifies "Vehicle Type" as enum, seeded as text; VIN seeded without unique constraint. **Prevention:** Define recipe field spec upfront (data type, enum values, constraints, stage requirements); validate spec against EF Core model before seeding; get domain expert review (dealership manager, admissions officer); test schema post-seeding; document field mappings in tenant UI.
 
-3. **Database-Per-Tenant Operational Complexity** — Schema migrations fail on some tenants; rollback requires per-tenant scripts. **Prevention:** Migration orchestrator with per-tenant tracking; blue-green migrations; schema versioning; infrastructure-as-code; multi-tenant monitoring dashboard.
+4. **Partial Provisioning Failure Without Clear Error** — Recipe application fails at step 5 of 5; transaction rolls back; user sees "Provisioning failed" but doesn't know why or if retry will help. **Prevention:** Wrap in transaction; provide detailed error messages (distinguish constraint violations, foreign key errors, timeouts); return structured error response with failed step and retryability flag; log provisioning steps with state tracking.
 
-4. **Dynamic Fields Without Type Safety** — Workflow rules fail because custom fields stored as JSON lack type constraints. **Prevention:** Define data type system (string, number, date, boolean, enum); store field definitions separately from values; enforce validation at input; index queryable fields.
+5. **Blank/Custom Recipe Unusable Out of Box** — Tenant chooses blank option, gets empty database, can't create leads (no stages), can't assign users (no roles), support required. **Prevention:** Blank template seeds minimum (one default "New" stage, Admin role); provide setup wizard or "Starter" recipe option; validate minimum requirements before allowing provisioning; clearly communicate requirements in UI.
 
-5. **Missing Tenant Context in Authorization** — User with "Manager" role in Tenant A sees metrics from Tenant B. **Prevention:** Include tenant ID in JWT claims alongside role claims; implement tenant-scoped role checks; verify in integration tests that crossing tenant boundaries fails with 403.
-
-Additional critical pitfalls: onboarding overwhelm, workflow engine without observability, data quality spiral, communication channel failures without monitoring, permission creep/role explosion, tenant-specific bugs invisible in staging, missing tenant context in background jobs.
-
----
+6. **Recipe Versioning Drift After Release** — Recipe 1.0 released to Tenants A, B, C; Recipe 1.1 released with new stages; new Tenant D has different recipe than A, B, C; data inconsistency. **Prevention:** Design versioning upfront (recipe has version field, Tenant table tracks RecipeVersion); make recipe updates additive when possible; provide upgrade path in tenant dashboard; document changelog; consider migration tooling for v1.2+.
 
 ## Implications for Roadmap
 
-Based on research dependencies and architectural patterns, the roadmap should follow this phase structure:
+Based on research, IronMonkey v1.1 should organize around recipe-centric phases with clear provisioning foundation first, then domain-specific details, then hardening.
 
-### Phase 1: Multi-Tenancy Foundation & Tenant Provisioning
-
-**Rationale:** Everything depends on correct tenant isolation and routing. This must be bulletproof before any data is created.
-
-**Delivers:**
-- Tenant Provisioning Service (automated database creation, schema init)
-- Multi-DB DbContext Factory with scoped lifetime and dynamic connection routing
-- Tenant Resolution Middleware (extract TenantId from JWT, set scoped context)
-- Event Outbox infrastructure (base for async workflows)
-- Tenant-scoped Authorization (JWT claims include TenantId + Role)
-- Query Interceptor (auto-appends `.Where(x => x.TenantId == currentTenant)` to all queries)
-
-**Pitfalls Addressed:**
-- Missing tenant filter in queries (Query Interceptor + integration tests)
-- Missing tenant context in authorization (scoped claims-based auth)
-- Missing tenant context in background jobs (establish context pattern)
-
-**Research Flags:** None — this pattern is well-documented and proven.
-
----
-
-### Phase 2: Configurable Lead Model with Dynamic Fields
-
-**Rationale:** Lead records are the foundation for everything downstream. Custom fields must be queryable and type-safe.
+### Phase 1: Recipe Data Model & Provisioning Foundation
+**Rationale:** Recipe application is a new, critical seeding path. Must be bulletproof before adding industry-specific recipes. Foundation supports all downstream work without rework.
 
 **Delivers:**
-- Custom Field Definitions (name, type, validation rules, constraints)
-- Hybrid Lead Entity (standard relational columns + EAV table for custom fields)
-- Field Validators (dynamic validation rules per field definition)
-- Tenant Configuration UI (Blazor pages to define fields, statuses, pipelines)
-- Recipe Application (industry templates pre-populate configuration)
-- Lead CRUD API endpoints (with custom field support)
+- Recipe entity in CentralDbContext (stores IndustryRecipe templates as immutable JSONB)
+- Recipe Application Service (deserializes JSONB, creates tenant entities atomically)
+- Extended TenantProvisioningService (accepts recipeId parameter, applies recipe during provisioning)
+- Transactional seeding with rollback safety
+- Idempotency checks and detailed error handling
 
-**Pitfalls Addressed:**
-- Dynamic fields without type safety (enforce type system at definition time)
-- Configuration drift (schema validation, audit logs)
-- Data quality spiral (field validation at input, duplicate detection on lead creation)
-- Onboarding overwhelm (recipe templates provide sensible defaults)
+**Addresses features:**
+- Full post-provisioning customization (infrastructure complete)
+- Blank recipe option (minimal seeding logic)
 
-**Research Flags:**
-- **Field Queryability:** Need to validate that dynamic fields used in filters/workflows are properly indexed. Research PostgreSQL JSON indexing strategies.
+**Avoids pitfalls:**
+- Pitfall 1 (idempotency) — transactional seeding + existence checks
+- Pitfall 2 (data model confusion) — clear ownership documented in code
+- Pitfall 4 (partial failure) — transaction wrapping + error messaging
 
----
+**Risk:** Seeding logic must handle dependency ordering (stages before rules that reference stages, roles before permissions). Test atomic rollback explicitly.
 
-### Phase 3: Workflow Engine & Lead Lifecycle Automation
-
-**Rationale:** Workflows (trigger → condition → action) are the primary automation mechanism. Stateless handles lead status transitions; rule engine evaluates conditions; outbox pattern enables async execution.
+### Phase 2: Automobile & Education Recipe Definitions
+**Rationale:** Domain-specific recipes depend on seeding infrastructure from Phase 1. Define both in parallel to validate pattern.
 
 **Delivers:**
-- Lead Status & Pipeline Definitions (tenant-defined stages, sequences)
-- Workflow Definition Store (trigger type, conditions, actions)
-- Rule Engine (evaluates conditions: if/then/else, AND/OR logic)
-- State Machine Validator (Stateless 5.20.1 for status transition validation)
-- Workflow Trigger Evaluator (Hosted Service polling Outbox)
-- Task Creation and Scheduling
-- Workflow Execution Tracing & Dry-Run Mode (observability)
+- Automobile recipe: 7 pipeline stages, 7 custom fields, 5 workflow rules, 3 roles
+- Education recipe: 8 pipeline stages, 8 custom fields, 6 workflow rules, 3 roles
+- Recipe field specification documents (validate data types, enum values, constraints against EF Core model)
+- Domain expert review (auto dealership manager, admissions officer)
+- Test suite: schema validation post-seeding, deduplication checks, stage/field count assertions
 
-**Pitfalls Addressed:**
-- Workflow engine complexity without observability (execution tracing, dry-run mode)
-- Configuration drift (workflow validation, audit logs)
-- Missing tenant context in background jobs (Workflow Trigger Evaluator scoped per tenant)
+**Addresses features:**
+- Recipe selection at signup (2 domain-specific + 1 blank option)
+- Pre-configured pipeline stages (Automobile + Education)
+- Pre-configured custom fields (Automobile + Education)
+- Pre-configured workflow rules (Automobile + Education)
+- Role seeding during provisioning (Admin, Sales Rep, Manager per industry)
 
-**Research Flags:** None — pattern is standard and well-established.
+**Avoids pitfalls:**
+- Pitfall 3 (field type mismatches) — expert review + schema validation tests
+- Pitfall 5 (blank template) — blank template definition + guidance UI
+- Pitfall 6 (versioning drift) — tag recipes with version numbers from day one
 
----
+**Risk:** Domain definitions may be incomplete without SME input. Plan 1-2 cycles of expert feedback before finalizing.
 
-### Phase 4: Event-Driven & Omnichannel Communication
-
-**Rationale:** Event relay service connects workflow engine to communication providers. Multi-channel messaging unified through adapter pattern.
-
-**Delivers:**
-- Event Relay Service (Hosted Service polling all tenant Outbox tables)
-- Communication Dispatcher (unified interface to channels)
-- Email Adapter + SMTP integration
-- SMS Adapter + Twilio integration
-- WhatsApp Adapter + Twilio Business API
-- Message Templates (with variable substitution)
-- Delivery Tracking & Retry Logic
-- Communication Dashboard (delivery history, failures, status)
-
-**Pitfalls Addressed:**
-- Omnichannel communication channel failures silent in production (delivery tracking, failure monitoring)
-- Missing tenant context in background jobs (Event Relay scoped per tenant)
-
-**Research Flags:** None — Twilio integration is straightforward and well-documented.
-
----
-
-### Phase 5: UI & Self-Service Onboarding
-
-**Rationale:** Users need to onboard themselves without support; recipes reduce time-to-value from weeks to hours.
+### Phase 3: Recipe Selection & Onboarding UI
+**Rationale:** UI layer depends on recipe definitions being final. Recipe selection at signup gates provisioning service.
 
 **Delivers:**
-- Tenant Onboarding Flow (signup → choose industry recipe → create first lead)
-- Lead Dashboard (Blazor pages with custom fields visible)
-- Workflow Builder UI (visual rule builder, not JSON)
-- Tenant Admin Console (field management, status management, user roles)
-- Bulk Import UI (CSV with validation and deduplication)
+- Modified signup flow: industry dropdown (Automobile, Education, Blank) before account creation
+- Recipe metadata display (name, description, icon, key fields preview)
+- Post-signup messaging (what to expect with selected recipe)
+- Blank template guidance ("You chose custom; here's what you need to set up")
 
-**Pitfalls Addressed:**
-- Onboarding overwhelm (fast path with recipes, defer advanced config)
-- Workflow engine complexity (visual builder UI instead of JSON)
+**Addresses features:**
+- Recipe selection at signup (UI implementation)
+- Recipe metadata
 
-**Research Flags:**
-- **Onboarding Metrics:** Measure drop-off rate, time-to-first-lead, configuration completion. Test with 3+ industries to find common patterns.
+**Implementation:** Minimal API changes — add optional `recipeId` to signup request. Provisioning service already routes to correct recipe via parameter.
 
----
-
-### Phase 6: Production Hardening, Compliance & Scale
-
-**Rationale:** System is now feature-complete; focus on reliability, security, compliance, and performance at scale.
+### Phase 4: Testing & Provisioning Hardening
+**Rationale:** Recipe seeding is complex; must be thoroughly tested before production. Integration tests exercise all failure modes.
 
 **Delivers:**
-- Database migration automation (across 10s of tenants)
-- Connection pooling optimization
-- Tenant isolation verification (security audit)
-- Audit logging (who changed what, when, in which tenant)
-- Data quality dashboard
-- Compliance features (data retention policies)
-- Performance testing under load
-- Backup & disaster recovery automation
-- Monitoring dashboard
+- Integration tests: provision each recipe variant, verify schema matches spec
+- Failure injection tests: simulate network timeout at step 2, verify rollback
+- Idempotency tests: apply recipe twice, verify no duplicates
+- Performance tests: provisioning latency < 5 seconds per recipe
+- Monitoring and alerting (provisioning failures, partial states detected)
 
-**Pitfalls Addressed:**
-- Database-per-tenant operational complexity (migration automation, monitoring)
-- Tenant-specific bugs (extreme configuration test tenants, load testing)
-- Permission creep (audit process for roles)
+**Addresses pitfalls:**
+- Pitfall 1 (idempotency) — explicit retry tests
+- Pitfall 4 (partial failure) — failure injection tests
 
-**Research Flags:** None — standard production hardening.
+**Risk:** Requires Testcontainers (PostgreSQL per test). May be slow; consider parallel test execution.
 
----
+### Phase 5: Documentation & Go-Live
+**Rationale:** Late phase because depends on all implementations complete. Documentation is final step before customer access.
+
+**Delivers:**
+- Tenant documentation: "Your industry recipe" — describes seeded stages, fields, rules
+- Admin documentation: Recipe maintenance guide, versioning strategy
+- Support playbook: Common issues (wrong recipe selected, customization regrets)
+- Recipe versioning policy: How future recipes will be released, upgrade paths
+
+**Avoids pitfalls:**
+- Pitfall 5 (blank template confusion) — documentation clarifies minimum requirements
+- Pitfall 6 (versioning drift) — versioning policy set before release
 
 ### Phase Ordering Rationale
 
-1. **Phase 1 must come first** — All downstream work depends on correct tenant isolation.
-2. **Phase 2 before Phase 3** — Lead entity with custom fields is the data model; workflows depend on accessing and validating these fields.
-3. **Phase 3 before Phase 4** — Workflow definitions and outbox must be in place before communication dispatcher.
-4. **Phase 4 before Phase 5** — Communication features must work before users see them in the UI.
-5. **Phase 5 after core features work** — Don't invest in UI polish until backend is solid.
-6. **Phase 6 after MVP validation** — Production hardening happens once you have real tenants with real usage patterns.
+1. **Foundation first (Phase 1):** Seeding infrastructure is a pre-requisite for all recipe work. If this is broken, all recipes fail. Must be bulletproof before domain work.
 
----
+2. **Parallel domain work (Phase 2):** Automobile and Education recipes can be defined in parallel; both use same seeding infrastructure. Validate pattern with first recipe before committing to second.
+
+3. **UI depends on definitions (Phase 3):** Recipe selection UI is trivial; depends on final recipe specs. Don't build until Phase 2 complete.
+
+4. **Testing validates everything (Phase 4):** Integration tests depend on all implementations. Can't validate provisioning fully until recipes exist and schema is defined.
+
+5. **Documentation last (Phase 5):** Write after everything works. Documentation is final gate before launch.
+
+6. **Not in v1.1:** Recipe versioning tooling (track versions, upgrade paths) deferred to v1.2. v1.1 recipes are immutable snapshots; tenants manually use newer recipes if desired.
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
 
-- **Phase 2 — Dynamic Fields Queryability:** PostgreSQL JSON indexing for custom fields used in workflows/filters. Verify performance with 100+ custom fields per tenant.
-- **Phase 5 — Onboarding Metrics:** Measure drop-off and time-to-value with real users from 3-5 industries.
+- **Phase 2 (Automobile + Education Recipes):** Domain knowledge required. Recommend 2-3 expert interviews per industry (dealership manager, education admissions officer) to validate field definitions and workflow rules. Risk is high if definitions are incomplete or inaccurate.
 
-Phases with standard patterns (skip research-phase):
+- **Phase 4 (Testing):** Database versioning and schema validation strategy may need research. How to introspect PostgreSQL schema post-provisioning to verify field types, constraints, indexes were seeded correctly?
 
-- **Phase 1:** Multi-tenancy pattern is proven and well-documented.
-- **Phase 3:** State machines and rule engines are established patterns.
-- **Phase 4:** Twilio and email integrations are straightforward.
-- **Phase 6:** Standard production hardening practices.
+Phases with standard patterns (skip `/gsd:research-phase`):
 
----
+- **Phase 1 (Foundation):** Transactional seeding, EAV pattern, idempotency tokens all well-documented in EF Core + SaaS literature. No research needed.
+
+- **Phase 3 (UI):** Minimal API changes, standard Blazor form pattern. No novel architecture.
+
+- **Phase 5 (Documentation):** Standard SaaS onboarding documentation patterns.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| **Stack** | HIGH | All technologies verified with .NET 10 compatibility. EF Core 10 JSON complex types work with PostgreSQL. Stateless, Twilio, MudBlazor are stable. No exotic dependencies. |
-| **Features** | HIGH | Competitive CRM analysis across Salesforce, HubSpot, Pipedrive, Zoho CRM is comprehensive. Table stakes clearly identified. Deferral decisions justified. |
-| **Architecture** | HIGH | Multi-tenant database-per-tenant pattern is proven at scale. Outbox pattern, rule engine, scoped DbContext are all established. |
-| **Pitfalls** | HIGH | 12 pitfalls researched from domain experts, academic papers, and production incident reports. Prevention strategies are specific and actionable. |
+| Stack | HIGH | v1.0 proven all patterns; v1.1 adds no external dependencies. EF Core 10.0.5 + Npgsql 10.0.1 version alignment verified. JSONB pattern already in use for custom fields. |
+| Features | HIGH | Table stakes verified against HubSpot, Pipedrive, Salesforce onboarding. Recipe definitions aligned with industry research (automotive CRM docs, higher ed admissions workflows). Feature dependencies clear. |
+| Architecture | HIGH | Multi-tenant, DB-per-tenant, outbox pattern, EAV hybrid model all proven in v1.0. Recipe application layered cleanly on existing provisioning service. No breaking changes needed. |
+| Pitfalls | HIGH | Six pitfalls extracted from SaaS provisioning literature (Microsoft Learn, AWS), EF Core best practices, and v1.0 lessons learned. Prevention strategies are concrete and testable. |
 
-**Overall Confidence:** **HIGH**
+**Overall confidence:** HIGH
 
-Research is high-quality across all four dimensions. Stack is mature with no version compatibility issues. Features align with competitive market and PROJECT.md requirements. Architecture is proven and well-documented. Pitfalls are specific to this domain and have clear prevention strategies.
+### Gaps to Address
 
----
+1. **Domain Expert Input (Phase 2):** Field definitions for Automobile and Education recipes need validation with actual practitioners. Current definitions are research-backed but not verified by dealership managers or admissions officers. **How to handle:** Plan 1-2 interview cycles during Phase 2 planning; adjust recipe definitions based on feedback before finalizing.
 
-## Gaps to Address
+2. **PostgreSQL Schema Introspection (Phase 4):** How to programmatically validate seeded schema (field types, constraints, indexes) post-provisioning? EF Core migrations handle schema creation, but testing whether schema matches spec requires database reflection. **How to handle:** Research PostgreSQL information schema queries during Phase 4 planning; may use EF Core's `Database.GetDbConnection()` + reflection.
 
-Areas where research was thorough but require validation during implementation:
+3. **Performance Baseline:** Recipe seeding with 50+ fields, 10+ workflow rules per tenant may have measurable latency impact during provisioning. Current assumption is < 5 seconds; needs validation. **How to handle:** Phase 4 integration tests should measure provisioning latency with realistic recipe sizes; if > 5 seconds, investigate bulk insert optimization or async seeding.
 
-- **Dynamic Field Indexing Performance:** PostgreSQL JSONB indexing strategies for queryable custom fields. Test with 100+ fields per tenant to verify dashboard performance.
-  - *How to handle:* Phase 2 includes performance testing. If indexing proves insufficient, consider denormalization in Phase 6.
+4. **Blank Template Guidance:** How to guide blank template users through minimum configuration without being prescriptive? Research suggests setup wizard or "Starter" template, but optimal UX is unclear. **How to handle:** Phase 3 planning should include UX research on blank template guidance; consider A/B testing "wizard" vs "guidance" approaches during beta.
 
-- **Onboarding Conversion Rates:** Unknown whether 5-minute recipe-based onboarding achieves >80% completion rate. Different industries may have different expectations.
-  - *How to handle:* Phase 5 includes onboarding metrics tracking. Iterate if drop-off is high.
-
-- **Workflow Complexity Limits:** Where does the rule engine become too slow? What's the practical limit on workflow count or lead ingestion rate?
-  - *How to handle:* Phase 3 includes load testing. Phase 6 documents limits and provides guidance to tenants.
-
-- **Tenant Database Scaling:** At what tenant count does database-per-tenant become operationally unsustainable?
-  - *How to handle:* Phase 1 architecture includes migration path documentation. Phase 6 includes cost/complexity analysis when tenant count exceeds 100.
-
-- **Multi-Channel Fallback Strategy:** How should the system handle email provider failures? Should it automatically fall back to SMS, or alert the tenant?
-  - *How to handle:* Phase 4 communication dispatcher includes configurable fallback logic.
-
----
+5. **Recipe Versioning Future-Proofing:** Design assumes versioning will be added in v1.2. Current design captures version number but doesn't implement upgrade tooling. Risk is if versioning logic isn't thought through, v1.2 migration code could be fragile. **How to handle:** Phase 1 should document recipe versioning strategy upfront (even if not implemented); v1.2 roadmap should reserve 2-3 weeks for migration tooling.
 
 ## Sources
 
-### Primary Research (HIGH Confidence)
+### Primary (HIGH confidence)
 
-**Technology Stack:**
-- [Microsoft Learn: EF Core Multi-Tenancy](https://learn.microsoft.com/en-us/ef/core/miscellaneous/multitenancy)
-- [Npgsql.EntityFrameworkCore.PostgreSQL 10.0.1 Release Notes](https://www.npgsql.org/efcore/release-notes/10.0.html)
-- [Stateless 5.20.1 NuGet Package](https://www.nuget.org/packages/stateless/)
-- [Twilio .NET SDK Documentation](https://www.twilio.com/docs/libraries/csharp)
-- [.NET Aspire Documentation](https://learn.microsoft.com/en-us/dotnet/aspire/)
+- **STACK.md:** EF Core 10.0.5 / Npgsql 10.0.1 compatibility, JSONB pattern validation, existing v1.0 dependencies
+- **FEATURES.md:** CRM table stakes from Pipedrive/HubSpot/Salesforce comparison; automotive and education recipe definitions from domain-specific CRM research; onboarding impact metrics (30-day churn reduction from 15-20% to 7-10%)
+- **ARCHITECTURE.md:** Multi-tenant DB-per-tenant patterns (Microsoft Learn, AWS SaaS Lens); orchestration/tenant layer boundaries; outbox pattern; EAV hybrid model; workflow trigger evaluation; component ownership
+- **PITFALLS.md:** Transactional seeding pitfalls from EF Core best practices; data model ownership (template vs instance) from SaaS architecture literature; field-type accuracy from domain-specific CRM implementations; provisioning error handling from AWS SaaS guidance; blank template usability from SaaS onboarding research; recipe versioning from software product versioning patterns
 
-**Architecture Patterns:**
-- [Microsoft Learn: Multi-tenancy Patterns](https://learn.microsoft.com/en-us/ef/core/miscellaneous/multitenancy)
-- [Multi-Tenant Architecture Best Practices — WorkOS](https://workos.com/blog/developers-guide-saas-multi-tenant-architecture)
-- [Outbox Pattern — OneUptime](https://oneuptime.com/blog/post/2026-01-26-dotnet-outbox-pattern/view)
+### Secondary (MEDIUM confidence)
 
-**Feature Landscape:**
-- [Salesforce vs Zoho vs HubSpot vs Pipedrive Comparison 2026](https://blog.salesflare.com/compare-salesforce-zoho-hubspot-pipedrive)
-- [CRM Features Comparison — Capterra](https://www.capterra.com/)
-- [Lead Management Best Practices — Apollo.io](https://www.apollo.io/insights/sales-pipeline-tool)
+- Automotive CRM market research (Driftrock, Pipedrive automotive vertical, HubSpot automotive, LeadsBridge)
+- Higher education admissions CRM research (Element451, Zoho Education, LeadSquared, Meritto)
+- Multi-tenant SaaS data modeling (Bytebase, AWS Well-Architected Lens, Microsoft Azure SQL patterns)
 
-**Domain Pitfalls:**
-- [Multi-Tenant SaaS Architecture: Mistakes to Avoid — SaaS Adviser](https://www.saasadviser.co/blog/multi-tenant-saas-architecture-mistakes-best-practices)
-- [Designing for Multi-Tenant Data Isolation — Propelius](https://propelius.ai/blogs/tenant-data-isolation-patterns-and-anti-patterns)
-- [Schema Migrations in Multi-Tenant Systems — Medium](https://sollybombe.medium.com/how-to-handle-schema-migrations-safely-across-tenants-in-multi-tenant-saas-2025-edition-0c4e4fb3103b)
+### Tertiary (LOW confidence)
 
-### Secondary Research (MEDIUM Confidence)
-
-- [CRM Automation Best Practices — Jetpack CRM](https://jetpackcrm.com/crm-automation-guide-to-workflow-optimization-and-process-automation/)
-- [Lead Data Quality Strategies — CRM Switch](https://crmswitch.com/crm-value/data-quality/)
-- [SaaS Onboarding Best Practices 2026 — SaaS UI](https://www.saasui.design/blog/saas-onboarding-flows-that-actually-convert-2026)
+- Specific field enum values for Automobile recipe (research shows common fields, but regional variations may exist; plan domain expert review)
+- Blank template usability metrics (research shows setup wizard reduces onboarding time, but no empirical data for IronMonkey's specific user base)
 
 ---
 
-*Research completed: 2026-03-19*
-*Ready for roadmap generation: yes*
+*Research completed: 2026-03-24*
+*Ready for roadmap: yes*

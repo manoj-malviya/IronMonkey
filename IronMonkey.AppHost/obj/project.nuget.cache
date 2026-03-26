@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "TDq1+DSrwTg=",
+  "dgSpecHash": "o5P5guEiKq4=",
   "success": true,
-  "projectFilePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+  "projectFilePath": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
   "expectedPackageFiles": [
     "/home/manoj/.nuget/packages/aspire.dashboard.sdk.linux-x64/13.1.0/aspire.dashboard.sdk.linux-x64.13.1.0.nupkg.sha512",
     "/home/manoj/.nuget/packages/aspire.hosting/13.1.0/aspire.hosting.13.1.0.nupkg.sha512",
