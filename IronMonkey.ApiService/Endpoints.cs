@@ -18,6 +18,7 @@ using IronMonkey.ApiService.Features.Leads.Workflow.Rules;
 using IronMonkey.ApiService.Features.Reports.Pipeline;
 using IronMonkey.ApiService.Features.Reports.Conversion;
 using IronMonkey.ApiService.Features.Reports.Performance;
+using IronMonkey.ApiService.Features.Recipes;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
 using IronMonkey.Data.Entities;
@@ -46,6 +47,7 @@ public static class Endpoints
         endpoints.MapPipelineEndpoints();
         endpoints.MapReportEndpoints();
         endpoints.MapActivityEndpoints();
+        endpoints.MapRecipeEndpoints();
     }
 
     extension(IEndpointRouteBuilder app)
@@ -177,6 +179,24 @@ public static class Endpoints
             // Activity timeline (ACTV-01)
             GetLeadActivityTimelineEndpoint.Map(app);
             AddLeadNoteEndpoint.Map(app);
+        }
+
+        private void MapRecipeEndpoints()
+        {
+            // Public read endpoints (anonymous — required for signup flow, D-10)
+            var publicRecipes = app.MapGroup("/api/recipes")
+                .WithTags("Recipes")
+                .AllowAnonymous();
+            publicRecipes.MapEndpoint<RecipeListEndpoint>();
+            publicRecipes.MapEndpoint<RecipePreviewEndpoint>();
+
+            // Admin write endpoints (require authorization, D-11)
+            var adminRecipes = app.MapGroup("/api/recipes")
+                .WithTags("Platform Admin")
+                .RequireAuthorization();
+            adminRecipes.MapEndpoint<CreateRecipeEndpoint>();
+            adminRecipes.MapEndpoint<UpdateRecipeEndpoint>();
+            adminRecipes.MapEndpoint<DeactivateRecipeEndpoint>();
         }
 
         private RouteGroupBuilder MapPublicGroup(string? prefix = null)
