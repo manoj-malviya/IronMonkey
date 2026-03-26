@@ -4,7 +4,7 @@
 
 A multi-tenant, domain-agnostic Lead Management SaaS platform. Any business — automobile dealerships, real estate agencies, insurance brokers, service providers, educational institutions — can sign up as a tenant and fully configure the system to match their lead workflow without any code changes. Built on .NET Aspire with Blazor Server frontend.
 
-**Current State:** v1.0 MVP shipped. Complete backend API with multi-tenancy, configurable lead model, multi-channel ingestion, pipeline workflow engine, and reporting dashboards. 207 C# files, ~19,100 LOC, 108+ integration tests against real PostgreSQL.
+**Current State:** v1.1 in progress. Phase 6 (Recipe Data Model) complete — IndustryRecipe entity, JSONB content storage, Blank recipe seed, provisioning integration. 117+ integration tests. Building on v1.0 MVP (multi-tenancy, configurable lead model, multi-channel ingestion, pipeline workflow engine, reporting dashboards).
 
 ## Current Milestone: v1.1 Tenant Onboarding with Industry Recipes
 
@@ -52,12 +52,12 @@ Any business can configure their complete lead management workflow — fields, s
 
 ### Active (v1.1)
 
-- [ ] Industry recipe data model with reusable templates
+- ✓ Industry recipe data model with reusable templates — v1.1 Phase 6
+- ✓ Blank/Custom option for tenants without a matching industry — v1.1 Phase 6
+- ✓ Recipe application seeds tenant database on provisioning — v1.1 Phase 6
 - [ ] Automobile Dealership recipe (stages, fields, rules, roles)
 - [ ] Educational Institution recipe (stages, fields, rules, roles)
-- [ ] Blank/Custom option for tenants without a matching industry
 - [ ] Recipe selection during tenant signup/provisioning
-- [ ] Recipe application seeds tenant database on provisioning
 - [ ] Tenant can freely modify all recipe-seeded configuration
 
 ### Future
@@ -128,4 +128,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-24 after v1.1 milestone started*
+*Last updated: 2026-03-26 after Phase 6 complete*
