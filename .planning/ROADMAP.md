@@ -70,8 +70,12 @@ Plans:
   2. A caller can request the list of available recipes (GET /api/recipes) and receive names, descriptions, and stage/field/rule counts
   3. A caller can preview the full contents of a specific recipe (stages, fields, rules, roles) before committing to it during signup
   4. An admin can create a new recipe, update an existing recipe definition, and soft-delete a recipe so it no longer appears in the selection list
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 3 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — SignupRequest entity RecipeId migration, SignupRequestEndpoint + ProvisionTenantEndpoint updates, deactivated-recipe guard
+- [ ] 08-02-PLAN.md — 5 recipe API endpoints (GET list, GET preview, POST create, PUT update, DELETE deactivate), RecipeContentValidator, Endpoints.cs registration
+- [ ] 08-03-PLAN.md — RecipeEndpointTests integration tests (all 8 Phase 8 requirements covered)
 
 ## Progress
 
@@ -84,4 +88,4 @@ Plans:
 | 5. Activity & Reporting | v1.0 | 5/5 | Complete | 2026-03-24 |
 | 6. Recipe Data Model | v1.1 | 2/3 | In Progress|  |
 | 7. Recipe Content | v1.1 | 0/3 | Not started | - |
-| 8. Onboarding & Admin API | v1.1 | 0/? | Not started | - |
+| 8. Onboarding & Admin API | v1.1 | 0/3 | Not started | - |
