@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Tenant Onboarding with Industry Recipes
-status: Milestone complete — archived
-stopped_at: v1.1 milestone archived and tagged
-last_updated: "2026-03-27T03:35:00.000Z"
+milestone: v1.2
+milestone_name: Admin UI
+status: Defining requirements
+stopped_at: Milestone v1.2 started
+last_updated: "2026-03-27T04:00:00.000Z"
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -23,7 +23,10 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 
 ## Current Position
 
-Milestone v1.1 complete and archived. No active milestone.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-27 — Milestone v1.2 started
 
 ## Performance Metrics
 
@@ -47,5 +50,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-27
-Stopped at: v1.1 milestone archived and tagged
+Stopped at: Milestone v1.2 started — defining requirements
 Resume file: None

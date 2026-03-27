@@ -6,7 +6,16 @@ A multi-tenant, domain-agnostic Lead Management SaaS platform. Any business — 
 
 **Current State:** v1.1 shipped 2026-03-27. 8 phases across 2 milestones, 39 plans, 143+ integration tests. Full multi-tenant CRM with configurable leads, multi-channel ingestion, pipeline workflow engine, reporting dashboards, and industry recipe onboarding. Building on .NET 10.0, .NET Aspire 13.1, EF Core 10.0.5, PostgreSQL.
 
-**Next milestone:** Not yet planned. Run `/gsd:new-milestone` to begin.
+## Current Milestone: v1.2 Admin UI
+
+**Goal:** Build the Blazor Server admin interface with Tailwind CSS (standalone CLI), connecting to existing backend APIs for full admin functionality.
+
+**Target features:**
+- UI foundation: Tailwind CSS (standalone CLI), layout shell with sidebar navigation, login page, auth guards, role-based route protection
+- Recipe management: list/create/edit/preview/deactivate industry recipes
+- Tenant management: view tenants, approve/reject signup requests, tenant status overview
+- User & role management: manage users within a tenant, assign roles
+- System configuration: pipeline stage setup, custom field definitions, lead routing config, workflow rule management
 
 ## Core Value
 
@@ -51,7 +60,16 @@ Any business can configure their complete lead management workflow — fields, s
 
 ### Active
 
-(None — start next milestone to define requirements)
+- [ ] UI foundation with Tailwind CSS and Blazor Server layout
+- [ ] Login page with JWT authentication
+- [ ] Role-based route protection and auth guards
+- [ ] Recipe management admin pages (list, create, edit, preview, deactivate)
+- [ ] Tenant management admin pages (view, approve/reject signups)
+- [ ] User & role management admin pages
+- [ ] Pipeline stage configuration UI
+- [ ] Custom field definition management UI
+- [ ] Lead routing configuration UI
+- [ ] Workflow rule management UI
 
 ### Future
 
@@ -74,6 +92,8 @@ Any business can configure their complete lead management workflow — fields, s
 - AI lead scoring — defer to future
 - Marketplace for third-party integrations — defer to future
 - Video/voice calling — out of scope entirely
+- End-user CRM pages (Kanban, lead management, dashboards) — deferred to later milestone
+- Node.js toolchain for Tailwind — using standalone CLI instead
 
 ## Context
 
@@ -105,6 +125,8 @@ The system must be truly domain-agnostic — the data model for leads, statuses,
 | Outbox pattern for domain events | Reliable async processing, integrated with Hangfire | ✓ Good — template for all background work |
 | ActivityLog via SaveChanges interceptor | Automatic audit trail without per-endpoint instrumentation | ✓ Good — zero-touch change tracking |
 | Direct LINQ for dashboards (no materialized views) | Simpler v1, defer optimization | — Pending (monitor at scale) |
+| Tailwind CSS via standalone CLI | No Node.js dependency, simpler build pipeline for Blazor Server | — Pending |
+| Admin UI first, CRM pages later | Establish UI patterns and auth foundation before building user-facing pages | — Pending |
 
 ## Evolution
 
@@ -124,4 +146,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-27 after v1.1 milestone complete*
+*Last updated: 2026-03-27 after v1.2 milestone started*
