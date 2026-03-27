@@ -77,35 +77,35 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UIFN-01 | — | Pending |
-| UIFN-02 | — | Pending |
-| UIFN-03 | — | Pending |
-| UIFN-04 | — | Pending |
-| UIFN-05 | — | Pending |
-| UIFN-06 | — | Pending |
-| RCUI-01 | — | Pending |
-| RCUI-02 | — | Pending |
-| RCUI-03 | — | Pending |
-| RCUI-04 | — | Pending |
-| RCUI-05 | — | Pending |
-| TNUI-01 | — | Pending |
-| TNUI-02 | — | Pending |
-| TNUI-03 | — | Pending |
-| TNUI-04 | — | Pending |
-| USUI-01 | — | Pending |
-| USUI-02 | — | Pending |
-| USUI-03 | — | Pending |
-| USUI-04 | — | Pending |
-| CFUI-01 | — | Pending |
-| CFUI-02 | — | Pending |
-| CFUI-03 | — | Pending |
-| CFUI-04 | — | Pending |
+| UIFN-01 | Phase 9 | Pending |
+| UIFN-02 | Phase 9 | Pending |
+| UIFN-03 | Phase 9 | Pending |
+| UIFN-04 | Phase 9 | Pending |
+| UIFN-05 | Phase 9 | Pending |
+| UIFN-06 | Phase 9 | Pending |
+| RCUI-01 | Phase 10 | Pending |
+| RCUI-02 | Phase 10 | Pending |
+| RCUI-03 | Phase 10 | Pending |
+| RCUI-04 | Phase 10 | Pending |
+| RCUI-05 | Phase 10 | Pending |
+| TNUI-01 | Phase 11 | Pending |
+| TNUI-02 | Phase 11 | Pending |
+| TNUI-03 | Phase 11 | Pending |
+| TNUI-04 | Phase 11 | Pending |
+| USUI-01 | Phase 12 | Pending |
+| USUI-02 | Phase 12 | Pending |
+| USUI-03 | Phase 12 | Pending |
+| USUI-04 | Phase 12 | Pending |
+| CFUI-01 | Phase 13 | Pending |
+| CFUI-02 | Phase 13 | Pending |
+| CFUI-03 | Phase 13 | Pending |
+| CFUI-04 | Phase 13 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 23 total
-- Mapped to phases: 0
-- Unmapped: 23
+- Mapped to phases: 23
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-27*
-*Last updated: 2026-03-27 after initial definition*
+*Last updated: 2026-03-27 after roadmap creation*

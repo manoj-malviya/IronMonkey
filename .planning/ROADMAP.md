@@ -4,6 +4,7 @@
 
 - v1.0 MVP — Phases 1-5 (shipped 2026-03-24) | [Archive](milestones/v1.0-ROADMAP.md)
 - v1.1 Tenant Onboarding with Industry Recipes — Phases 6-8 (shipped 2026-03-27) | [Archive](milestones/v1.1-ROADMAP.md)
+- v1.2 Admin UI — Phases 9-13 (in progress)
 
 ## Phases
 
@@ -27,6 +28,80 @@
 
 </details>
 
+### v1.2 Admin UI (In Progress)
+
+**Milestone Goal:** Build the Blazor Server admin interface with Tailwind CSS, connecting to existing backend APIs for full admin functionality.
+
+- [ ] **Phase 9: UI Foundation & Auth** - Tailwind CSS setup, layout shell with sidebar navigation, login page, auth guards, and logout
+- [ ] **Phase 10: Recipe Management UI** - Admin pages to list, create, edit, preview, and deactivate industry recipes
+- [ ] **Phase 11: Tenant Management UI** - Admin pages to view tenants and approve or reject signup requests
+- [ ] **Phase 12: User & Role Management UI** - Admin pages to view, create, edit, and deactivate users with role assignment
+- [ ] **Phase 13: System Configuration UI** - Admin pages for pipeline stages, custom fields, lead routing, and workflow rules
+
+## Phase Details
+
+### Phase 9: UI Foundation & Auth
+**Goal**: Admins can authenticate into a styled, navigable admin shell that protects all routes from unauthenticated access
+**Depends on**: Phases 1-8 (existing backend API)
+**Requirements**: UIFN-01, UIFN-02, UIFN-03, UIFN-04, UIFN-05, UIFN-06
+**Success Criteria** (what must be TRUE):
+  1. Admin can submit email and password on the login page and receive a JWT-authenticated session that persists in the browser
+  2. Navigating to any admin route without a valid session redirects to the login page
+  3. Admin sees a sidebar with grouped navigation links to all admin sections after logging in
+  4. The sidebar collapses on smaller screens and the layout remains usable
+  5. Admin can click logout and is returned to the login page with the session cleared
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 10: Recipe Management UI
+**Goal**: Admins can fully manage industry recipes from the browser, including creating, editing, previewing, and deactivating them
+**Depends on**: Phase 9
+**Requirements**: RCUI-01, RCUI-02, RCUI-03, RCUI-04, RCUI-05
+**Success Criteria** (what must be TRUE):
+  1. Admin can view a table of all industry recipes showing name, industry, and status
+  2. Admin can fill out a form to create a new recipe with name, industry, and content (stages, fields, rules, roles) and see it appear in the list
+  3. Admin can open an existing recipe, modify its details or content, and save the changes
+  4. Admin can open a preview of a recipe and see its full configuration (stages, fields, rules) before applying it
+  5. Admin can deactivate a recipe and see its status update to disabled in the list
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 11: Tenant Management UI
+**Goal**: Admins can monitor all tenants and action pending signup requests from the browser
+**Depends on**: Phase 9
+**Requirements**: TNUI-01, TNUI-02, TNUI-03, TNUI-04
+**Success Criteria** (what must be TRUE):
+  1. Admin can view a list of all tenants showing name, status, and creation date
+  2. Admin can open a pending signup request and see its submitted details
+  3. Admin can approve a pending signup request and see the tenant provisioning triggered
+  4. Admin can reject a pending signup request by entering a reason, and the request is marked rejected
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 12: User & Role Management UI
+**Goal**: Admins can manage user accounts and role assignments within a tenant from the browser
+**Depends on**: Phase 9
+**Requirements**: USUI-01, USUI-02, USUI-03, USUI-04
+**Success Criteria** (what must be TRUE):
+  1. Admin can view a list of all users in the current tenant showing name, email, role, and status
+  2. Admin can create a new user by entering name, email, and selecting a role, and see the user appear in the list
+  3. Admin can open an existing user, update their details or role, and save the changes
+  4. Admin can deactivate a user and see their status change to disabled in the list
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 13: System Configuration UI
+**Goal**: Admins can configure pipeline stages, custom fields, lead routing, and workflow rules for their tenant without writing code
+**Depends on**: Phase 9
+**Requirements**: CFUI-01, CFUI-02, CFUI-03, CFUI-04
+**Success Criteria** (what must be TRUE):
+  1. Admin can view pipeline stages and create, edit, reorder, or delete them from the browser
+  2. Admin can view custom field definitions and create, edit, or delete them from the browser
+  3. Admin can view and modify lead routing configuration including round-robin and territory rules
+  4. Admin can view workflow rules and create, edit, or delete triggers, conditions, and actions
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -39,3 +114,8 @@
 | 6. Recipe Data Model | v1.1 | 3/3 | Complete | 2026-03-26 |
 | 7. Recipe Content | v1.1 | 3/3 | Complete | 2026-03-26 |
 | 8. Onboarding & Admin API | v1.1 | 3/3 | Complete | 2026-03-26 |
+| 9. UI Foundation & Auth | v1.2 | 0/? | Not started | - |
+| 10. Recipe Management UI | v1.2 | 0/? | Not started | - |
+| 11. Tenant Management UI | v1.2 | 0/? | Not started | - |
+| 12. User & Role Management UI | v1.2 | 0/? | Not started | - |
+| 13. System Configuration UI | v1.2 | 0/? | Not started | - |
