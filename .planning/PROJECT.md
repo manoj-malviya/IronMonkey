@@ -4,19 +4,9 @@
 
 A multi-tenant, domain-agnostic Lead Management SaaS platform. Any business — automobile dealerships, real estate agencies, insurance brokers, service providers, educational institutions — can sign up as a tenant and fully configure the system to match their lead workflow without any code changes. Built on .NET Aspire with Blazor Server frontend.
 
-**Current State:** v1.1 complete. All 3 phases (Recipe Data Model, Recipe Content, Onboarding & Admin API) delivered. 143+ integration tests. Recipe selection at signup, 5 recipe API endpoints (list, preview, create, update, deactivate), deactivated-recipe guard, RecipeContentValidator. Building on v1.0 MVP (multi-tenancy, configurable lead model, multi-channel ingestion, pipeline workflow engine, reporting dashboards).
+**Current State:** v1.1 shipped 2026-03-27. 8 phases across 2 milestones, 39 plans, 143+ integration tests. Full multi-tenant CRM with configurable leads, multi-channel ingestion, pipeline workflow engine, reporting dashboards, and industry recipe onboarding. Building on .NET 10.0, .NET Aspire 13.1, EF Core 10.0.5, PostgreSQL.
 
-## Current Milestone: v1.1 Tenant Onboarding with Industry Recipes
-
-**Goal:** New tenants pick an industry (or blank) at signup and get a fully pre-configured workspace — pipeline stages, custom fields, workflow rules, and default roles — as a starting point they can freely customize.
-
-**Target features:**
-- Industry recipe data model (reusable templates storing stages, fields, rules, roles)
-- Two initial recipes: Automobile Dealerships, Educational Institutions
-- Blank/Custom option for tenants without a matching industry
-- Recipe selection integrated into tenant signup/provisioning flow
-- Recipe application seeds tenant DB with pre-configured data
-- Tenant can modify all recipe-seeded data after provisioning
+**Next milestone:** Not yet planned. Run `/gsd:new-milestone` to begin.
 
 ## Core Value
 
@@ -49,16 +39,19 @@ Any business can configure their complete lead management workflow — fields, s
 - ✓ Lead routing (round-robin, territory) — v1.0 (PIPE-03)
 - ✓ Basic dashboards: pipeline overview, conversion rates, agent performance — v1.0 (REPT-01, REPT-02, REPT-03)
 - ✓ Unified lead activity timeline — v1.0 (ACTV-01)
+- ✓ Industry recipe data model with reusable templates — v1.1 (RCPE-01..04)
+- ✓ Blank/Custom option for tenants without a matching industry — v1.1 (RCPE-03)
+- ✓ Recipe application seeds tenant database on provisioning — v1.1 (ONBD-03)
+- ✓ Automobile Dealership recipe (stages, fields, rules, roles, sample leads) — v1.1 (RCNT-01, RCNT-03)
+- ✓ Educational Institution recipe (stages, fields, rules, roles, sample leads) — v1.1 (RCNT-02, RCNT-03)
+- ✓ Recipe selection during tenant signup/provisioning — v1.1 (ONBD-01)
+- ✓ Recipe preview and catalog API — v1.1 (ONBD-02, ONBD-05)
+- ✓ Recipe administration (create, update, deactivate) — v1.1 (RADM-01..03)
+- ✓ Tenant can freely modify all recipe-seeded configuration — v1.1 (ONBD-04)
 
-### Active (v1.1)
+### Active
 
-- ✓ Industry recipe data model with reusable templates — v1.1 Phase 6
-- ✓ Blank/Custom option for tenants without a matching industry — v1.1 Phase 6
-- ✓ Recipe application seeds tenant database on provisioning — v1.1 Phase 6
-- ✓ Automobile Dealership recipe (stages, fields, rules, roles) — v1.1 Phase 7
-- ✓ Educational Institution recipe (stages, fields, rules, roles) — v1.1 Phase 7
-- ✓ Recipe selection during tenant signup/provisioning — v1.1 Phase 8
-- ✓ Tenant can freely modify all recipe-seeded configuration — v1.1 Phase 8
+(None — start next milestone to define requirements)
 
 ### Future
 
@@ -84,7 +77,7 @@ Any business can configure their complete lead management workflow — fields, s
 
 ## Context
 
-Shipped v1.0 with 19,100 LOC across 207 C# files. Tech stack: .NET 10.0, .NET Aspire 13.1, EF Core 10.0.5, PostgreSQL (Npgsql 10.0.1), Hangfire, Serilog, BCrypt, FuzzySharp, CsvHelper. 108+ integration tests using Testcontainers (postgres:15-alpine). All API endpoints are backend-only (Minimal API); Blazor Server frontend exists but is not yet wired to Phase 2-5 endpoints.
+Shipped v1.1 with ~28,000 LOC across 75+ new files (v1.1 added 8,800+ lines). Tech stack: .NET 10.0, .NET Aspire 13.1, EF Core 10.0.5, PostgreSQL (Npgsql 10.0.1), Hangfire, Serilog, BCrypt, FuzzySharp, CsvHelper. 143+ integration tests using Testcontainers (postgres:15-alpine). All API endpoints are backend-only (Minimal API); Blazor Server frontend exists but is not yet wired to API endpoints.
 
 The system must be truly domain-agnostic — the data model for leads, statuses, workflows, and fields is entirely tenant-defined. Industry "recipes" (automobile, real estate, insurance, etc.) provide sensible defaults but everything is customizable.
 
@@ -101,9 +94,12 @@ The system must be truly domain-agnostic — the data model for leads, statuses,
 |----------|-----------|---------|
 | DB-per-tenant isolation | Maximum data isolation, compliance-friendly, tenant can be migrated independently | ✓ Good — working well across all phases |
 | Blazor Server (not WASM) | Simpler auth, no API duplication, real-time updates via SignalR | — Pending (frontend not yet connected) |
-| Industry recipes for onboarding | Reduces time-to-value for new tenants, avoids blank-slate problem | — In Progress (v1.1) |
-| Recipes as starting points, not locked | Tenant freedom to customize post-provisioning | — Pending |
-| Seed existing roles (no granular permissions) | Keep v1.1 focused; granular permissions deferred | — Pending |
+| Industry recipes for onboarding | Reduces time-to-value for new tenants, avoids blank-slate problem | ✓ Good — shipped v1.1, 3 recipes (Blank, Auto, Edu) |
+| Recipes as starting points, not locked | Tenant freedom to customize post-provisioning | ✓ Good — all seeded entities are mutable |
+| Seed existing roles (no granular permissions) | Keep v1.1 focused; granular permissions deferred | ✓ Good — roles informational only, permissions deferred |
+| JSONB recipe content model | Store stages/fields/rules/roles as JSONB snapshot, copy at provisioning | ✓ Good — clean separation between template and tenant data |
+| Fixed GUID for Blank recipe | Deterministic provisioning without DB lookup | ✓ Good — simplifies fallback logic |
+| AllowAnonymous for recipe browsing | Signup flow needs recipe list before auth | ✓ Good — public GET, admin-only mutations |
 | Billing model deferred | Not finalized — will decide between subscription tiers, usage-based, or hybrid | — Pending |
 | JSONB custom fields with HasConversion | Flexible tenant-defined fields without schema changes | ✓ Good — EF Core value converters work cleanly |
 | Outbox pattern for domain events | Reliable async processing, integrated with Hangfire | ✓ Good — template for all background work |
@@ -128,4 +124,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-26 after Phase 8 complete — v1.1 milestone finished*
+*Last updated: 2026-03-27 after v1.1 milestone complete*

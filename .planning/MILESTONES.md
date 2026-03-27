@@ -1,5 +1,21 @@
 # Milestones
 
+## v1.1 Tenant Onboarding with Industry Recipes (Shipped: 2026-03-27)
+
+**Phases completed:** 3 phases, 9 plans, 16 tasks
+
+**Key accomplishments:**
+
+- IndustryRecipe entity with JSONB content model, EF configuration, and tenant recipe tracking fields
+- Blank/Custom recipe seed with fixed GUID for deterministic provisioning
+- Transactional recipe application during tenant provisioning — stages, custom fields, and workflow rules from JSONB content
+- Automobile Dealership and Educational Institution domain recipes with sample leads seeded on provisioning
+- Recipe selection integrated into signup-to-provision flow with deactivated-recipe guard and Blank recipe fallback
+- 5 recipe API endpoints (list, preview, create, update, deactivate) with RecipeContentValidator
+- 14 RecipeEndpointTests covering all Phase 8 requirements — 143+ total integration tests
+
+---
+
 ## v1.0 MVP (Shipped: 2026-03-24)
 
 **Phases completed:** 5 phases, 30 plans, 59 tasks

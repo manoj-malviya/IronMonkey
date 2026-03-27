@@ -45,13 +45,58 @@
 
 ---
 
+## Milestone: v1.1 — Tenant Onboarding with Industry Recipes
+
+**Shipped:** 2026-03-27
+**Phases:** 3 | **Plans:** 9 | **Tasks:** 16
+
+### What Was Built
+- IndustryRecipe entity with JSONB content model storing pipeline stages, custom fields, workflow rules, and default roles
+- Blank/Custom recipe with fixed GUID for deterministic fallback provisioning
+- Automobile Dealership and Educational Institution domain recipes with sample lead seeding
+- Recipe selection integrated into tenant signup-to-provision flow with deactivated-recipe guard
+- 5 recipe API endpoints (list, preview, create, update, deactivate) with content validation
+- 14 RecipeEndpointTests covering all 8 Phase 8 requirements
+
+### What Worked
+- JSONB content model design allowed recipes to be self-contained snapshots — no FKs back to templates
+- Fixed GUID for Blank recipe eliminated DB lookups during provisioning fallback
+- Split SaveChangesAsync (flush stages first, then seed leads) cleanly solved stage ID resolution
+- AllowAnonymous on read endpoints / RequireAuthorization on mutations — clean auth split
+- Reusing existing integration test patterns (PostgreSqlFixture) made Phase 8 tests straightforward
+
+### What Was Inefficient
+- Some Phase 7 SUMMARY.md one-liners were still generic ("One-liner:") — same issue from v1.0
+- ROADMAP.md checkboxes not kept in sync with actual completion (showed unchecked despite plans done)
+- Domain recipe field definitions flagged as needing expert validation but proceeded without it
+- Designer.cs files for EF migrations had to be manually created — error-prone pattern
+
+### Patterns Established
+- Recipe content model: `RecipeContentModel` with `StageDefinition[]`, `FieldDefinition[]`, `RuleDefinition[]`, `RoleDefinition[]`, `SampleLeadDefinition[]`
+- Platform-level entities extend `Entity` (not `BaseTenantEntity`) — no TenantId
+- Public/admin route group split on same prefix for mixed auth policies
+- `RecipeContentValidator` validates JSONB structure before persistence
+
+### Key Lessons
+- EF Core `ApplyConfigurationsFromAssembly` includes ALL entity configs — tenant DBs mirror central DB shapes even for entities not logically tenant-scoped
+- PascalCase JSON keys in JSONB are critical when using System.Text.Json default serialization
+- Migration Designer.cs files required for `MigrateAsync()` to locate and apply migrations at runtime
+- Two-phase SaveChanges needed when seeded entities have cross-references (stages before leads)
+
+### Cost Observations
+- Model mix: ~20% opus (orchestration), ~60% sonnet (execution), ~20% haiku (research)
+- Sessions: ~3 across 1 day
+- Notable: Entire v1.1 milestone completed in a single day — benefit of established patterns from v1.0
+
+---
+
 ## Cross-Milestone Trends
 
-| Metric | v1.0 |
-|--------|------|
-| Phases | 5 |
-| Plans | 30 |
-| Tasks | 59 |
-| LOC | 19,106 |
-| Test Count | 108+ |
-| Duration | 6 days |
+| Metric | v1.0 | v1.1 |
+|--------|------|------|
+| Phases | 5 | 3 |
+| Plans | 30 | 9 |
+| Tasks | 59 | 16 |
+| LOC | 19,106 | ~28,000 (cumulative) |
+| Test Count | 108+ | 143+ |
+| Duration | 6 days | 1 day |
