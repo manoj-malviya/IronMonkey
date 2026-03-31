@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin UI
 status: Ready to execute
-stopped_at: Completed 09-ui-foundation-auth/09-02-PLAN.md
-last_updated: "2026-03-31T17:24:11.898Z"
+stopped_at: Completed 09-ui-foundation-auth/09-01-PLAN.md - Tailwind CSS MSBuild integration and Aspire AppHost wire-up
+last_updated: "2026-03-31T17:42:50.147Z"
 progress:
   total_phases: 5
   completed_phases: 0
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 ## Current Position
 
 Phase: 09 (ui-foundation-auth) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -47,6 +47,8 @@ Key decisions for v1.2:
 - [Phase 09-ui-foundation-auth]: System.IdentityModel.Tokens.Jwt 8.7.0 added to Web project for client-side JWT claims parsing without signature validation
 - [Phase 09-ui-foundation-auth]: AdminAuthenticationStateProvider registered as both concrete Scoped and AuthenticationStateProvider interface — allows LoginAsync/LogoutAsync injection alongside Blazor auth cascade
 - [Phase 09-ui-foundation-auth]: ProtectedSessionStorage key 'auth_token' as canonical JWT storage key used by both AdminAuthenticationStateProvider and BearerTokenHandler
+- [Phase 09-ui-foundation-auth]: Tailwind v4 MSBuild target uses BeforeTargets=ResolveStaticWebAssets to ensure output.css exists before Aspire static asset validation
+- [Phase 09-ui-foundation-auth]: Aspire.Hosting.PostgreSQL 9.1.0 added to AppHost — was missing, causing AddPostgres compile error
 
 ### Pending Todos
 
@@ -59,6 +61,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-31T17:24:11.893Z
-Stopped at: Completed 09-ui-foundation-auth/09-02-PLAN.md
+Last session: 2026-03-31T17:42:50.136Z
+Stopped at: Completed 09-ui-foundation-auth/09-01-PLAN.md - Tailwind CSS MSBuild integration and Aspire AppHost wire-up
 Resume file: None
