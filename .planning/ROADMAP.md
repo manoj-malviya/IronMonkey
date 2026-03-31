@@ -50,7 +50,11 @@
   3. Admin sees a sidebar with grouped navigation links to all admin sections after logging in
   4. The sidebar collapses on smaller screens and the layout remains usable
   5. Admin can click logout and is returned to the login page with the session cleared
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 09-01-PLAN.md — Tailwind CSS setup + MSBuild integration + AppHost wire-up
+- [ ] 09-02-PLAN.md — JWT auth infrastructure (AuthStateProvider, BearerTokenHandler, Program.cs)
+- [ ] 09-03-PLAN.md — Login page, admin shell layout, sidebar navigation, auth guards
 **UI hint**: yes
 
 ### Phase 10: Recipe Management UI
