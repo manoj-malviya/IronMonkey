@@ -8,4 +8,9 @@ var apiService = builder.AddProject<Projects.IronMonkey_ApiService>("apiservice"
     .WaitFor(centralDb)
     .WithHttpHealthCheck("/health");
 
+var webFrontend = builder.AddProject<Projects.IronMonkey_Web>("webfrontend")
+    .WithReference(apiService)
+    .WaitFor(apiService)
+    .WithExternalHttpEndpoints();
+
 builder.Build().Run();
