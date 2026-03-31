@@ -10,4 +10,8 @@
     <ProjectReference Include="..\IronMonkey.ServiceDefaults\IronMonkey.ServiceDefaults.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.7.0" />
+  </ItemGroup>
+
 </Project>
