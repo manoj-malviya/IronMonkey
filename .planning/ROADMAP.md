@@ -53,7 +53,7 @@
 **Plans**: 3 plans
 Plans:
 - [ ] 09-01-PLAN.md — Tailwind CSS setup + MSBuild integration + AppHost wire-up
-- [ ] 09-02-PLAN.md — JWT auth infrastructure (AuthStateProvider, BearerTokenHandler, Program.cs)
+- [x] 09-02-PLAN.md — JWT auth infrastructure (AuthStateProvider, BearerTokenHandler, Program.cs)
 - [ ] 09-03-PLAN.md — Login page, admin shell layout, sidebar navigation, auth guards
 **UI hint**: yes
 
@@ -118,7 +118,7 @@ Plans:
 | 6. Recipe Data Model | v1.1 | 3/3 | Complete | 2026-03-26 |
 | 7. Recipe Content | v1.1 | 3/3 | Complete | 2026-03-26 |
 | 8. Onboarding & Admin API | v1.1 | 3/3 | Complete | 2026-03-26 |
-| 9. UI Foundation & Auth | v1.2 | 0/? | Not started | - |
+| 9. UI Foundation & Auth | v1.2 | 1/3 | In Progress|  |
 | 10. Recipe Management UI | v1.2 | 0/? | Not started | - |
 | 11. Tenant Management UI | v1.2 | 0/? | Not started | - |
 | 12. User & Role Management UI | v1.2 | 0/? | Not started | - |

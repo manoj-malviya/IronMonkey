@@ -9,12 +9,12 @@ Requirements for the Admin UI milestone. Each maps to roadmap phases.
 
 ### UI Foundation
 
-- [ ] **UIFN-01**: Admin can log in with email and password and receive a JWT-authenticated session
-- [ ] **UIFN-02**: Unauthenticated users are redirected to login page when accessing admin routes
+- [x] **UIFN-01**: Admin can log in with email and password and receive a JWT-authenticated session
+- [x] **UIFN-02**: Unauthenticated users are redirected to login page when accessing admin routes
 - [ ] **UIFN-03**: Admin sees a sidebar navigation with grouped links to all admin sections
 - [ ] **UIFN-04**: Layout renders responsively with collapsible sidebar on smaller screens
 - [ ] **UIFN-05**: Tailwind CSS standalone CLI compiles styles from .razor files via MSBuild integration
-- [ ] **UIFN-06**: Admin can log out and is redirected to login page
+- [x] **UIFN-06**: Admin can log out and is redirected to login page
 
 ### Recipe Management
 
@@ -77,12 +77,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UIFN-01 | Phase 9 | Pending |
-| UIFN-02 | Phase 9 | Pending |
+| UIFN-01 | Phase 9 | Complete |
+| UIFN-02 | Phase 9 | Complete |
 | UIFN-03 | Phase 9 | Pending |
 | UIFN-04 | Phase 9 | Pending |
 | UIFN-05 | Phase 9 | Pending |
-| UIFN-06 | Phase 9 | Pending |
+| UIFN-06 | Phase 9 | Complete |
 | RCUI-01 | Phase 10 | Pending |
 | RCUI-02 | Phase 10 | Pending |
 | RCUI-03 | Phase 10 | Pending |
