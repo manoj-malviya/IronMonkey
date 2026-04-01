@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin UI
 status: Ready to execute
-stopped_at: Completed 10-recipe-management-ui/10-02-PLAN.md
-last_updated: "2026-04-01T05:59:34.190Z"
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-04-01T06:01:43.564Z"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 ## Current Position
 
 Phase: 10 (recipe-management-ui) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -53,6 +53,8 @@ Key decisions for v1.2:
 - [Phase 09-ui-foundation-auth]: Admin/Index.razor stat cards use em-dash placeholders — Phase 10-13 will wire real API counts
 - [Phase 10-recipe-management-ui]: Added IronMonkey.Data project reference to IronMonkey.Web — required for RecipeContentModel types used by recipe management UI
 - [Phase 10-recipe-management-ui]: RecipeContentEditor uses native input with @onchange for comma-separated options rather than InputText — List<string> not directly bindable
+- [Phase 10-recipe-management-ui]: NavigateToPreview/NavigateToEdit as named methods — Razor HTML attributes cannot contain interpolated strings inline
+- [Phase 10-recipe-management-ui]: RecipeListItem as mutable class (not record) to support optimistic IsActive=false mutation
 
 ### Pending Todos
 
@@ -65,6 +67,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-01T05:59:34.187Z
-Stopped at: Completed 10-recipe-management-ui/10-02-PLAN.md
+Last session: 2026-04-01T06:01:43.560Z
+Stopped at: Completed 10-01-PLAN.md
 Resume file: None
