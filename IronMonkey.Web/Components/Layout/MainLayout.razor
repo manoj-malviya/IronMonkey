@@ -1,23 +1,40 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@inject IJSRuntime JS
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+<CascadingAuthenticationState>
+    <!-- Mobile topbar (D-16) -->
+    <AdminTopbar OnHamburgerClick="ToggleSidebar" />
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
+    <!-- Sidebar (D-15: fixed desktop, overlay mobile) -->
+    <AdminSidebar IsOpen="_sidebarOpen"
+                  IsOpenChanged="val => _sidebarOpen = val"
+                  IsMobile="_isMobile" />
 
-        <article class="content px-4">
+    <!-- Main content: offset by sidebar width on desktop -->
+    <main class="min-h-screen bg-slate-50 md:pl-64">
+        <div class="px-4 py-6 sm:px-6 lg:px-8">
             @Body
-        </article>
+        </div>
     </main>
-</div>
+</CascadingAuthenticationState>
 
-<div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
-</div>
+@code {
+    private bool _sidebarOpen = false;
+    private bool _isMobile = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Detect initial viewport width to set mobile/desktop mode
+            var width = await JS.InvokeAsync<int>("eval", "window.innerWidth");
+            _isMobile = width < 768;  // D-14: md breakpoint
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleSidebar()
+    {
+        _sidebarOpen = !_sidebarOpen;
+    }
+}

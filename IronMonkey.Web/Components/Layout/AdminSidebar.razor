@@ -1,0 +1,178 @@
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+
+@if (!IsMobile || IsOpen)
+{
+    <aside class="@SidebarClasses" role="navigation" aria-label="Admin navigation">
+        <!-- App branding (D-03) -->
+        <div class="px-4 py-6 border-b border-slate-100">
+            <h1 class="text-xl font-bold text-slate-900 tracking-tight">IronMonkey</h1>
+            <p class="mt-0.5 text-xs text-slate-500">Admin Console</p>
+        </div>
+
+        <!-- Navigation groups (D-05) -->
+        <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+
+            <!-- Recipes group -->
+            <div>
+                <h3 class="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Recipes</h3>
+                <NavLink href="/admin/recipes"
+                         class="nav-link flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                         ActiveClass="bg-indigo-50 text-indigo-700 border-l-2 border-indigo-500 pl-[10px]">
+                    <!-- Heroicon: book-open outline -->
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                    </svg>
+                    <span>Recipe Management</span>
+                </NavLink>
+            </div>
+
+            <!-- Tenants group -->
+            <div>
+                <h3 class="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Tenants</h3>
+                <NavLink href="/admin/tenants"
+                         class="nav-link flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                         ActiveClass="bg-indigo-50 text-indigo-700 border-l-2 border-indigo-500 pl-[10px]">
+                    <!-- Heroicon: building-office-2 outline -->
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+                    </svg>
+                    <span>Tenant Management</span>
+                </NavLink>
+                <NavLink href="/admin/signups"
+                         class="nav-link flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                         ActiveClass="bg-indigo-50 text-indigo-700 border-l-2 border-indigo-500 pl-[10px]">
+                    <!-- Heroicon: clipboard-document-list outline -->
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25Z" />
+                    </svg>
+                    <span>Signup Requests</span>
+                </NavLink>
+            </div>
+
+            <!-- Users & Roles group -->
+            <div>
+                <h3 class="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Users &amp; Roles</h3>
+                <NavLink href="/admin/users"
+                         class="nav-link flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                         ActiveClass="bg-indigo-50 text-indigo-700 border-l-2 border-indigo-500 pl-[10px]">
+                    <!-- Heroicon: users outline -->
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                    </svg>
+                    <span>User Management</span>
+                </NavLink>
+                <NavLink href="/admin/roles"
+                         class="nav-link flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                         ActiveClass="bg-indigo-50 text-indigo-700 border-l-2 border-indigo-500 pl-[10px]">
+                    <!-- Heroicon: key outline -->
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 0 1 21.75 8.25Z" />
+                    </svg>
+                    <span>Roles</span>
+                </NavLink>
+            </div>
+
+            <!-- Configuration group -->
+            <div>
+                <h3 class="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Configuration</h3>
+                <NavLink href="/admin/stages"
+                         class="nav-link flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                         ActiveClass="bg-indigo-50 text-indigo-700 border-l-2 border-indigo-500 pl-[10px]">
+                    <!-- Heroicon: squares-2x2 outline -->
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
+                    </svg>
+                    <span>Pipeline Stages</span>
+                </NavLink>
+                <NavLink href="/admin/fields"
+                         class="nav-link flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                         ActiveClass="bg-indigo-50 text-indigo-700 border-l-2 border-indigo-500 pl-[10px]">
+                    <!-- Heroicon: list-bullet outline -->
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                    </svg>
+                    <span>Custom Fields</span>
+                </NavLink>
+                <NavLink href="/admin/routing"
+                         class="nav-link flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                         ActiveClass="bg-indigo-50 text-indigo-700 border-l-2 border-indigo-500 pl-[10px]">
+                    <!-- Heroicon: arrow-path outline -->
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                    </svg>
+                    <span>Lead Routing</span>
+                </NavLink>
+                <NavLink href="/admin/workflows"
+                         class="nav-link flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                         ActiveClass="bg-indigo-50 text-indigo-700 border-l-2 border-indigo-500 pl-[10px]">
+                    <!-- Heroicon: cog-6-tooth outline -->
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                    </svg>
+                    <span>Workflows</span>
+                </NavLink>
+            </div>
+
+        </nav>
+
+        <!-- User info footer (D-08) -->
+        <div class="border-t border-slate-200 px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="min-w-0">
+                    <p class="truncate text-sm font-semibold text-slate-900">@_userName</p>
+                    <p class="truncate text-xs text-slate-500">@_userRole</p>
+                </div>
+                <!-- Logout button -->
+                <button @onclick="HandleLogoutAsync"
+                        title="Sign out"
+                        class="ml-2 shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
+                    <!-- Heroicon: arrow-left-on-rectangle outline -->
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </aside>
+}
+
+@* Mobile overlay backdrop (D-13) *@
+@if (IsOpen && IsMobile)
+{
+    <div class="fixed inset-0 z-40 bg-black/40 md:hidden"
+         @onclick="() => IsOpenChanged.InvokeAsync(false)"
+         aria-hidden="true"></div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    // D-14: mobile breakpoint at 768px (Tailwind md)
+    [Parameter] public bool IsMobile { get; set; }
+
+    private string _userName = "Admin";
+    private string _userRole = "User";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        _userName = user.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "Admin";
+        _userRole = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "User";
+    }
+
+    // D-15: fixed desktop / overlay mobile
+    private string SidebarClasses => IsMobile
+        ? $"fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-white shadow-xl transform transition-transform duration-200 {(IsOpen ? "translate-x-0" : "-translate-x-full")}"
+        : "hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 md:left-0 bg-white border-r border-slate-100";
+
+    private async Task HandleLogoutAsync()
+    {
+        var provider = (AdminAuthenticationStateProvider)AuthStateProvider;
+        await provider.LogoutAsync();
+        // LogoutAsync navigates to /login internally (D-10)
+    }
+}
