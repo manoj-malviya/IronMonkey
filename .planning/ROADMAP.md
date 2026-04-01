@@ -123,7 +123,7 @@ Plans:
 | 7. Recipe Content | v1.1 | 3/3 | Complete | 2026-03-26 |
 | 8. Onboarding & Admin API | v1.1 | 3/3 | Complete | 2026-03-26 |
 | 9. UI Foundation & Auth | v1.2 | 3/3 | Complete   | 2026-04-01 |
-| 10. Recipe Management UI | v1.2 | 3/3 | Complete   | 2026-04-01 |
+| 10. Recipe Management UI | v1.2 | 3/3 | Complete    | 2026-04-01 |
 | 11. Tenant Management UI | v1.2 | 0/? | Not started | - |
 | 12. User & Role Management UI | v1.2 | 0/? | Not started | - |
 | 13. System Configuration UI | v1.2 | 0/? | Not started | - |
