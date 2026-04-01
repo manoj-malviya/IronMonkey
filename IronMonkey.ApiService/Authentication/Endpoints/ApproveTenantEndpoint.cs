@@ -17,7 +17,7 @@ public class ApproveTenantEndpoint : IEndpoint
     public record Request(string? ApprovalNote);
     public record Response(string Message);
 
-    private static async Task<Results<Ok<Response>, NotFound, ValidationError>> Handle(
+    internal static async Task<Results<Ok<Response>, NotFound, ValidationError>> Handle(
         Guid id,
         Request request,
         CentralDbContext centralDb,

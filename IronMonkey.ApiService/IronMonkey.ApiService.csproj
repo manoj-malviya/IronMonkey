@@ -7,6 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>IronMonkey.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\IronMonkey.ServiceDefaults\IronMonkey.ServiceDefaults.csproj" />
       <ProjectReference Include="..\IronMonkey.Data\IronMonkey.Data.csproj" />
       <ProjectReference Include="..\IronMonkey.Common\IronMonkey.Common.csproj" />
