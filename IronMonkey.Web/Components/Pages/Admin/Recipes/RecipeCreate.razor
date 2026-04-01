@@ -1,0 +1,184 @@
+@page "/admin/recipes/create"
+@attribute [Authorize]
+@using IronMonkey.Data.RecipeContent
+@using IronMonkey.Web.Components.Pages.Admin.Recipes.Shared
+@using System.ComponentModel.DataAnnotations
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+
+<PageTitle>Create Recipe — IronMonkey Admin</PageTitle>
+
+<div class="max-w-3xl">
+
+    <button type="button" @onclick='() => Nav.NavigateTo("/admin/recipes")'
+            class="mb-4 text-sm text-indigo-600 hover:text-indigo-700">
+        ← Back to Recipes
+    </button>
+
+    <h1 class="mb-6 text-2xl font-bold text-slate-900">Create Recipe</h1>
+
+    @if (!string.IsNullOrEmpty(_errorBanner))
+    {
+        <div class="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            @_errorBanner
+        </div>
+    }
+
+    <EditForm Model="_model" OnValidSubmit="HandleSaveAsync">
+        <DataAnnotationsValidator />
+
+        <!-- Metadata section -->
+        <div class="mb-6 rounded-lg border border-slate-200 bg-white p-6">
+            <h2 class="mb-4 text-base font-semibold text-slate-900">Recipe Details</h2>
+
+            <!-- Name -->
+            <div class="mb-4">
+                <label class="mb-1 block text-sm font-medium text-slate-700">Name</label>
+                <InputText @bind-Value="_model.Name" @oninput="OnNameChanged"
+                           placeholder="e.g. Automobile Dealership"
+                           class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                <ValidationMessage For="() => _model.Name" class="mt-1 text-xs text-red-600" />
+            </div>
+
+            <!-- Description -->
+            <div class="mb-4">
+                <label class="mb-1 block text-sm font-medium text-slate-700">Description</label>
+                <textarea @bind="_model.Description" rows="3"
+                          placeholder="Describe what this recipe is for..."
+                          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"></textarea>
+                <ValidationMessage For="() => _model.Description" class="mt-1 text-xs text-red-600" />
+            </div>
+
+            <!-- Industry Slug -->
+            <div class="mb-4">
+                <label class="mb-1 block text-sm font-medium text-slate-700">Industry Slug</label>
+                <InputText @bind-Value="_model.IndustrySlug"
+                           @oninput="() => _slugManuallyEdited = true"
+                           placeholder="e.g. real-estate"
+                           class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                <p class="mt-1 text-xs text-slate-500">Lowercase letters, numbers, and hyphens only.</p>
+                <ValidationMessage For="() => _model.IndustrySlug" class="mt-1 text-xs text-red-600" />
+            </div>
+
+            <!-- Icon Identifier -->
+            <div class="mb-4">
+                <label class="mb-1 block text-sm font-medium text-slate-700">Icon Identifier</label>
+                <InputText @bind-Value="_model.IconIdentifier"
+                           placeholder="e.g. home"
+                           class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                <ValidationMessage For="() => _model.IconIdentifier" class="mt-1 text-xs text-red-600" />
+            </div>
+
+            <!-- IsBlank toggle -->
+            <div>
+                <label class="flex items-center gap-2 text-sm text-slate-700">
+                    <InputCheckbox @bind-Value="_model.IsBlank" class="rounded border-slate-300" />
+                    Blank recipe (no pre-filled content)
+                </label>
+            </div>
+        </div>
+
+        <!-- Content sections -->
+        <RecipeContentEditor Content="_model.Content" />
+
+        <!-- Save button -->
+        <div class="mt-6 flex justify-end">
+            <button type="submit" disabled="@_isLoading"
+                    class="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed">
+                @(_isLoading ? "Saving..." : "Save Recipe")
+            </button>
+        </div>
+
+    </EditForm>
+
+</div>
+
+@code {
+    private RecipeFormModel _model = new();
+    private bool _isLoading = false;
+    private string? _errorBanner = null;
+    private bool _slugManuallyEdited = false;
+
+    private void OnNameChanged(ChangeEventArgs e)
+    {
+        var name = e.Value?.ToString() ?? string.Empty;
+        _model.Name = name;
+        if (!_slugManuallyEdited)
+        {
+            _model.IndustrySlug = GenerateSlug(name);
+        }
+    }
+
+    private static string GenerateSlug(string name) =>
+        System.Text.RegularExpressions.Regex.Replace(
+            name.ToLowerInvariant().Trim(), @"[^a-z0-9]+", "-").Trim('-');
+
+    private async Task HandleSaveAsync()
+    {
+        _isLoading = true;
+        _errorBanner = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var payload = new
+            {
+                _model.Name,
+                _model.Description,
+                _model.IconIdentifier,
+                _model.IndustrySlug,
+                _model.IsBlank,
+                _model.Content
+            };
+            var response = await client.PostAsJsonAsync("/api/recipes", payload);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<RecipeCreateResponse>();
+                Nav.NavigateTo($"/admin/recipes/{result?.RecipeId}/edit");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                Nav.NavigateTo("/login");
+            }
+            else
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                _errorBanner = $"Failed to save recipe: {errorBody}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Unable to save recipe: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private record RecipeCreateResponse(Guid RecipeId, string Message);
+
+    private class RecipeFormModel
+    {
+        [Required(ErrorMessage = "Name is required")]
+        [MaxLength(200, ErrorMessage = "Name must be 200 characters or fewer")]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Description is required")]
+        [MaxLength(2000, ErrorMessage = "Description must be 2000 characters or fewer")]
+        public string Description { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Icon identifier is required")]
+        [MaxLength(100, ErrorMessage = "Icon identifier must be 100 characters or fewer")]
+        public string IconIdentifier { get; set; } = "default";
+
+        [Required(ErrorMessage = "Industry slug is required")]
+        [MaxLength(100)]
+        [RegularExpression(@"^[a-z0-9\-]+$", ErrorMessage = "Must be lowercase letters, numbers, and hyphens only")]
+        public string IndustrySlug { get; set; } = string.Empty;
+
+        public bool IsBlank { get; set; } = false;
+        public RecipeContentModel Content { get; set; } = new();
+    }
+}
