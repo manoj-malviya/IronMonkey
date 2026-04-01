@@ -38,4 +38,31 @@ public sealed class User : BaseTenantEntity
     {
         IdentityId = identityId;
     }
+
+    public void Update(string name, string email)
+    {
+        Name = name;
+        Email = email;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateRole(Role newRole)
+    {
+        _roles.Clear();
+        _roles.Add(newRole);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Deactivate()
+    {
+        IsDeleted = true;
+        DeletedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ResetPassword(string hashedPassword)
+    {
+        Password = hashedPassword;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
