@@ -1,0 +1,235 @@
+@page "/admin/recipes"
+@attribute [Authorize]
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+
+<PageTitle>Recipe Management — IronMonkey Admin</PageTitle>
+
+<div class="space-y-6">
+
+    <!-- Top heading area -->
+    <div class="space-y-3">
+        <!-- Row 1: Title + Create button -->
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-slate-900">Recipe Management</h1>
+            <button @onclick="NavigateToCreate"
+                    class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                <!-- Heroicon: plus -->
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Create Recipe
+            </button>
+        </div>
+
+        <!-- Row 2: Show Deactivated checkbox -->
+        <div class="flex items-center gap-2">
+            <input type="checkbox" id="showInactive" @bind="_showInactive" class="rounded border-slate-300" />
+            <label for="showInactive" class="text-sm font-medium text-slate-700">Show Deactivated Recipes</label>
+        </div>
+    </div>
+
+    <!-- Error banner -->
+    @if (!string.IsNullOrEmpty(_errorBanner))
+    {
+        <div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            @_errorBanner
+        </div>
+    }
+
+    <!-- Success banner -->
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
+            @_successMessage
+        </div>
+    }
+
+    <!-- Loading state -->
+    @if (_isLoading)
+    {
+        <div class="py-12 text-center">
+            <p class="text-sm text-slate-500">Loading recipes...</p>
+        </div>
+    }
+
+    <!-- Empty state -->
+    @if (!_isLoading && DisplayedRecipes.Count == 0)
+    {
+        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
+            <p class="text-slate-600">No recipes found.</p>
+            <button @onclick="NavigateToCreate"
+                    class="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                Create your first recipe
+            </button>
+        </div>
+    }
+
+    <!-- Table -->
+    @if (!_isLoading && DisplayedRecipes.Count > 0)
+    {
+        <div class="overflow-x-auto rounded-lg border border-slate-200">
+            <table class="w-full">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Industry</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Status</th>
+                        <th class="px-6 py-3 text-center text-xs font-semibold text-slate-900 uppercase tracking-wide">Stages</th>
+                        <th class="px-6 py-3 text-center text-xs font-semibold text-slate-900 uppercase tracking-wide">Fields</th>
+                        <th class="px-6 py-3 text-center text-xs font-semibold text-slate-900 uppercase tracking-wide">Rules</th>
+                        <th class="px-6 py-3 text-center text-xs font-semibold text-slate-900 uppercase tracking-wide">Roles</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Version</th>
+                        <th class="px-6 py-3 text-right text-xs font-semibold text-slate-900 uppercase tracking-wide">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var recipe in DisplayedRecipes)
+                    {
+                        <tr class="border-b border-slate-100 hover:bg-slate-50">
+                            <td class="px-6 py-4 text-sm text-slate-900">@recipe.Name</td>
+                            <td class="px-6 py-4 text-sm text-slate-600">@recipe.IndustrySlug</td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold @GetStatusBadgeClass(recipe.IsActive)">
+                                    @(recipe.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-slate-500 text-center">@recipe.StageCount</td>
+                            <td class="px-6 py-4 text-sm text-slate-500 text-center">@recipe.FieldCount</td>
+                            <td class="px-6 py-4 text-sm text-slate-500 text-center">@recipe.RuleCount</td>
+                            <td class="px-6 py-4 text-sm text-slate-500 text-center">@recipe.RoleCount</td>
+                            <td class="px-6 py-4 text-sm text-slate-600">v@(recipe.Version)</td>
+                            <td class="px-6 py-4 text-right space-x-2">
+                                <button @onclick="() => NavigateToPreview(recipe.Id)"
+                                        class="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+                                    Preview
+                                </button>
+                                <button @onclick="() => NavigateToEdit(recipe.Id)"
+                                        class="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+                                    Edit
+                                </button>
+                                @if (recipe.IsActive)
+                                {
+                                    <button @onclick="() => HandleDeactivateAsync(recipe.Id)"
+                                            disabled="@(_isDeactivating && _deactivatingId == recipe.Id)"
+                                            class="text-sm font-medium text-red-600 hover:text-red-700 disabled:opacity-50">
+                                        @(_isDeactivating && _deactivatingId == recipe.Id ? "..." : "Deactivate")
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+</div>
+
+@code {
+    private List<RecipeListItem> _recipes = [];
+    private bool _isLoading = true;
+    private bool _showInactive = false;
+    private string? _errorBanner = null;
+    private string? _successMessage = null;
+    private bool _isDeactivating = false;
+    private Guid? _deactivatingId = null;
+
+    private List<RecipeListItem> DisplayedRecipes =>
+        _showInactive ? _recipes : _recipes.Where(r => r.IsActive).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRecipesAsync();
+    }
+
+    private void NavigateToCreate()
+    {
+        Nav.NavigateTo("/admin/recipes/create");
+    }
+
+    private void NavigateToPreview(Guid id)
+    {
+        Nav.NavigateTo($"/admin/recipes/{id}/preview");
+    }
+
+    private void NavigateToEdit(Guid id)
+    {
+        Nav.NavigateTo($"/admin/recipes/{id}/edit");
+    }
+
+    private async Task LoadRecipesAsync()
+    {
+        _isLoading = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var list = await client.GetFromJsonAsync<List<RecipeListItem>>("/api/recipes");
+            _recipes = list ?? [];
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to load recipes: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleDeactivateAsync(Guid id)
+    {
+        _isDeactivating = true;
+        _deactivatingId = id;
+        _errorBanner = null;
+        _successMessage = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.DeleteAsync($"/api/recipes/{id}");
+            if (response.IsSuccessStatusCode)
+            {
+                var item = _recipes.FirstOrDefault(r => r.Id == id);
+                if (item is not null) item.IsActive = false;
+                _successMessage = "Recipe deactivated successfully.";
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                Nav.NavigateTo("/login");
+            }
+            else
+            {
+                _errorBanner = "Failed to deactivate recipe.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isDeactivating = false;
+            _deactivatingId = null;
+        }
+    }
+
+    private static string GetStatusBadgeClass(bool isActive) =>
+        isActive ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600";
+
+    private class RecipeListItem
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string IconIdentifier { get; set; } = string.Empty;
+        public string IndustrySlug { get; set; } = string.Empty;
+        public bool IsBlank { get; set; }
+        public int Version { get; set; }
+        public int StageCount { get; set; }
+        public int FieldCount { get; set; }
+        public int RuleCount { get; set; }
+        public int RoleCount { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+}
