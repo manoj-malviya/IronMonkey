@@ -67,7 +67,11 @@ Plans:
   3. Admin can open an existing recipe, modify its details or content, and save the changes
   4. Admin can open a preview of a recipe and see its full configuration (stages, fields, rules) before applying it
   5. Admin can deactivate a recipe and see its status update to disabled in the list
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 10-01-PLAN.md — RecipeList page with status filter, table, and inline deactivate action
+- [ ] 10-02-PLAN.md — RecipeContentEditor shared component + RecipeCreate page with POST
+- [ ] 10-03-PLAN.md — RecipeEdit page (pre-populated form + PUT) + RecipePreview page (tabbed read-only)
 **UI hint**: yes
 
 ### Phase 11: Tenant Management UI
@@ -119,7 +123,7 @@ Plans:
 | 7. Recipe Content | v1.1 | 3/3 | Complete | 2026-03-26 |
 | 8. Onboarding & Admin API | v1.1 | 3/3 | Complete | 2026-03-26 |
 | 9. UI Foundation & Auth | v1.2 | 3/3 | Complete   | 2026-04-01 |
-| 10. Recipe Management UI | v1.2 | 0/? | Not started | - |
+| 10. Recipe Management UI | v1.2 | 0/3 | Not started | - |
 | 11. Tenant Management UI | v1.2 | 0/? | Not started | - |
 | 12. User & Role Management UI | v1.2 | 0/? | Not started | - |
 | 13. System Configuration UI | v1.2 | 0/? | Not started | - |
