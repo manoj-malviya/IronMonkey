@@ -32,7 +32,7 @@
 
 **Milestone Goal:** Build the Blazor Server admin interface with Tailwind CSS, connecting to existing backend APIs for full admin functionality.
 
-- [ ] **Phase 9: UI Foundation & Auth** - Tailwind CSS setup, layout shell with sidebar navigation, login page, auth guards, and logout
+- [x] **Phase 9: UI Foundation & Auth** - Tailwind CSS setup, layout shell with sidebar navigation, login page, auth guards, and logout (completed 2026-04-01)
 - [ ] **Phase 10: Recipe Management UI** - Admin pages to list, create, edit, preview, and deactivate industry recipes
 - [ ] **Phase 11: Tenant Management UI** - Admin pages to view tenants and approve or reject signup requests
 - [ ] **Phase 12: User & Role Management UI** - Admin pages to view, create, edit, and deactivate users with role assignment
@@ -52,9 +52,9 @@
   5. Admin can click logout and is returned to the login page with the session cleared
 **Plans**: 3 plans
 Plans:
-- [ ] 09-01-PLAN.md — Tailwind CSS setup + MSBuild integration + AppHost wire-up
+- [x] 09-01-PLAN.md — Tailwind CSS setup + MSBuild integration + AppHost wire-up
 - [x] 09-02-PLAN.md — JWT auth infrastructure (AuthStateProvider, BearerTokenHandler, Program.cs)
-- [ ] 09-03-PLAN.md — Login page, admin shell layout, sidebar navigation, auth guards
+- [x] 09-03-PLAN.md — Login page, admin shell layout, sidebar navigation, auth guards
 **UI hint**: yes
 
 ### Phase 10: Recipe Management UI
@@ -118,7 +118,7 @@ Plans:
 | 6. Recipe Data Model | v1.1 | 3/3 | Complete | 2026-03-26 |
 | 7. Recipe Content | v1.1 | 3/3 | Complete | 2026-03-26 |
 | 8. Onboarding & Admin API | v1.1 | 3/3 | Complete | 2026-03-26 |
-| 9. UI Foundation & Auth | v1.2 | 1/3 | In Progress|  |
+| 9. UI Foundation & Auth | v1.2 | 3/3 | Complete   | 2026-04-01 |
 | 10. Recipe Management UI | v1.2 | 0/? | Not started | - |
 | 11. Tenant Management UI | v1.2 | 0/? | Not started | - |
 | 12. User & Role Management UI | v1.2 | 0/? | Not started | - |

@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin UI
-status: Ready to execute
-stopped_at: Completed 09-ui-foundation-auth/09-01-PLAN.md - Tailwind CSS MSBuild integration and Aspire AppHost wire-up
-last_updated: "2026-03-31T17:42:50.147Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 09-03-PLAN.md - Login page, admin shell, auth guards all built and verified
+last_updated: "2026-04-01T03:17:32.809Z"
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 3
 ---
 
 # Project State
@@ -49,6 +49,8 @@ Key decisions for v1.2:
 - [Phase 09-ui-foundation-auth]: ProtectedSessionStorage key 'auth_token' as canonical JWT storage key used by both AdminAuthenticationStateProvider and BearerTokenHandler
 - [Phase 09-ui-foundation-auth]: Tailwind v4 MSBuild target uses BeforeTargets=ResolveStaticWebAssets to ensure output.css exists before Aspire static asset validation
 - [Phase 09-ui-foundation-auth]: Aspire.Hosting.PostgreSQL 9.1.0 added to AppHost — was missing, causing AddPostgres compile error
+- [Phase 09-ui-foundation-auth]: AuthorizeRouteView with NotAuthorized block for router-level auth guard — Nav.NavigateTo('/login') in NotAuthorized fires before any page renders
+- [Phase 09-ui-foundation-auth]: Admin/Index.razor stat cards use em-dash placeholders — Phase 10-13 will wire real API counts
 
 ### Pending Todos
 
@@ -61,6 +63,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-31T17:42:50.136Z
-Stopped at: Completed 09-ui-foundation-auth/09-01-PLAN.md - Tailwind CSS MSBuild integration and Aspire AppHost wire-up
+Last session: 2026-04-01T03:17:32.805Z
+Stopped at: Completed 09-03-PLAN.md - Login page, admin shell, auth guards all built and verified
 Resume file: None
