@@ -86,7 +86,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 11-01-PLAN.md — Backend: ListTenantsEndpoint + GetSignupRequestEndpoint + integration tests
-- [ ] 11-02-PLAN.md — Frontend: TenantManagement.razor two-tab page with tenant list and signup request list with expandable rows
+- [x] 11-02-PLAN.md — Frontend: TenantManagement.razor two-tab page with tenant list and signup request list with expandable rows
 - [ ] 11-03-PLAN.md — Frontend: Approve/Reject modals with two-step approve+provision chain and optimistic UI updates
 **UI hint**: yes
 
@@ -128,6 +128,6 @@ Plans:
 | 8. Onboarding & Admin API | v1.1 | 3/3 | Complete | 2026-03-26 |
 | 9. UI Foundation & Auth | v1.2 | 3/3 | Complete   | 2026-04-01 |
 | 10. Recipe Management UI | v1.2 | 3/3 | Complete    | 2026-04-01 |
-| 11. Tenant Management UI | v1.2 | 1/3 | In Progress|  |
+| 11. Tenant Management UI | v1.2 | 2/3 | In Progress|  |
 | 12. User & Role Management UI | v1.2 | 0/? | Not started | - |
 | 13. System Configuration UI | v1.2 | 0/? | Not started | - |
