@@ -19,7 +19,7 @@ Requirements for the Admin UI milestone. Each maps to roadmap phases.
 ### Recipe Management
 
 - [ ] **RCUI-01**: Admin can view a list of all industry recipes with name, industry, and status
-- [ ] **RCUI-02**: Admin can create a new recipe with name, industry, and content (stages, fields, rules, roles)
+- [x] **RCUI-02**: Admin can create a new recipe with name, industry, and content (stages, fields, rules, roles)
 - [ ] **RCUI-03**: Admin can edit an existing recipe's details and content
 - [ ] **RCUI-04**: Admin can preview a recipe's full configuration before applying
 - [ ] **RCUI-05**: Admin can deactivate a recipe (soft disable, not delete)
@@ -84,7 +84,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UIFN-05 | Phase 9 | Complete |
 | UIFN-06 | Phase 9 | Complete |
 | RCUI-01 | Phase 10 | Pending |
-| RCUI-02 | Phase 10 | Pending |
+| RCUI-02 | Phase 10 | Complete |
 | RCUI-03 | Phase 10 | Pending |
 | RCUI-04 | Phase 10 | Pending |
 | RCUI-05 | Phase 10 | Pending |
