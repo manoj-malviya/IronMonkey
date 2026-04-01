@@ -21,6 +21,7 @@ using IronMonkey.ApiService.Features.Reports.Performance;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
 using IronMonkey.Data.Entities;
+using IronMonkey.ApiService.Features.UserManagement;
 
 namespace IronMonkey.ApiService;
 
@@ -105,12 +106,24 @@ public static class Endpoints
             var endpoints = app.MapGroup("/user-management")
                 .WithTags("User Management");
 
+            // Existing public endpoints (role/permission management)
             endpoints.MapPublicGroup()
                 .MapEndpoint<CreateRole>()
                 .MapEndpoint<ListRoles>()
                 .MapEndpoint<CreatePermission>()
                 .MapEndpoint<ListRolePermissions>()
                 .MapEndpoint<AttachPermissionsToRole>();
+
+            // Tenant-scoped user management endpoints (require auth)
+            var userEndpoints = endpoints.MapGroup(string.Empty)
+                .RequireAuthorization();
+            userEndpoints
+                .MapEndpoint<ListUsersEndpoint>()
+                .MapEndpoint<GetUserEndpoint>()
+                .MapEndpoint<CreateTenantUserEndpoint>()
+                .MapEndpoint<UpdateUserEndpoint>()
+                .MapEndpoint<DeactivateUserEndpoint>()
+                .MapEndpoint<ResetPasswordEndpoint>();
         }
 
         private void MapLeadsEndpoints()
