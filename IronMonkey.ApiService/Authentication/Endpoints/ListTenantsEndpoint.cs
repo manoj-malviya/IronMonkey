@@ -18,6 +18,7 @@ public class ListTenantsEndpoint : IEndpoint
         string Status,
         string SubscriptionPlan,
         bool IsProvisioned,
+        Guid? AppliedRecipeId,
         DateTime CreatedAt);
 
     private static async Task<Ok<List<TenantSummary>>> Handle(
@@ -33,6 +34,7 @@ public class ListTenantsEndpoint : IEndpoint
                 t.Status,
                 t.SubscriptionPlan,
                 t.IsProvisioned,
+                t.AppliedRecipeId,
                 t.CreatedAt))
             .ToListAsync(cancellationToken);
 
