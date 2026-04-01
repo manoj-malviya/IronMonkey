@@ -20,7 +20,7 @@ public class GetSignupRequestEndpoint : IEndpoint
         string CompanySize,
         string Address,
         string BillingContact,
-        string IndustryType,
+        Guid? RecipeId,
         string Status,
         string? ReviewNote,
         DateTime CreatedAt);
@@ -45,7 +45,7 @@ public class GetSignupRequestEndpoint : IEndpoint
             signup.CompanySize,
             signup.Address,
             signup.BillingContact,
-            signup.IndustryType,
+            signup.RecipeId,
             signup.Status,
             signup.ReviewNote,
             signup.CreatedAt));

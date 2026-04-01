@@ -40,7 +40,7 @@ public class GetSignupRequestEndpointTests : IClassFixture<PostgreSqlFixture>
             adminEmail: email,
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-9999",
-            industryType: "Technology",
+            recipeId: null,
             companySize: "50-100",
             address: "42 Test Street",
             billingContact: "billing@detailtest.com");
@@ -62,7 +62,7 @@ public class GetSignupRequestEndpointTests : IClassFixture<PostgreSqlFixture>
         Assert.Equal("50-100", detail.CompanySize);
         Assert.Equal("42 Test Street", detail.Address);
         Assert.Equal("billing@detailtest.com", detail.BillingContact);
-        Assert.Equal("Technology", detail.IndustryType);
+        Assert.Null(detail.RecipeId);
         Assert.Equal("Pending", detail.Status);
         Assert.Null(detail.ReviewNote);
         Assert.True(detail.CreatedAt > DateTime.MinValue);
