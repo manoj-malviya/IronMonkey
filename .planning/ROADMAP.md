@@ -115,7 +115,12 @@ Plans:
   2. Admin can view custom field definitions and create, edit, or delete them from the browser
   3. Admin can view and modify lead routing configuration including round-robin and territory rules
   4. Admin can view workflow rules and create, edit, or delete triggers, conditions, and actions
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 13-01-PLAN.md — Backend: 4 missing DELETE/PUT endpoints (pipeline stage, custom field, workflow rule) + Endpoints.cs registration
+- [ ] 13-02-PLAN.md — Frontend: SystemConfiguration.razor page shell + Pipeline Stages tab (inline CRUD, reorder, delete)
+- [ ] 13-03-PLAN.md — Frontend: Custom Fields tab (type-conditional options) + Routing tab (mode selector + territory JSON)
+- [ ] 13-04-PLAN.md — Frontend: Workflow Rules tab (trigger/action dropdowns, IsActive toggle) + AdminSidebar nav link
 **UI hint**: yes
 
 ## Progress
@@ -134,4 +139,4 @@ Plans:
 | 10. Recipe Management UI | v1.2 | 3/3 | Complete    | 2026-04-01 |
 | 11. Tenant Management UI | v1.2 | 3/3 | Complete    | 2026-04-01 |
 | 12. User & Role Management UI | v1.2 | 2/3 | Complete    | 2026-04-01 |
-| 13. System Configuration UI | v1.2 | 0/? | Not started | - |
+| 13. System Configuration UI | v1.2 | 0/4 | Not started | - |
