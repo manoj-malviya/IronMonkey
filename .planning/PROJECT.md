@@ -60,9 +60,9 @@ Any business can configure their complete lead management workflow — fields, s
 
 ### Active
 
-- [ ] UI foundation with Tailwind CSS and Blazor Server layout
-- [ ] Login page with JWT authentication
-- [ ] Role-based route protection and auth guards
+- [x] UI foundation with Tailwind CSS and Blazor Server layout — Validated in Phase 9
+- [x] Login page with JWT authentication — Validated in Phase 9
+- [x] Role-based route protection and auth guards — Validated in Phase 9
 - [ ] Recipe management admin pages (list, create, edit, preview, deactivate)
 - [ ] Tenant management admin pages (view, approve/reject signups)
 - [ ] User & role management admin pages
@@ -146,4 +146,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-27 after v1.2 milestone started*
+*Last updated: 2026-04-01 after Phase 9 (UI Foundation & Auth) completed*
