@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin UI
-status: Ready to execute
-stopped_at: Completed 11-02-PLAN.md - TenantManagement.razor and AdminSidebar cleanup
-last_updated: "2026-04-01T15:29:19.924Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 11-03-PLAN.md - Approve/Reject modals and integration tests
+last_updated: "2026-04-01T15:37:34.290Z"
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -61,6 +61,8 @@ Key decisions for v1.2:
 - [Phase 11-tenant-management-ui]: SignupRequestDetail uses IndustryType not RecipeId — plan interface section referenced non-existent entity field
 - [Phase 11-tenant-management-ui]: SignupListItem.IsProvisioned tracked locally (false initially); Plan 11-03 sets true after provision — avoids changing list endpoint
 - [Phase 11-tenant-management-ui]: Modal stubs (OpenApproveModal, OpenRejectModal, RetryProvisionAsync) created in TenantManagement.razor so Plan 11-03 has clean integration surface
+- [Phase 11]: Handle methods on ApproveTenantEndpoint and RejectTenantEndpoint changed from private to internal with InternalsVisibleTo for direct integration test invocation
+- [Phase 11]: Two-step approve+provision chain: approve first then provision, partial failure shows retry button (D-17)
 
 ### Pending Todos
 
@@ -73,6 +75,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-01T15:29:19.919Z
-Stopped at: Completed 11-02-PLAN.md - TenantManagement.razor and AdminSidebar cleanup
+Last session: 2026-04-01T15:37:34.285Z
+Stopped at: Completed 11-03-PLAN.md - Approve/Reject modals and integration tests
 Resume file: None

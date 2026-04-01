@@ -28,8 +28,8 @@ Requirements for the Admin UI milestone. Each maps to roadmap phases.
 
 - [x] **TNUI-01**: Admin can view a list of all tenants with name, status, and creation date
 - [x] **TNUI-02**: Admin can view a pending signup request with details
-- [ ] **TNUI-03**: Admin can approve a pending signup request (triggers provisioning)
-- [ ] **TNUI-04**: Admin can reject a pending signup request with a reason
+- [x] **TNUI-03**: Admin can approve a pending signup request (triggers provisioning)
+- [x] **TNUI-04**: Admin can reject a pending signup request with a reason
 
 ### User & Role Management
 
@@ -90,8 +90,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RCUI-05 | Phase 10 | Complete |
 | TNUI-01 | Phase 11 | Complete |
 | TNUI-02 | Phase 11 | Complete |
-| TNUI-03 | Phase 11 | Pending |
-| TNUI-04 | Phase 11 | Pending |
+| TNUI-03 | Phase 11 | Complete |
+| TNUI-04 | Phase 11 | Complete |
 | USUI-01 | Phase 12 | Pending |
 | USUI-02 | Phase 12 | Pending |
 | USUI-03 | Phase 12 | Pending |
