@@ -64,7 +64,7 @@ Any business can configure their complete lead management workflow — fields, s
 - [x] Login page with JWT authentication — Validated in Phase 9
 - [x] Role-based route protection and auth guards — Validated in Phase 9
 - [x] Recipe management admin pages (list, create, edit, preview, deactivate) — Validated in Phase 10
-- [ ] Tenant management admin pages (view, approve/reject signups)
+- [x] Tenant management admin pages (view, approve/reject signups) — Validated in Phase 11
 - [ ] User & role management admin pages
 - [ ] Pipeline stage configuration UI
 - [ ] Custom field definition management UI
@@ -146,4 +146,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-01 after Phase 10 (Recipe Management UI) completed*
+*Last updated: 2026-04-01 after Phase 11 (Tenant Management UI) completed*
