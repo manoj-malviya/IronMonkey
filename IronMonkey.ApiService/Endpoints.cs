@@ -117,9 +117,12 @@ public static class Endpoints
         {
             CreateCustomFieldEndpoint.Map(app);
             ListCustomFieldsEndpoint.Map(app);
+            UpdateCustomFieldEndpoint.Map(app);
+            DeleteCustomFieldEndpoint.Map(app);
             CreatePipelineStageEndpoint.Map(app);
             ListPipelineStagesEndpoint.Map(app);
             UpdatePipelineStageEndpoint.Map(app);
+            DeletePipelineStageEndpoint.Map(app);
             CreateLeadEndpoint.Map(app);
             CheckDuplicatesEndpoint.Map(app);
             MergeLeadsEndpoint.Map(app);
@@ -162,6 +165,7 @@ public static class Endpoints
             CreateWorkflowRuleEndpoint.Map(app);
             ListWorkflowRulesEndpoint.Map(app);
             UpdateWorkflowRuleEndpoint.Map(app);
+            DeleteWorkflowRuleEndpoint.Map(app);
         }
 
         private void MapReportEndpoints()
