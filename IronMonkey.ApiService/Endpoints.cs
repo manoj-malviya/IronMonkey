@@ -78,8 +78,10 @@ public static class Endpoints
             endpoints.MapEndpoint<ApproveTenantEndpoint>();
             endpoints.MapEndpoint<RejectTenantEndpoint>();
             endpoints.MapEndpoint<ListSignupRequestsEndpoint>();
+            endpoints.MapEndpoint<GetSignupRequestEndpoint>();
             endpoints.MapEndpoint<ProvisionTenantEndpoint>();
             endpoints.MapEndpoint<MigrateAllTenantsEndpoint>();
+            endpoints.MapEndpoint<ListTenantsEndpoint>();
         }
 
         private void MapUserEndpoints()
