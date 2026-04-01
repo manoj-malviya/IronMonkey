@@ -166,8 +166,9 @@
                                         <!-- Retry provision button for Approved-but-not-provisioned -->
                                         <button type="button"
                                                 @onclick="() => RetryProvisionAsync(signup.Id)"
-                                                class="text-sm font-medium text-indigo-600 hover:text-indigo-700">
-                                            Provision
+                                                disabled="@(_isProvisioning && _provisioningId == signup.Id)"
+                                                class="text-sm font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50">
+                                            @(_isProvisioning && _provisioningId == signup.Id ? "..." : "Provision")
                                         </button>
                                     }
                                 </td>
@@ -205,9 +206,77 @@
 
 </div>
 
-<!-- Modal placeholders — implemented in Plan 11-03 -->
-@if (_showApproveModal) { }
-@if (_showRejectModal) { }
+<!-- Approve modal -->
+@if (_showApproveModal)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h2 class="text-lg font-semibold text-slate-900 mb-2">Approve Signup Request</h2>
+            <p class="text-sm text-slate-600 mb-4">
+                Approving will mark this request as approved and trigger tenant provisioning.
+            </p>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1" for="approvalNote">
+                    Approval Note <span class="text-slate-400 text-xs">(optional)</span>
+                </label>
+                <textarea id="approvalNote" rows="3"
+                          @bind="_approvalNote"
+                          placeholder="Optional note visible to the team..."
+                          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </textarea>
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button type="button" @onclick="CancelApproveModal"
+                        class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    Cancel
+                </button>
+                <button type="button" @onclick="HandleApproveAsync"
+                        disabled="@_isApproving"
+                        class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500 disabled:opacity-50">
+                    @(_isApproving ? "Approving..." : "Confirm Approve")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Reject modal -->
+@if (_showRejectModal)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h2 class="text-lg font-semibold text-slate-900 mb-2">Reject Signup Request</h2>
+            <p class="text-sm text-slate-600 mb-4">
+                Please provide a reason for rejection. This will be recorded on the request.
+            </p>
+            @if (!string.IsNullOrEmpty(_rejectValidationError))
+            {
+                <p class="text-sm text-red-600 mb-3">@_rejectValidationError</p>
+            }
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1" for="rejectReason">
+                    Rejection Reason <span class="text-red-500">*</span>
+                </label>
+                <textarea id="rejectReason" rows="3"
+                          @bind="_rejectionReason"
+                          placeholder="Required: explain why this request is rejected..."
+                          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </textarea>
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button type="button" @onclick="CancelRejectModal"
+                        class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    Cancel
+                </button>
+                <button type="button" @onclick="HandleRejectAsync"
+                        disabled="@_isRejecting"
+                        class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50">
+                    @(_isRejecting ? "Rejecting..." : "Confirm Reject")
+                </button>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     // Tab state
@@ -231,10 +300,23 @@
     private string? _errorBanner = null;
     private string? _successMessage = null;
 
-    // Modal state (used by Plan 11-03)
+    // Modal state
     private bool _showApproveModal = false;
     private bool _showRejectModal = false;
     private Guid? _actionSignupId = null;
+
+    // Approve modal state (D-14)
+    private string _approvalNote = string.Empty;
+    private bool _isApproving = false;
+
+    // Reject modal state (D-15)
+    private string _rejectionReason = string.Empty;
+    private string? _rejectValidationError = null;
+    private bool _isRejecting = false;
+
+    // Retry provision state (D-17)
+    private bool _isProvisioning = false;
+    private Guid? _provisioningId = null;
 
     private List<SignupListItem> DisplayedSignups =>
         _showAllSignups ? _signups : _signups.Where(s => s.Status == "Pending").ToList();
@@ -306,10 +388,159 @@
         _showRejectModal = true;
     }
 
-    // Retry provision for Approved-but-not-provisioned — implemented in Plan 11-03
+    private void CancelApproveModal()
+    {
+        _showApproveModal = false;
+        _approvalNote = string.Empty;
+        _actionSignupId = null;
+    }
+
+    private void CancelRejectModal()
+    {
+        _showRejectModal = false;
+        _rejectionReason = string.Empty;
+        _rejectValidationError = null;
+        _actionSignupId = null;
+    }
+
+    // D-14: Two-step approve + provision chain
+    private async Task HandleApproveAsync()
+    {
+        if (_actionSignupId is null) return;
+        _isApproving = true;
+        _errorBanner = null;
+        _successMessage = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var signupId = _actionSignupId.Value;
+
+            // Step 1: Approve signup request
+            var approveResponse = await client.PostAsJsonAsync(
+                $"/admin/signup/{signupId}/approve",
+                new { ApprovalNote = string.IsNullOrWhiteSpace(_approvalNote) ? (string?)null : _approvalNote });
+
+            if (!approveResponse.IsSuccessStatusCode)
+            {
+                _errorBanner = $"Approval failed (HTTP {(int)approveResponse.StatusCode}).";
+                return;
+            }
+
+            // Update row to Approved immediately
+            var signupItem = _signups.FirstOrDefault(s => s.Id == signupId);
+            if (signupItem is not null) signupItem.Status = "Approved";
+
+            // Step 2: Provision tenant (D-14 chaining)
+            var provisionResponse = await client.PostAsJsonAsync(
+                $"/admin/tenants/{signupId}/provision", new { });
+
+            if (provisionResponse.IsSuccessStatusCode)
+            {
+                // Both steps succeeded (D-16)
+                if (signupItem is not null) signupItem.IsProvisioned = true;
+                _successMessage = "Signup approved and tenant provisioned successfully.";
+            }
+            else
+            {
+                // D-17: Step 1 succeeded, Step 2 failed — show retry button
+                _errorBanner = "Approval succeeded but provisioning failed. Use the 'Provision' button to retry.";
+            }
+
+            _showApproveModal = false;
+            _approvalNote = string.Empty;
+            _actionSignupId = null;
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isApproving = false;
+        }
+    }
+
+    // D-15: Reject with required reason
+    private async Task HandleRejectAsync()
+    {
+        if (_actionSignupId is null) return;
+
+        // Front-end validation: reason is required (D-15)
+        if (string.IsNullOrWhiteSpace(_rejectionReason))
+        {
+            _rejectValidationError = "Rejection reason is required.";
+            return;
+        }
+
+        _isRejecting = true;
+        _rejectValidationError = null;
+        _errorBanner = null;
+        _successMessage = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var signupId = _actionSignupId.Value;
+
+            var response = await client.PostAsJsonAsync(
+                $"/admin/signup/{signupId}/reject",
+                new { RejectionReason = _rejectionReason });
+
+            if (response.IsSuccessStatusCode)
+            {
+                // D-16: Optimistic UI update
+                var item = _signups.FirstOrDefault(s => s.Id == signupId);
+                if (item is not null) item.Status = "Rejected";
+                _successMessage = "Signup request rejected.";
+                _showRejectModal = false;
+                _rejectionReason = string.Empty;
+                _actionSignupId = null;
+            }
+            else
+            {
+                _errorBanner = $"Rejection failed (HTTP {(int)response.StatusCode}).";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isRejecting = false;
+        }
+    }
+
+    // D-17: Retry provision for Approved-but-not-provisioned entries
     private async Task RetryProvisionAsync(Guid id)
     {
-        await Task.CompletedTask; // Plan 11-03 will implement
+        _isProvisioning = true;
+        _provisioningId = id;
+        _errorBanner = null;
+        _successMessage = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.PostAsJsonAsync($"/admin/tenants/{id}/provision", new { });
+            if (response.IsSuccessStatusCode)
+            {
+                var item = _signups.FirstOrDefault(s => s.Id == id);
+                if (item is not null) item.IsProvisioned = true;
+                _successMessage = "Tenant provisioned successfully.";
+            }
+            else
+            {
+                _errorBanner = $"Provisioning failed (HTTP {(int)response.StatusCode}).";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isProvisioning = false;
+            _provisioningId = null;
+        }
     }
 
     private static string GetStatusBadgeClass(string status) =>
