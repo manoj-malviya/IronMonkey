@@ -83,7 +83,11 @@ Plans:
   2. Admin can open a pending signup request and see its submitted details
   3. Admin can approve a pending signup request and see the tenant provisioning triggered
   4. Admin can reject a pending signup request by entering a reason, and the request is marked rejected
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 11-01-PLAN.md — Backend: ListTenantsEndpoint + GetSignupRequestEndpoint + integration tests
+- [ ] 11-02-PLAN.md — Frontend: TenantManagement.razor two-tab page with tenant list and signup request list with expandable rows
+- [ ] 11-03-PLAN.md — Frontend: Approve/Reject modals with two-step approve+provision chain and optimistic UI updates
 **UI hint**: yes
 
 ### Phase 12: User & Role Management UI
@@ -124,6 +128,6 @@ Plans:
 | 8. Onboarding & Admin API | v1.1 | 3/3 | Complete | 2026-03-26 |
 | 9. UI Foundation & Auth | v1.2 | 3/3 | Complete   | 2026-04-01 |
 | 10. Recipe Management UI | v1.2 | 3/3 | Complete    | 2026-04-01 |
-| 11. Tenant Management UI | v1.2 | 0/? | Not started | - |
+| 11. Tenant Management UI | v1.2 | 0/3 | Not started | - |
 | 12. User & Role Management UI | v1.2 | 0/? | Not started | - |
 | 13. System Configuration UI | v1.2 | 0/? | Not started | - |
