@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin UI
-status: Ready to execute
-stopped_at: Completed 10-01-PLAN.md
-last_updated: "2026-04-01T06:01:43.564Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 10-03-PLAN.md
+last_updated: "2026-04-01T06:09:15.725Z"
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -55,6 +55,8 @@ Key decisions for v1.2:
 - [Phase 10-recipe-management-ui]: RecipeContentEditor uses native input with @onchange for comma-separated options rather than InputText — List<string> not directly bindable
 - [Phase 10-recipe-management-ui]: NavigateToPreview/NavigateToEdit as named methods — Razor HTML attributes cannot contain interpolated strings inline
 - [Phase 10-recipe-management-ui]: RecipeListItem as mutable class (not record) to support optimistic IsActive=false mutation
+- [Phase 10]: Dual API fetch on RecipeEdit init merges content from GET /api/recipes/{id} with metadata from list endpoint — no single endpoint provides all fields
+- [Phase 10]: RecipeListItem as record enables 'with' expression for optimistic version update after save response
 
 ### Pending Todos
 
@@ -67,6 +69,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-01T06:01:43.560Z
-Stopped at: Completed 10-01-PLAN.md
+Last session: 2026-04-01T06:09:15.722Z
+Stopped at: Completed 10-03-PLAN.md
 Resume file: None
