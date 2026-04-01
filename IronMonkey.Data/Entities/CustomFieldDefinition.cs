@@ -23,4 +23,12 @@ public sealed class CustomFieldDefinition : BaseTenantEntity
             IsRequired = isRequired,
             Options = options ?? []
         };
+
+    public void Update(string fieldName, CustomFieldType type, bool isRequired, List<string>? options)
+    {
+        FieldName = fieldName;
+        FieldType = type;
+        IsRequired = isRequired;
+        Options = options ?? [];
+    }
 }
