@@ -1,0 +1,17 @@
+@* Mobile topbar — slim bar with hamburger + app name. Hidden on md+ screens (D-16). *@
+
+<header class="md:hidden sticky top-0 z-30 flex h-14 items-center border-b border-slate-200 bg-white px-4">
+    <button @onclick="OnHamburgerClick"
+            class="mr-3 rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
+            aria-label="Open navigation menu">
+        <!-- Heroicon: bars-3 outline (hamburger) -->
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+        </svg>
+    </button>
+    <span class="text-base font-bold text-slate-900">IronMonkey</span>
+</header>
+
+@code {
+    [Parameter] public EventCallback OnHamburgerClick { get; set; }
+}
