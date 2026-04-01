@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin UI
-status: Ready to plan
-stopped_at: Phase 12 UI-SPEC approved
-last_updated: "2026-04-01T16:43:59.684Z"
+status: Ready to execute
+stopped_at: Completed 12-01-PLAN.md - User management API endpoints
+last_updated: "2026-04-01T18:03:07.732Z"
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 12
+  completed_plans: 10
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** Any business can configure their complete lead management workflow without writing code
-**Current focus:** Phase 11 — tenant-management-ui
+**Current focus:** Phase 12 — user-role-management-ui
 
 ## Current Position
 
-Phase: 12
-Plan: Not started
+Phase: 12 (user-role-management-ui) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -63,6 +63,7 @@ Key decisions for v1.2:
 - [Phase 11-tenant-management-ui]: Modal stubs (OpenApproveModal, OpenRejectModal, RetryProvisionAsync) created in TenantManagement.razor so Plan 11-03 has clean integration surface
 - [Phase 11]: Handle methods on ApproveTenantEndpoint and RejectTenantEndpoint changed from private to internal with InternalsVisibleTo for direct integration test invocation
 - [Phase 11]: Two-step approve+provision chain: approve first then provision, partial failure shows retry button (D-17)
+- [Phase 12-user-role-management-ui]: IgnoreQueryFilters used on all user queries to include deactivated users — global query filter excludes IsDeleted=true by default
 
 ### Pending Todos
 
@@ -75,6 +76,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-01T16:43:59.660Z
-Stopped at: Phase 12 UI-SPEC approved
-Resume file: .planning/phases/12-user-role-management-ui/12-UI-SPEC.md
+Last session: 2026-04-01T18:03:07.721Z
+Stopped at: Completed 12-01-PLAN.md - User management API endpoints
+Resume file: None

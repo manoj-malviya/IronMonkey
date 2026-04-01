@@ -33,10 +33,10 @@ Requirements for the Admin UI milestone. Each maps to roadmap phases.
 
 ### User & Role Management
 
-- [ ] **USUI-01**: Admin can view a list of users within the current tenant
-- [ ] **USUI-02**: Admin can create a new user with name, email, and role assignment
-- [ ] **USUI-03**: Admin can edit a user's details and role
-- [ ] **USUI-04**: Admin can deactivate a user (soft disable)
+- [x] **USUI-01**: Admin can view a list of users within the current tenant
+- [x] **USUI-02**: Admin can create a new user with name, email, and role assignment
+- [x] **USUI-03**: Admin can edit a user's details and role
+- [x] **USUI-04**: Admin can deactivate a user (soft disable)
 
 ### System Configuration
 
@@ -92,10 +92,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TNUI-02 | Phase 11 | Complete |
 | TNUI-03 | Phase 11 | Complete |
 | TNUI-04 | Phase 11 | Complete |
-| USUI-01 | Phase 12 | Pending |
-| USUI-02 | Phase 12 | Pending |
-| USUI-03 | Phase 12 | Pending |
-| USUI-04 | Phase 12 | Pending |
+| USUI-01 | Phase 12 | Complete |
+| USUI-02 | Phase 12 | Complete |
+| USUI-03 | Phase 12 | Complete |
+| USUI-04 | Phase 12 | Complete |
 | CFUI-01 | Phase 13 | Pending |
 | CFUI-02 | Phase 13 | Pending |
 | CFUI-03 | Phase 13 | Pending |
