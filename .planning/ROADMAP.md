@@ -102,7 +102,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 12-01-PLAN.md — Backend: User entity mutations + 6 tenant-scoped user management endpoints + Endpoints.cs registration
-- [ ] 12-02-PLAN.md — Frontend: UserList.razor with data table, filter toggle, and deactivate confirmation modal
+- [x] 12-02-PLAN.md — Frontend: UserList.razor with data table, filter toggle, and deactivate confirmation modal
 - [ ] 12-03-PLAN.md — Frontend: UserPasswordDisplay shared component + UserCreate.razor + UserEdit.razor
 **UI hint**: yes
 
@@ -133,5 +133,5 @@ Plans:
 | 9. UI Foundation & Auth | v1.2 | 3/3 | Complete   | 2026-04-01 |
 | 10. Recipe Management UI | v1.2 | 3/3 | Complete    | 2026-04-01 |
 | 11. Tenant Management UI | v1.2 | 3/3 | Complete    | 2026-04-01 |
-| 12. User & Role Management UI | v1.2 | 1/3 | In Progress|  |
+| 12. User & Role Management UI | v1.2 | 2/3 | In Progress|  |
 | 13. System Configuration UI | v1.2 | 0/? | Not started | - |

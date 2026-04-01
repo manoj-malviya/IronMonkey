@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin UI
 status: Ready to execute
-stopped_at: Completed 12-01-PLAN.md - User management API endpoints
-last_updated: "2026-04-01T18:03:07.732Z"
+stopped_at: Completed 12-02-PLAN.md - UserList.razor with data table, filter toggle, and deactivate modal
+last_updated: "2026-04-01T18:08:04.610Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 ## Current Position
 
 Phase: 12 (user-role-management-ui) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -64,6 +64,8 @@ Key decisions for v1.2:
 - [Phase 11]: Handle methods on ApproveTenantEndpoint and RejectTenantEndpoint changed from private to internal with InternalsVisibleTo for direct integration test invocation
 - [Phase 11]: Two-step approve+provision chain: approve first then provision, partial failure shows retry button (D-17)
 - [Phase 12-user-role-management-ui]: IgnoreQueryFilters used on all user queries to include deactivated users — global query filter excludes IsDeleted=true by default
+- [Phase 12-user-role-management-ui]: UserListItem as mutable private class (not record) to allow IsActive mutation for optimistic UI after deactivation
+- [Phase 12-user-role-management-ui]: Deactivate modal uses _showDeactivateModal + _deactivatingUser pair; closes in both success and error paths to prevent stuck modal state
 
 ### Pending Todos
 
@@ -76,6 +78,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-01T18:03:07.721Z
-Stopped at: Completed 12-01-PLAN.md - User management API endpoints
+Last session: 2026-04-01T18:08:04.599Z
+Stopped at: Completed 12-02-PLAN.md - UserList.razor with data table, filter toggle, and deactivate modal
 Resume file: None
