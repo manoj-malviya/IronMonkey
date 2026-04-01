@@ -99,7 +99,11 @@ Plans:
   2. Admin can create a new user by entering name, email, and selecting a role, and see the user appear in the list
   3. Admin can open an existing user, update their details or role, and save the changes
   4. Admin can deactivate a user and see their status change to disabled in the list
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 12-01-PLAN.md — Backend: User entity mutations + 6 tenant-scoped user management endpoints + Endpoints.cs registration
+- [ ] 12-02-PLAN.md — Frontend: UserList.razor with data table, filter toggle, and deactivate confirmation modal
+- [ ] 12-03-PLAN.md — Frontend: UserPasswordDisplay shared component + UserCreate.razor + UserEdit.razor
 **UI hint**: yes
 
 ### Phase 13: System Configuration UI
@@ -129,5 +133,5 @@ Plans:
 | 9. UI Foundation & Auth | v1.2 | 3/3 | Complete   | 2026-04-01 |
 | 10. Recipe Management UI | v1.2 | 3/3 | Complete    | 2026-04-01 |
 | 11. Tenant Management UI | v1.2 | 3/3 | Complete    | 2026-04-01 |
-| 12. User & Role Management UI | v1.2 | 0/? | Not started | - |
+| 12. User & Role Management UI | v1.2 | 0/3 | Not started | - |
 | 13. System Configuration UI | v1.2 | 0/? | Not started | - |
