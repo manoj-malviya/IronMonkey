@@ -35,7 +35,7 @@
 - [x] **Phase 9: UI Foundation & Auth** - Tailwind CSS setup, layout shell with sidebar navigation, login page, auth guards, and logout (completed 2026-04-01)
 - [x] **Phase 10: Recipe Management UI** - Admin pages to list, create, edit, preview, and deactivate industry recipes (completed 2026-04-01)
 - [x] **Phase 11: Tenant Management UI** - Admin pages to view tenants and approve or reject signup requests (completed 2026-04-01)
-- [ ] **Phase 12: User & Role Management UI** - Admin pages to view, create, edit, and deactivate users with role assignment
+- [x] **Phase 12: User & Role Management UI** - Admin pages to view, create, edit, and deactivate users with role assignment (completed 2026-04-01)
 - [ ] **Phase 13: System Configuration UI** - Admin pages for pipeline stages, custom fields, lead routing, and workflow rules
 
 ## Phase Details
@@ -133,5 +133,5 @@ Plans:
 | 9. UI Foundation & Auth | v1.2 | 3/3 | Complete   | 2026-04-01 |
 | 10. Recipe Management UI | v1.2 | 3/3 | Complete    | 2026-04-01 |
 | 11. Tenant Management UI | v1.2 | 3/3 | Complete    | 2026-04-01 |
-| 12. User & Role Management UI | v1.2 | 2/3 | In Progress|  |
+| 12. User & Role Management UI | v1.2 | 2/3 | Complete    | 2026-04-01 |
 | 13. System Configuration UI | v1.2 | 0/? | Not started | - |
