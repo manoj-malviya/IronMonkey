@@ -1,0 +1,208 @@
+@page "/admin/users/{Id:guid}/edit"
+@attribute [Authorize]
+@using IronMonkey.Web.Components.Pages.Admin.Users.Shared
+@using System.ComponentModel.DataAnnotations
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+
+<PageTitle>Edit User — IronMonkey Admin</PageTitle>
+
+<div class="max-w-3xl">
+
+    <button type="button" @onclick='() => Nav.NavigateTo("/admin/users")'
+            class="mb-4 text-sm text-indigo-600 hover:text-indigo-700">
+        ← Back to Users
+    </button>
+
+    <h1 class="mb-6 text-2xl font-bold text-slate-900">Edit User: @_userName</h1>
+
+    @if (!string.IsNullOrEmpty(_errorBanner))
+    {
+        <div class="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            @_errorBanner
+        </div>
+    }
+
+    @if (_generatedPassword != null)
+    {
+        <UserPasswordDisplay Password="@_generatedPassword" OnClosed='() => _generatedPassword = null' Heading="Password reset successfully!" />
+    }
+
+    @if (_isLoading)
+    {
+        <p class="text-sm text-slate-500 py-12 text-center">Loading user...</p>
+    }
+    else
+    {
+        <!-- Reset Password button (outside EditForm to avoid form submit trigger) -->
+        <div class="mb-4">
+            <button type="button" @onclick="HandleResetPasswordAsync" disabled="@_isResettingPassword"
+                    class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed">
+                @(_isResettingPassword ? "Resetting..." : "Reset Password")
+            </button>
+        </div>
+
+        <EditForm Model="_model" OnValidSubmit="HandleSaveAsync">
+            <DataAnnotationsValidator />
+
+            <!-- Name -->
+            <div class="mb-4">
+                <label class="mb-1 block text-sm font-medium text-slate-700">Name</label>
+                <InputText @bind-Value="_model.Name" placeholder="e.g. John Doe"
+                           class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                <ValidationMessage For="() => _model.Name" class="mt-1 text-xs text-red-600" />
+            </div>
+
+            <!-- Email -->
+            <div class="mb-4">
+                <label class="mb-1 block text-sm font-medium text-slate-700">Email</label>
+                <InputText @bind-Value="_model.Email" placeholder="e.g. john@example.com"
+                           class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                <ValidationMessage For="() => _model.Email" class="mt-1 text-xs text-red-600" />
+            </div>
+
+            <!-- Role -->
+            <div class="mb-4">
+                <label class="mb-1 block text-sm font-medium text-slate-700">Role</label>
+                <select @bind="_selectedRoleId"
+                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    <option value="0">Select a role</option>
+                    @foreach (var role in _roles)
+                    {
+                        <option value="@role.RoleId">@role.RoleName</option>
+                    }
+                </select>
+                @if (_submitted && _selectedRoleId == 0)
+                {
+                    <p class="mt-1 text-xs text-red-600">Role is required.</p>
+                }
+            </div>
+
+            <!-- Save button -->
+            <div class="mt-6 flex justify-end">
+                <button type="submit" disabled="@_isSaving"
+                        class="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed">
+                    @(_isSaving ? "Saving..." : "Save")
+                </button>
+            </div>
+
+        </EditForm>
+    }
+
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private UserFormModel _model = new();
+    private int _selectedRoleId = 0;
+    private List<RoleItem> _roles = [];
+    private string _userName = string.Empty;
+    private string? _generatedPassword = null;
+    private bool _isLoading = true;
+    private bool _isSaving = false;
+    private bool _isResettingPassword = false;
+    private bool _submitted = false;
+    private string? _errorBanner = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.WhenAll(LoadUserAsync(), LoadRolesAsync());
+    }
+
+    private async Task LoadUserAsync()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var user = await client.GetFromJsonAsync<UserDetail>($"/api/user-management/users/{Id}");
+            if (user is not null)
+            {
+                _model.Name = user.Name;
+                _model.Email = user.Email;
+                _selectedRoleId = user.RoleId;
+                _userName = user.Name;
+            }
+        }
+        catch (Exception ex) { _errorBanner = $"Failed to load user: {ex.Message}"; }
+        finally { _isLoading = false; }
+    }
+
+    private async Task LoadRolesAsync()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var roles = await client.GetFromJsonAsync<List<RoleItem>>("/api/user-management/roles");
+            _roles = roles ?? [];
+        }
+        catch (Exception ex) { _errorBanner = $"Failed to load roles: {ex.Message}"; }
+    }
+
+    private async Task HandleSaveAsync()
+    {
+        _submitted = true;
+        if (_selectedRoleId == 0) return;
+
+        _isSaving = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var payload = new { _model.Name, _model.Email, RoleId = _selectedRoleId };
+            var response = await client.PutAsJsonAsync($"/api/user-management/users/{Id}", payload);
+            if (response.IsSuccessStatusCode)
+            {
+                _userName = _model.Name; // update title
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                Nav.NavigateTo("/login");
+            else
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                _errorBanner = $"Failed to save user: {body}";
+            }
+        }
+        catch (Exception ex) { _errorBanner = $"Unable to save user: {ex.Message}"; }
+        finally { _isSaving = false; }
+    }
+
+    private async Task HandleResetPasswordAsync()
+    {
+        _isResettingPassword = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.PostAsync($"/api/user-management/users/{Id}/reset-password", null);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ResetPasswordResponse>();
+                _generatedPassword = result?.GeneratedPassword;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                Nav.NavigateTo("/login");
+            else
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                _errorBanner = $"Failed to reset password: {body}";
+            }
+        }
+        catch (Exception ex) { _errorBanner = $"Unable to reset password: {ex.Message}"; }
+        finally { _isResettingPassword = false; }
+    }
+
+    private record UserDetail(Guid Id, string Name, string Email, int RoleId, string RoleName, bool IsActive, DateTime CreatedAt);
+    private record RoleItem(int RoleId, string RoleName);
+    private record ResetPasswordResponse(string GeneratedPassword, string Message);
+
+    private class UserFormModel
+    {
+        [Required(ErrorMessage = "Name is required.")]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Email must be a valid email address.")]
+        public string Email { get; set; } = string.Empty;
+    }
+}
