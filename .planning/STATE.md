@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin UI
-status: Ready to plan
-stopped_at: Phase 13 UI-SPEC approved
-last_updated: "2026-04-01T18:41:27.308Z"
+status: Ready to execute
+stopped_at: Completed 13-02-PLAN.md - SystemConfiguration.razor with Pipeline Stages tab
+last_updated: "2026-04-02T02:37:02.069Z"
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 16
+  completed_plans: 14
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** Any business can configure their complete lead management workflow without writing code
-**Current focus:** Phase 12 — user-role-management-ui
+**Current focus:** Phase 13 — system-configuration-ui
 
 ## Current Position
 
-Phase: 13
-Plan: Not started
+Phase: 13 (system-configuration-ui) — EXECUTING
+Plan: 3 of 4
 
 ## Performance Metrics
 
@@ -68,6 +68,10 @@ Key decisions for v1.2:
 - [Phase 12-user-role-management-ui]: Deactivate modal uses _showDeactivateModal + _deactivatingUser pair; closes in both success and error paths to prevent stuck modal state
 - [Phase 12-user-role-management-ui]: UserPasswordDisplay Heading parameter allows both 'User created successfully!' and 'Password reset successfully!' variants without duplication
 - [Phase 12-user-role-management-ui]: Reset Password button placed outside EditForm with type=button to prevent triggering form validation
+- [Phase 13-system-configuration-ui]: PipelineStage delete uses Deactivate() soft-delete; CustomFieldDefinition/WorkflowRule use hard-delete (db.Remove())
+- [Phase 13-system-configuration-ui]: CustomFieldDefinition.Update() added to entity following PipelineStage.Update() pattern
+- [Phase 13-system-configuration-ui]: StageItem DTO uses Id/Name/Order/IsActive only — ListPipelineStagesEndpoint response does not include StageType
+- [Phase 13-system-configuration-ui]: _Imports.razor updated to add Microsoft.AspNetCore.Authorization using directives (worktree at v1.0 baseline)
 
 ### Pending Todos
 
@@ -80,6 +84,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-01T18:41:27.302Z
-Stopped at: Phase 13 UI-SPEC approved
-Resume file: .planning/phases/13-system-configuration-ui/13-UI-SPEC.md
+Last session: 2026-04-02T02:37:02.066Z
+Stopped at: Completed 13-02-PLAN.md - SystemConfiguration.razor with Pipeline Stages tab
+Resume file: None
