@@ -1,5 +1,30 @@
 # Milestones
 
+## v1.2 Admin UI (Shipped: 2026-04-02)
+
+**Phases completed:** 5 phases, 16 plans, 20 tasks
+
+**Key accomplishments:**
+
+- Tailwind CSS v4.2.2 standalone CLI integrated into MSBuild pipeline via BeforeTargets hook, Bootstrap removed from App.razor, and IronMonkey.Web registered as webfrontend in Aspire AppHost orchestration
+- JWT-backed AuthenticationStateProvider with ProtectedSessionStorage, auto-Bearer DelegatingHandler, and named AdminApi HttpClient registration in Program.cs
+- Login page with JWT auth flow, AdminSidebar with 4 Heroicon nav groups, mobile topbar, MainLayout shell, auth-guarded /admin index, and router-level NotAuthorized redirect to /login
+- RecipeList.razor
+- Blazor collapsible RecipeContentEditor component and RecipeCreate page with auto-slug generation, POST to /api/recipes, and 401 redirect
+- One-liner:
+- GET /admin/tenants and GET /admin/signup/{id} Minimal API endpoints with TenantSummary/SignupRequestDetail projections and 5 passing integration tests
+- Two-tab Blazor page at /admin/tenants combining tenant list and signup requests with expandable row detail, plus sidebar cleanup removing the redundant /admin/signups link
+- One-liner:
+- One-liner:
+- Blazor Server UserList.razor at /admin/users with sortable data table, Show Deactivated toggle, and confirmation modal for soft-deleting users via DELETE /api/user-management/users/{id}
+- Blazor UserCreate and UserEdit pages with shared UserPasswordDisplay component for copy-to-clipboard password reveal after create/reset
+- One-liner:
+- SystemConfiguration.razor at /admin/configuration — 4-tab shell with complete Pipeline Stages CRUD (inline edit, reorder arrows, create, delete modal)
+- Custom Fields tab (inline CRUD with type-conditional Options) + Routing tab (mode radio + conditional Territory JSON textarea) replacing placeholder panels in SystemConfiguration.razor
+- Commit:
+
+---
+
 ## v1.1 Tenant Onboarding with Industry Recipes (Shipped: 2026-03-27)
 
 **Phases completed:** 3 phases, 9 plans, 16 tasks

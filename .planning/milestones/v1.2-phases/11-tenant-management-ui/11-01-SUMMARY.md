@@ -126,3 +126,14 @@ None - no external service configuration required.
 ---
 *Phase: 11-tenant-management-ui*
 *Completed: 2026-04-01*
+
+## Self-Check: PASSED
+
+- FOUND: IronMonkey.ApiService/Authentication/Endpoints/ListTenantsEndpoint.cs
+- FOUND: IronMonkey.ApiService/Authentication/Endpoints/GetSignupRequestEndpoint.cs
+- FOUND: IronMonkey.Tests/Integration/TenantManagement/ListTenantsEndpointTests.cs
+- FOUND: IronMonkey.Tests/Integration/TenantManagement/GetSignupRequestEndpointTests.cs
+- FOUND: commit 8754549 (Task 1 feat commit)
+- FOUND: commit 7820ee6 (Task 2 feat commit)
+- FOUND: commit 144fabd (metadata commit)
+- Tests: 5/5 passed

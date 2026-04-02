@@ -4,18 +4,7 @@
 
 A multi-tenant, domain-agnostic Lead Management SaaS platform. Any business — automobile dealerships, real estate agencies, insurance brokers, service providers, educational institutions — can sign up as a tenant and fully configure the system to match their lead workflow without any code changes. Built on .NET Aspire with Blazor Server frontend.
 
-**Current State:** v1.1 shipped 2026-03-27. 8 phases across 2 milestones, 39 plans, 143+ integration tests. Full multi-tenant CRM with configurable leads, multi-channel ingestion, pipeline workflow engine, reporting dashboards, and industry recipe onboarding. Building on .NET 10.0, .NET Aspire 13.1, EF Core 10.0.5, PostgreSQL.
-
-## Current Milestone: v1.2 Admin UI
-
-**Goal:** Build the Blazor Server admin interface with Tailwind CSS (standalone CLI), connecting to existing backend APIs for full admin functionality.
-
-**Target features:**
-- UI foundation: Tailwind CSS (standalone CLI), layout shell with sidebar navigation, login page, auth guards, role-based route protection
-- Recipe management: list/create/edit/preview/deactivate industry recipes
-- Tenant management: view tenants, approve/reject signup requests, tenant status overview
-- User & role management: manage users within a tenant, assign roles
-- System configuration: pipeline stage setup, custom field definitions, lead routing config, workflow rule management
+**Current State:** v1.2 shipped 2026-04-02. 13 phases across 3 milestones, 55 plans, 143+ integration tests. Full multi-tenant CRM with configurable leads, multi-channel ingestion, pipeline workflow engine, reporting dashboards, industry recipe onboarding, and complete Blazor Server admin UI. Built on .NET 10.0, .NET Aspire 13.1, EF Core 10.0.5, PostgreSQL, Tailwind CSS v4 (standalone CLI).
 
 ## Core Value
 
@@ -58,18 +47,17 @@ Any business can configure their complete lead management workflow — fields, s
 - ✓ Recipe administration (create, update, deactivate) — v1.1 (RADM-01..03)
 - ✓ Tenant can freely modify all recipe-seeded configuration — v1.1 (ONBD-04)
 
+- ✓ UI foundation with Tailwind CSS and Blazor Server layout — v1.2 (UIFN-01..06)
+- ✓ Login page with JWT authentication — v1.2 (UIFN-01)
+- ✓ Role-based route protection and auth guards — v1.2 (UIFN-02)
+- ✓ Recipe management admin pages (list, create, edit, preview, deactivate) — v1.2 (RCUI-01..05)
+- ✓ Tenant management admin pages (view, approve/reject signups) — v1.2 (TNUI-01..04)
+- ✓ User & role management admin pages — v1.2 (USUI-01..04)
+- ✓ System configuration UI (pipeline stages, custom fields, routing, workflow rules) — v1.2 (CFUI-01..04)
+
 ### Active
 
-- [x] UI foundation with Tailwind CSS and Blazor Server layout — Validated in Phase 9
-- [x] Login page with JWT authentication — Validated in Phase 9
-- [x] Role-based route protection and auth guards — Validated in Phase 9
-- [x] Recipe management admin pages (list, create, edit, preview, deactivate) — Validated in Phase 10
-- [x] Tenant management admin pages (view, approve/reject signups) — Validated in Phase 11
-- [x] User & role management admin pages — Validated in Phase 12
-- [x] Pipeline stage configuration UI — Validated in Phase 13
-- [x] Custom field definition management UI — Validated in Phase 13
-- [x] Lead routing configuration UI — Validated in Phase 13
-- [x] Workflow rule management UI — Validated in Phase 13
+(None — next milestone not yet defined)
 
 ### Future
 
@@ -125,8 +113,10 @@ The system must be truly domain-agnostic — the data model for leads, statuses,
 | Outbox pattern for domain events | Reliable async processing, integrated with Hangfire | ✓ Good — template for all background work |
 | ActivityLog via SaveChanges interceptor | Automatic audit trail without per-endpoint instrumentation | ✓ Good — zero-touch change tracking |
 | Direct LINQ for dashboards (no materialized views) | Simpler v1, defer optimization | — Pending (monitor at scale) |
-| Tailwind CSS via standalone CLI | No Node.js dependency, simpler build pipeline for Blazor Server | — Pending |
-| Admin UI first, CRM pages later | Establish UI patterns and auth foundation before building user-facing pages | — Pending |
+| Tailwind CSS via standalone CLI | No Node.js dependency, simpler build pipeline for Blazor Server | ✓ Good — v4.2.2 integrated via MSBuild BeforeTargets |
+| Admin UI first, CRM pages later | Establish UI patterns and auth foundation before building user-facing pages | ✓ Good — v1.2 complete, patterns established for CRM pages |
+| Inline editing for config pages | Faster admin workflow for simple config items | ✓ Good — Phase 13 SystemConfiguration uses inline edit across 4 tabs |
+| Auto-generated passwords for user creation | More secure than admin-entered passwords | ✓ Good — BCrypt hashed, displayed once with copy-to-clipboard |
 
 ## Evolution
 
@@ -146,4 +136,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-02 after Phase 13 (System Configuration UI) completed — v1.2 milestone complete*
+*Last updated: 2026-04-02 after v1.2 Admin UI milestone completed*

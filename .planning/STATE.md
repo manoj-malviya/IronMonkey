@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin UI
-status: Milestone complete
+status: v1.2 milestone complete
 stopped_at: Completed 13-04-PLAN.md — Workflow Rules tab and AdminSidebar nav link
-last_updated: "2026-04-02T02:55:54.944Z"
+last_updated: "2026-04-02T03:02:57.951Z"
 progress:
   total_phases: 5
   completed_phases: 5
