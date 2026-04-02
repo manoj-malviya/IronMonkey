@@ -36,7 +36,7 @@
 - [x] **Phase 10: Recipe Management UI** - Admin pages to list, create, edit, preview, and deactivate industry recipes (completed 2026-04-01)
 - [x] **Phase 11: Tenant Management UI** - Admin pages to view tenants and approve or reject signup requests (completed 2026-04-01)
 - [x] **Phase 12: User & Role Management UI** - Admin pages to view, create, edit, and deactivate users with role assignment (completed 2026-04-01)
-- [ ] **Phase 13: System Configuration UI** - Admin pages for pipeline stages, custom fields, lead routing, and workflow rules
+- [x] **Phase 13: System Configuration UI** - Admin pages for pipeline stages, custom fields, lead routing, and workflow rules (completed 2026-04-02)
 
 ## Phase Details
 
@@ -119,8 +119,8 @@ Plans:
 Plans:
 - [x] 13-01-PLAN.md — Backend: 4 missing DELETE/PUT endpoints (pipeline stage, custom field, workflow rule) + Endpoints.cs registration
 - [x] 13-02-PLAN.md — Frontend: SystemConfiguration.razor page shell + Pipeline Stages tab (inline CRUD, reorder, delete)
-- [ ] 13-03-PLAN.md — Frontend: Custom Fields tab (type-conditional options) + Routing tab (mode selector + territory JSON)
-- [ ] 13-04-PLAN.md — Frontend: Workflow Rules tab (trigger/action dropdowns, IsActive toggle) + AdminSidebar nav link
+- [x] 13-03-PLAN.md — Frontend: Custom Fields tab (type-conditional options) + Routing tab (mode selector + territory JSON)
+- [x] 13-04-PLAN.md — Frontend: Workflow Rules tab (trigger/action dropdowns, IsActive toggle) + AdminSidebar nav link
 **UI hint**: yes
 
 ## Progress
@@ -139,4 +139,4 @@ Plans:
 | 10. Recipe Management UI | v1.2 | 3/3 | Complete    | 2026-04-01 |
 | 11. Tenant Management UI | v1.2 | 3/3 | Complete    | 2026-04-01 |
 | 12. User & Role Management UI | v1.2 | 2/3 | Complete    | 2026-04-01 |
-| 13. System Configuration UI | v1.2 | 2/4 | In Progress|  |
+| 13. System Configuration UI | v1.2 | 4/4 | Complete   | 2026-04-02 |

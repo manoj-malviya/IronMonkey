@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin UI
-status: Ready to execute
-stopped_at: Completed 13-02-PLAN.md - SystemConfiguration.razor with Pipeline Stages tab
-last_updated: "2026-04-02T02:37:02.069Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 13-04-PLAN.md — Workflow Rules tab and AdminSidebar nav link
+last_updated: "2026-04-02T02:51:22.862Z"
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 16
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 ## Current Position
 
 Phase: 13 (system-configuration-ui) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 
 ## Performance Metrics
 
@@ -72,6 +72,9 @@ Key decisions for v1.2:
 - [Phase 13-system-configuration-ui]: CustomFieldDefinition.Update() added to entity following PipelineStage.Update() pattern
 - [Phase 13-system-configuration-ui]: StageItem DTO uses Id/Name/Order/IsActive only — ListPipelineStagesEndpoint response does not include StageType
 - [Phase 13-system-configuration-ui]: _Imports.razor updated to add Microsoft.AspNetCore.Authorization using directives (worktree at v1.0 baseline)
+- [Phase 13-system-configuration-ui]: ConfigureRoutingEndpoint requires Dimension as required field — send 'Agent' as default when not configuring territory
+- [Phase 13-system-configuration-ui]: GetRoutingConfigEndpoint returns NotFound when no config exists — LoadRoutingConfigAsync treats 404 as valid 'no config yet' state
+- [Phase 13-system-configuration-ui]: AdminSidebar Configuration group consolidated to single /admin/configuration link — replaces 4 stale per-feature links pointing to non-existent separate routes
 
 ### Pending Todos
 
@@ -84,6 +87,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-02T02:37:02.066Z
-Stopped at: Completed 13-02-PLAN.md - SystemConfiguration.razor with Pipeline Stages tab
+Last session: 2026-04-02T02:51:22.857Z
+Stopped at: Completed 13-04-PLAN.md — Workflow Rules tab and AdminSidebar nav link
 Resume file: None
