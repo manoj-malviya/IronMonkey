@@ -1,0 +1,568 @@
+@page "/admin/configuration"
+@attribute [Authorize]
+@inject IHttpClientFactory HttpClientFactory
+
+<PageTitle>System Configuration — IronMonkey Admin</PageTitle>
+
+<div class="space-y-6">
+
+    <h1 class="text-2xl font-bold text-slate-900">System Configuration</h1>
+
+    <!-- Tab selector -->
+    <div class="border-b border-slate-200">
+        <nav class="flex space-x-8">
+            @foreach (var tab in _tabs)
+            {
+                <button type="button" @onclick="() => SetTab(tab)"
+                        class="@(tab == _activeTab
+                            ? "border-b-2 border-indigo-600 text-indigo-600 font-medium"
+                            : "text-slate-600 hover:text-slate-900") px-1 py-4 text-sm transition-colors">
+                    @tab
+                </button>
+            }
+        </nav>
+    </div>
+
+    <!-- Error banner -->
+    @if (!string.IsNullOrEmpty(_errorBanner))
+    {
+        <div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            @_errorBanner
+        </div>
+    }
+
+    <!-- Success banner -->
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
+            @_successMessage
+        </div>
+    }
+
+    <!-- PIPELINE STAGES TAB -->
+    @if (_activeTab == "Pipeline Stages")
+    {
+        @if (_isLoading)
+        {
+            <div class="py-12 text-center">
+                <p class="text-sm text-slate-500">Loading...</p>
+            </div>
+        }
+        else if (_stages.Count == 0 && !_creatingStage)
+        {
+            <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
+                <p class="text-slate-600">No pipeline stages configured. Add your first stage to get started.</p>
+                <button type="button" @onclick="StartAddStage"
+                        class="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                    + Add Stage
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto rounded-lg border border-slate-200">
+                <table class="w-full">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Order</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Status</th>
+                            <th class="px-6 py-3 text-right text-xs font-semibold text-slate-900 uppercase tracking-wide">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var stage in _stages.OrderBy(s => s.Order))
+                        {
+                            @if (_editingStageId == stage.Id)
+                            {
+                                <!-- Edit mode row -->
+                                <tr @key="stage.Id" class="border-b border-slate-100 bg-indigo-50">
+                                    <td colspan="4" class="px-6 py-4">
+                                        <div class="flex flex-wrap gap-3 items-end">
+                                            <div>
+                                                <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Name</label>
+                                                <input type="text" @bind="_editingStage!.Name"
+                                                       class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600" />
+                                            </div>
+                                            <div class="flex gap-2">
+                                                <button type="button" @onclick="CancelEditStage"
+                                                        class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                                    Cancel
+                                                </button>
+                                                <button type="button" @onclick="SaveEditStageAsync" disabled="@_isSaving"
+                                                        class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                                                    @(_isSaving ? "Saving..." : "Save")
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                <!-- Display mode row -->
+                                <tr @key="stage.Id" class="border-b border-slate-100 hover:bg-slate-50">
+                                    <td class="px-6 py-4 text-sm text-slate-900">@stage.Order</td>
+                                    <td class="px-6 py-4 text-sm text-slate-900">@stage.Name</td>
+                                    <td class="px-6 py-4 text-sm text-slate-600">
+                                        @if (stage.IsActive)
+                                        {
+                                            <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold bg-green-100 text-green-800">Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold bg-slate-100 text-slate-600">Inactive</span>
+                                        }
+                                    </td>
+                                    <td class="px-6 py-4 text-right space-x-1">
+                                        <!-- Up arrow -->
+                                        <button type="button" @onclick="() => MoveStageUpAsync(stage.Id)"
+                                                disabled="@(stage.Order == _stages.Min(s => s.Order))"
+                                                title="Move up"
+                                                class="p-1 rounded text-slate-600 hover:bg-slate-100 disabled:text-slate-300">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18" />
+                                            </svg>
+                                        </button>
+                                        <!-- Down arrow -->
+                                        <button type="button" @onclick="() => MoveStageDownAsync(stage.Id)"
+                                                disabled="@(stage.Order == _stages.Max(s => s.Order))"
+                                                title="Move down"
+                                                class="p-1 rounded text-slate-600 hover:bg-slate-100 disabled:text-slate-300">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
+                                            </svg>
+                                        </button>
+                                        <button type="button" @onclick="() => StartEditStage(stage)"
+                                                class="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+                                            Edit
+                                        </button>
+                                        <button type="button" @onclick="() => OpenDeleteStageConfirm(stage.Id)"
+                                                class="text-sm font-medium text-red-600 hover:text-red-700">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+
+                        <!-- Add Stage row -->
+                        @if (_creatingStage && _editingStageId == null)
+                        {
+                            <tr class="border-b border-slate-100 bg-indigo-50">
+                                <td colspan="4" class="px-6 py-4">
+                                    <div class="flex flex-wrap gap-3 items-end">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Name</label>
+                                            <input type="text" @bind="_newStageName" placeholder="Stage name"
+                                                   class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600" />
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <button type="button" @onclick="CancelAddStage"
+                                                    class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                                Cancel
+                                            </button>
+                                            <button type="button" @onclick="SaveNewStageAsync" disabled="@_isSaving"
+                                                    class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                                                @(_isSaving ? "Saving..." : "Create")
+                                            </button>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Add Stage button (below table) -->
+            <div class="mt-4">
+                <button type="button" @onclick="StartAddStage"
+                        disabled="@(_creatingStage || _editingStageId != null)"
+                        class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                    + Add Stage
+                </button>
+            </div>
+        }
+    }
+
+    <!-- CUSTOM FIELDS TAB -->
+    @if (_activeTab == "Custom Fields")
+    {
+        <p class="text-sm text-slate-500 py-8">Coming soon.</p>
+    }
+
+    <!-- ROUTING TAB -->
+    @if (_activeTab == "Routing")
+    {
+        <p class="text-sm text-slate-500 py-8">Coming soon.</p>
+    }
+
+    <!-- WORKFLOW RULES TAB -->
+    @if (_activeTab == "Workflow Rules")
+    {
+        <p class="text-sm text-slate-500 py-8">Coming soon.</p>
+    }
+
+</div>
+
+<!-- Delete confirmation modal -->
+@if (_showDeleteConfirm)
+{
+    <div class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-lg max-w-sm w-full">
+            <div class="px-6 py-4 border-b border-slate-200">
+                <h3 class="text-lg font-semibold text-slate-900">@_deleteModalTitle</h3>
+            </div>
+            <div class="px-6 py-4">
+                <p class="text-sm text-slate-600">@_deleteModalMessage</p>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-200 flex gap-2 justify-end">
+                <button type="button" @onclick="CancelDelete"
+                        class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    Cancel
+                </button>
+                <button type="button" @onclick="ConfirmDeleteAsync" disabled="@_isSaving"
+                        class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+                    @(_isSaving ? "Deleting..." : "Delete")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // Tab state
+    private readonly string[] _tabs = ["Pipeline Stages", "Custom Fields", "Routing", "Workflow Rules"];
+    private string _activeTab = "Pipeline Stages";
+    private bool _isLoading = false;
+    private bool _isSaving = false;
+    private string? _errorBanner = null;
+    private string? _successMessage = null;
+
+    // Pipeline Stages
+    private List<StageItem> _stages = new();
+    private bool _stagesLoaded = false;
+    private Guid? _editingStageId = null;
+    private StageItem? _editingStage = null;
+    private bool _creatingStage = false;
+    private string _newStageName = string.Empty;
+
+    // Delete modal (shared across all tabs)
+    private bool _showDeleteConfirm = false;
+    private string _deleteModalTitle = string.Empty;
+    private string _deleteModalMessage = string.Empty;
+    private Guid _deletingItemId = Guid.Empty;
+    private string _deletingItemType = string.Empty; // "stage", "field", "rule"
+
+    // Local DTO for stages — matches ListPipelineStagesEndpoint response (Id, Name, Order, IsActive)
+    private class StageItem
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int Order { get; set; }
+        public bool IsActive { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStagesAsync();
+    }
+
+    private void SetTab(string tab)
+    {
+        _activeTab = tab;
+        _errorBanner = null;
+        if (tab == "Pipeline Stages" && !_stagesLoaded)
+        {
+            _ = LoadStagesAsync();
+        }
+    }
+
+    private async Task LoadStagesAsync()
+    {
+        _isLoading = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var stages = await client.GetFromJsonAsync<List<StageItem>>("/api/pipeline-stages");
+            _stages = (stages ?? []).OrderBy(s => s.Order).ToList();
+            _stagesLoaded = true;
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to load pipeline stages: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void StartAddStage()
+    {
+        _creatingStage = true;
+        _editingStageId = null;
+        _newStageName = string.Empty;
+    }
+
+    private void CancelAddStage()
+    {
+        _creatingStage = false;
+        _newStageName = string.Empty;
+    }
+
+    private async Task SaveNewStageAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newStageName)) return;
+
+        _isSaving = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var newOrder = _stages.Count > 0 ? _stages.Max(s => s.Order) + 1 : 1;
+            var response = await client.PostAsJsonAsync("/api/pipeline-stages", new { Name = _newStageName, Order = newOrder });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var created = await response.Content.ReadFromJsonAsync<StageItem>();
+                if (created is not null)
+                {
+                    _stages.Add(created);
+                    _stages = _stages.OrderBy(s => s.Order).ToList();
+                }
+                _creatingStage = false;
+                _newStageName = string.Empty;
+                ShowSuccessMessage("Pipeline stage created.");
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _errorBanner = $"Failed to create stage. {error}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to create stage: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void StartEditStage(StageItem stage)
+    {
+        _editingStageId = stage.Id;
+        _editingStage = new StageItem { Id = stage.Id, Name = stage.Name, Order = stage.Order, IsActive = stage.IsActive };
+        _creatingStage = false;
+    }
+
+    private void CancelEditStage()
+    {
+        _editingStageId = null;
+        _editingStage = null;
+    }
+
+    private async Task SaveEditStageAsync()
+    {
+        if (_editingStage is null || _editingStageId is null) return;
+        if (string.IsNullOrWhiteSpace(_editingStage.Name)) return;
+
+        _isSaving = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.PutAsJsonAsync($"/api/pipeline-stages/{_editingStageId}", new { _editingStage.Name, _editingStage.Order });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var updated = await response.Content.ReadFromJsonAsync<StageItem>();
+                if (updated is not null)
+                {
+                    var idx = _stages.FindIndex(s => s.Id == updated.Id);
+                    if (idx >= 0) _stages[idx] = updated;
+                    _stages = _stages.OrderBy(s => s.Order).ToList();
+                }
+                _editingStageId = null;
+                _editingStage = null;
+                ShowSuccessMessage("Pipeline stage saved.");
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _errorBanner = $"Failed to save stage. {error}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to save stage: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task MoveStageUpAsync(Guid id)
+    {
+        var stage = _stages.FirstOrDefault(s => s.Id == id);
+        if (stage is null) return;
+
+        var above = _stages.Where(s => s.Order < stage.Order).OrderByDescending(s => s.Order).FirstOrDefault();
+        if (above is null) return;
+
+        // Optimistic swap
+        var stageOrder = stage.Order;
+        var aboveOrder = above.Order;
+        stage.Order = aboveOrder;
+        above.Order = stageOrder;
+        _stages = _stages.OrderBy(s => s.Order).ToList();
+
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var task1 = client.PutAsJsonAsync($"/api/pipeline-stages/{stage.Id}", new { stage.Name, stage.Order });
+            var task2 = client.PutAsJsonAsync($"/api/pipeline-stages/{above.Id}", new { above.Name, above.Order });
+            await Task.WhenAll(task1, task2);
+
+            if (!task1.Result.IsSuccessStatusCode || !task2.Result.IsSuccessStatusCode)
+            {
+                // Revert on failure
+                stage.Order = stageOrder;
+                above.Order = aboveOrder;
+                _stages = _stages.OrderBy(s => s.Order).ToList();
+                _errorBanner = "Failed to reorder stages. Please try again.";
+            }
+            else
+            {
+                ShowSuccessMessage("Stages reordered.");
+            }
+        }
+        catch (Exception ex)
+        {
+            // Revert on exception
+            stage.Order = stageOrder;
+            above.Order = aboveOrder;
+            _stages = _stages.OrderBy(s => s.Order).ToList();
+            _errorBanner = $"Failed to reorder stages: {ex.Message}";
+        }
+    }
+
+    private async Task MoveStageDownAsync(Guid id)
+    {
+        var stage = _stages.FirstOrDefault(s => s.Id == id);
+        if (stage is null) return;
+
+        var below = _stages.Where(s => s.Order > stage.Order).OrderBy(s => s.Order).FirstOrDefault();
+        if (below is null) return;
+
+        // Optimistic swap
+        var stageOrder = stage.Order;
+        var belowOrder = below.Order;
+        stage.Order = belowOrder;
+        below.Order = stageOrder;
+        _stages = _stages.OrderBy(s => s.Order).ToList();
+
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var task1 = client.PutAsJsonAsync($"/api/pipeline-stages/{stage.Id}", new { stage.Name, stage.Order });
+            var task2 = client.PutAsJsonAsync($"/api/pipeline-stages/{below.Id}", new { below.Name, below.Order });
+            await Task.WhenAll(task1, task2);
+
+            if (!task1.Result.IsSuccessStatusCode || !task2.Result.IsSuccessStatusCode)
+            {
+                // Revert on failure
+                stage.Order = stageOrder;
+                below.Order = belowOrder;
+                _stages = _stages.OrderBy(s => s.Order).ToList();
+                _errorBanner = "Failed to reorder stages. Please try again.";
+            }
+            else
+            {
+                ShowSuccessMessage("Stages reordered.");
+            }
+        }
+        catch (Exception ex)
+        {
+            // Revert on exception
+            stage.Order = stageOrder;
+            below.Order = belowOrder;
+            _stages = _stages.OrderBy(s => s.Order).ToList();
+            _errorBanner = $"Failed to reorder stages: {ex.Message}";
+        }
+    }
+
+    private void OpenDeleteStageConfirm(Guid id)
+    {
+        _showDeleteConfirm = true;
+        _deleteModalTitle = "Delete Pipeline Stage";
+        _deleteModalMessage = "Are you sure? Leads in this stage will be affected. This cannot be undone.";
+        _deletingItemId = id;
+        _deletingItemType = "stage";
+    }
+
+    private void CancelDelete()
+    {
+        _showDeleteConfirm = false;
+        _deletingItemId = Guid.Empty;
+        _deletingItemType = string.Empty;
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (_deletingItemType == "stage")
+        {
+            await DeleteStageAsync(_deletingItemId);
+        }
+        _showDeleteConfirm = false;
+        _deletingItemId = Guid.Empty;
+        _deletingItemType = string.Empty;
+    }
+
+    private async Task DeleteStageAsync(Guid id)
+    {
+        _isSaving = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.DeleteAsync($"/api/pipeline-stages/{id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                _stages.RemoveAll(s => s.Id == id);
+                ShowSuccessMessage("Pipeline stage deleted.");
+            }
+            else
+            {
+                _errorBanner = "Failed to delete stage. It may be in use. Please refresh and try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to delete stage: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void ShowSuccessMessage(string msg)
+    {
+        _successMessage = msg;
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(3000);
+            _successMessage = null;
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+}
