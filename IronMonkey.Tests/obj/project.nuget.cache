@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "v2/xVy4+IsI=",
+  "dgSpecHash": "nLSR9nxFgEg=",
   "success": true,
-  "projectFilePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Tests/IronMonkey.Tests.csproj",
+  "projectFilePath": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.Tests/IronMonkey.Tests.csproj",
   "expectedPackageFiles": [
     "/home/manoj/.nuget/packages/asp.versioning.abstractions/8.1.0/asp.versioning.abstractions.8.1.0.nupkg.sha512",
     "/home/manoj/.nuget/packages/asp.versioning.http/8.1.1/asp.versioning.http.8.1.1.nupkg.sha512",

@@ -28,6 +28,8 @@ public sealed class Tenant : BaseTenantEntity
     public bool IsProvisioned { get; private set; }
     public DateTime? ApprovedAt { get; private set; }
     public DateTime? ProvisionedAt { get; private set; }
+    public Guid? AppliedRecipeId { get; private set; }
+    public int? AppliedRecipeVersion { get; private set; }
 
     public static Tenant Create(string name, string slug, string subscriptionPlan, string status)
     {
@@ -72,5 +74,11 @@ public sealed class Tenant : BaseTenantEntity
         IsProvisioned = true;
         ProvisionedAt = DateTime.UtcNow;
         UpdateDatabaseConnectionString(connectionString);
+    }
+
+    public void SetAppliedRecipe(Guid recipeId, int recipeVersion)
+    {
+        AppliedRecipeId = recipeId;
+        AppliedRecipeVersion = recipeVersion;
     }
 }

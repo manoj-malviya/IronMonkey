@@ -1,0 +1,286 @@
+@using IronMonkey.Data.RecipeContent
+
+<div class="space-y-4">
+
+    <!-- Section 1: Pipeline Stages -->
+    <div class="rounded-lg border border-slate-200 bg-white">
+        <button type="button" @onclick="() => _stagesExpanded = !_stagesExpanded"
+                class="flex w-full items-center justify-between px-4 py-3 text-left">
+            <span class="text-sm font-semibold text-slate-900">Pipeline Stages (@Content.PipelineStages.Count)</span>
+            <svg class="@(_stagesExpanded ? "rotate-180" : "") h-4 w-4 text-slate-500 transition-transform"
+                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
+        </button>
+        @if (_stagesExpanded)
+        {
+            <div class="border-t border-slate-100 px-4 pb-4 pt-3">
+                @foreach (var (stage, index) in Content.PipelineStages.Select((s, i) => (s, i)))
+                {
+                    <div class="mb-2 flex items-center gap-2">
+                        <span class="w-6 text-center text-xs text-slate-400">@index</span>
+                        <InputText @bind-Value="stage.Name"
+                                   placeholder="Stage name"
+                                   class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                        <InputSelect @bind-Value="stage.StageType"
+                                     class="rounded-lg border border-slate-300 px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            <option value="Entry">Entry</option>
+                            <option value="Active">Active</option>
+                            <option value="ClosedWon">ClosedWon</option>
+                            <option value="ClosedLost">ClosedLost</option>
+                        </InputSelect>
+                        <button type="button" @onclick="() => _ = RemoveStage(index)"
+                                class="shrink-0 text-sm text-red-600 hover:text-red-700">Remove</button>
+                    </div>
+                }
+                <button type="button" @onclick="AddStage"
+                        class="mt-2 w-full rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:border-indigo-400 hover:text-indigo-600">
+                    + Add Stage
+                </button>
+            </div>
+        }
+    </div>
+
+    <!-- Section 2: Custom Fields -->
+    <div class="rounded-lg border border-slate-200 bg-white">
+        <button type="button" @onclick="() => _fieldsExpanded = !_fieldsExpanded"
+                class="flex w-full items-center justify-between px-4 py-3 text-left">
+            <span class="text-sm font-semibold text-slate-900">Custom Fields (@Content.CustomFields.Count)</span>
+            <svg class="@(_fieldsExpanded ? "rotate-180" : "") h-4 w-4 text-slate-500 transition-transform"
+                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
+        </button>
+        @if (_fieldsExpanded)
+        {
+            <div class="border-t border-slate-100 px-4 pb-4 pt-3">
+                @foreach (var (field, index) in Content.CustomFields.Select((f, i) => (f, i)))
+                {
+                    <div class="mb-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
+                        <div class="mb-2 flex items-center gap-2">
+                            <InputText @bind-Value="field.FieldName"
+                                       placeholder="Field name"
+                                       class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                            <InputSelect @bind-Value="field.FieldType"
+                                         class="rounded-lg border border-slate-300 px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                <option value="Text">Text</option>
+                                <option value="Number">Number</option>
+                                <option value="Date">Date</option>
+                                <option value="Dropdown">Dropdown</option>
+                                <option value="MultiSelect">MultiSelect</option>
+                                <option value="Currency">Currency</option>
+                                <option value="Boolean">Boolean</option>
+                            </InputSelect>
+                            <label class="flex shrink-0 items-center gap-1 text-sm text-slate-700">
+                                <InputCheckbox @bind-Value="field.IsRequired" class="rounded border-slate-300" />
+                                Required
+                            </label>
+                            <button type="button" @onclick="() => _ = RemoveField(index)"
+                                    class="shrink-0 text-sm text-red-600 hover:text-red-700">Remove</button>
+                        </div>
+                        @if (field.FieldType == "Dropdown" || field.FieldType == "MultiSelect")
+                        {
+                            <div class="mt-1">
+                                <label class="mb-1 block text-xs text-slate-500">Options (comma-separated)</label>
+                                <input type="text"
+                                       value="@GetOptionsText(field)"
+                                       @onchange="@(e => { SetOptionsText(field, e.Value?.ToString() ?? string.Empty); StateHasChanged(); })"
+                                       placeholder="option1, option2, ..."
+                                       class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                            </div>
+                        }
+                    </div>
+                }
+                <button type="button" @onclick="AddField"
+                        class="mt-2 w-full rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:border-indigo-400 hover:text-indigo-600">
+                    + Add Field
+                </button>
+            </div>
+        }
+    </div>
+
+    <!-- Section 3: Workflow Rules -->
+    <div class="rounded-lg border border-slate-200 bg-white">
+        <button type="button" @onclick="() => _rulesExpanded = !_rulesExpanded"
+                class="flex w-full items-center justify-between px-4 py-3 text-left">
+            <span class="text-sm font-semibold text-slate-900">Workflow Rules (@Content.WorkflowRules.Count)</span>
+            <svg class="@(_rulesExpanded ? "rotate-180" : "") h-4 w-4 text-slate-500 transition-transform"
+                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
+        </button>
+        @if (_rulesExpanded)
+        {
+            <div class="border-t border-slate-100 px-4 pb-4 pt-3">
+                @foreach (var (rule, index) in Content.WorkflowRules.Select((r, i) => (r, i)))
+                {
+                    <div class="mb-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
+                        <div class="mb-2 flex items-center gap-2">
+                            <InputText @bind-Value="rule.Name"
+                                       placeholder="Rule name"
+                                       class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                            <InputSelect @bind-Value="rule.Trigger"
+                                         class="rounded-lg border border-slate-300 px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                <option value="FieldChange">FieldChange</option>
+                                <option value="StatusChange">StatusChange</option>
+                                <option value="TimeElapsed">TimeElapsed</option>
+                            </InputSelect>
+                            <button type="button" @onclick="() => _ = RemoveRule(index)"
+                                    class="shrink-0 text-sm text-red-600 hover:text-red-700">Remove</button>
+                        </div>
+                        <div class="mb-2">
+                            <label class="mb-1 block text-xs text-slate-500">Condition JSON</label>
+                            <textarea @bind="rule.ConditionJson"
+                                      rows="2"
+                                      placeholder="{}"
+                                      class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"></textarea>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs text-slate-500">Action JSON</label>
+                            <textarea @bind="rule.ActionJson"
+                                      rows="2"
+                                      placeholder="{}"
+                                      class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"></textarea>
+                        </div>
+                    </div>
+                }
+                <button type="button" @onclick="AddRule"
+                        class="mt-2 w-full rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:border-indigo-400 hover:text-indigo-600">
+                    + Add Rule
+                </button>
+            </div>
+        }
+    </div>
+
+    <!-- Section 4: Roles -->
+    <div class="rounded-lg border border-slate-200 bg-white">
+        <button type="button" @onclick="() => _rolesExpanded = !_rolesExpanded"
+                class="flex w-full items-center justify-between px-4 py-3 text-left">
+            <span class="text-sm font-semibold text-slate-900">Roles (@Content.Roles.Count)</span>
+            <svg class="@(_rolesExpanded ? "rotate-180" : "") h-4 w-4 text-slate-500 transition-transform"
+                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
+        </button>
+        @if (_rolesExpanded)
+        {
+            <div class="border-t border-slate-100 px-4 pb-4 pt-3">
+                @foreach (var (role, index) in Content.Roles.Select((r, i) => (r, i)))
+                {
+                    <div class="mb-2 flex items-center gap-2">
+                        <InputText @bind-Value="role.Name"
+                                   placeholder="Role name"
+                                   class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                        <InputText @bind-Value="role.Description"
+                                   placeholder="Description"
+                                   class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                        <button type="button" @onclick="() => _ = RemoveRole(index)"
+                                class="shrink-0 text-sm text-red-600 hover:text-red-700">Remove</button>
+                    </div>
+                }
+                <button type="button" @onclick="AddRole"
+                        class="mt-2 w-full rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:border-indigo-400 hover:text-indigo-600">
+                    + Add Role
+                </button>
+            </div>
+        }
+    </div>
+
+</div>
+
+@code {
+    [Parameter, EditorRequired] public RecipeContentModel Content { get; set; } = new();
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private bool _stagesExpanded = true;
+    private bool _fieldsExpanded = true;
+    private bool _rulesExpanded = true;
+    private bool _rolesExpanded = true;
+
+    // Pipeline Stages
+    private async Task AddStage()
+    {
+        Content.PipelineStages.Add(new PipelineStageDefinition
+        {
+            Name = "New Stage",
+            Order = Content.PipelineStages.Count,
+            StageType = "Active"
+        });
+        StateHasChanged();
+        await NotifyChanged();
+    }
+
+    private async Task RemoveStage(int index)
+    {
+        Content.PipelineStages.RemoveAt(index);
+        for (int i = 0; i < Content.PipelineStages.Count; i++)
+            Content.PipelineStages[i].Order = i;
+        StateHasChanged();
+        await NotifyChanged();
+    }
+
+    // Custom Fields
+    private async Task AddField()
+    {
+        Content.CustomFields.Add(new CustomFieldDefinitionDto { FieldName = "New Field", FieldType = "Text" });
+        StateHasChanged();
+        await NotifyChanged();
+    }
+
+    private async Task RemoveField(int index)
+    {
+        Content.CustomFields.RemoveAt(index);
+        StateHasChanged();
+        await NotifyChanged();
+    }
+
+    private static string GetOptionsText(CustomFieldDefinitionDto field) =>
+        string.Join(", ", field.Options);
+
+    private static void SetOptionsText(CustomFieldDefinitionDto field, string value)
+    {
+        field.Options = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+    }
+
+    // Workflow Rules
+    private async Task AddRule()
+    {
+        Content.WorkflowRules.Add(new WorkflowRuleDefinition
+        {
+            Name = "New Rule",
+            Trigger = "FieldChange",
+            ConditionJson = "{}",
+            ActionJson = "{}"
+        });
+        StateHasChanged();
+        await NotifyChanged();
+    }
+
+    private async Task RemoveRule(int index)
+    {
+        Content.WorkflowRules.RemoveAt(index);
+        StateHasChanged();
+        await NotifyChanged();
+    }
+
+    // Roles
+    private async Task AddRole()
+    {
+        Content.Roles.Add(new RoleDefinition { Name = "New Role", Description = "" });
+        StateHasChanged();
+        await NotifyChanged();
+    }
+
+    private async Task RemoveRole(int index)
+    {
+        Content.Roles.RemoveAt(index);
+        StateHasChanged();
+        await NotifyChanged();
+    }
+
+    private async Task NotifyChanged()
+    {
+        if (OnChanged.HasDelegate)
+            await OnChanged.InvokeAsync();
+    }
+}

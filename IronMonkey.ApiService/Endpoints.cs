@@ -18,9 +18,11 @@ using IronMonkey.ApiService.Features.Leads.Workflow.Rules;
 using IronMonkey.ApiService.Features.Reports.Pipeline;
 using IronMonkey.ApiService.Features.Reports.Conversion;
 using IronMonkey.ApiService.Features.Reports.Performance;
+using IronMonkey.ApiService.Features.Recipes;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
 using IronMonkey.Data.Entities;
+using IronMonkey.ApiService.Features.UserManagement;
 
 namespace IronMonkey.ApiService;
 
@@ -46,6 +48,7 @@ public static class Endpoints
         endpoints.MapPipelineEndpoints();
         endpoints.MapReportEndpoints();
         endpoints.MapActivityEndpoints();
+        endpoints.MapRecipeEndpoints();
     }
 
     extension(IEndpointRouteBuilder app)
@@ -78,8 +81,10 @@ public static class Endpoints
             endpoints.MapEndpoint<ApproveTenantEndpoint>();
             endpoints.MapEndpoint<RejectTenantEndpoint>();
             endpoints.MapEndpoint<ListSignupRequestsEndpoint>();
+            endpoints.MapEndpoint<GetSignupRequestEndpoint>();
             endpoints.MapEndpoint<ProvisionTenantEndpoint>();
             endpoints.MapEndpoint<MigrateAllTenantsEndpoint>();
+            endpoints.MapEndpoint<ListTenantsEndpoint>();
         }
 
         private void MapUserEndpoints()
@@ -105,21 +110,36 @@ public static class Endpoints
             var endpoints = app.MapGroup("/user-management")
                 .WithTags("User Management");
 
+            // Existing public endpoints (role/permission management)
             endpoints.MapPublicGroup()
                 .MapEndpoint<CreateRole>()
                 .MapEndpoint<ListRoles>()
                 .MapEndpoint<CreatePermission>()
                 .MapEndpoint<ListRolePermissions>()
                 .MapEndpoint<AttachPermissionsToRole>();
+
+            // Tenant-scoped user management endpoints (require auth)
+            var userEndpoints = endpoints.MapGroup(string.Empty)
+                .RequireAuthorization();
+            userEndpoints
+                .MapEndpoint<ListUsersEndpoint>()
+                .MapEndpoint<GetUserEndpoint>()
+                .MapEndpoint<CreateTenantUserEndpoint>()
+                .MapEndpoint<UpdateUserEndpoint>()
+                .MapEndpoint<DeactivateUserEndpoint>()
+                .MapEndpoint<ResetPasswordEndpoint>();
         }
 
         private void MapLeadsEndpoints()
         {
             CreateCustomFieldEndpoint.Map(app);
             ListCustomFieldsEndpoint.Map(app);
+            UpdateCustomFieldEndpoint.Map(app);
+            DeleteCustomFieldEndpoint.Map(app);
             CreatePipelineStageEndpoint.Map(app);
             ListPipelineStagesEndpoint.Map(app);
             UpdatePipelineStageEndpoint.Map(app);
+            DeletePipelineStageEndpoint.Map(app);
             CreateLeadEndpoint.Map(app);
             CheckDuplicatesEndpoint.Map(app);
             MergeLeadsEndpoint.Map(app);
@@ -162,6 +182,7 @@ public static class Endpoints
             CreateWorkflowRuleEndpoint.Map(app);
             ListWorkflowRulesEndpoint.Map(app);
             UpdateWorkflowRuleEndpoint.Map(app);
+            DeleteWorkflowRuleEndpoint.Map(app);
         }
 
         private void MapReportEndpoints()
@@ -179,26 +200,22 @@ public static class Endpoints
             AddLeadNoteEndpoint.Map(app);
         }
 
-        private void MapIngestionEndpoints()
+        private void MapRecipeEndpoints()
         {
-            // API key management (authenticated, for tenant admins)
-            GenerateApiKeyEndpoint.Map(app);
-            ListApiKeysEndpoint.Map(app);
-            DeleteApiKeyEndpoint.Map(app);
+            // Public read endpoints (anonymous — required for signup flow, D-10)
+            var publicRecipes = app.MapGroup("/api/recipes")
+                .WithTags("Recipes")
+                .AllowAnonymous();
+            publicRecipes.MapEndpoint<RecipeListEndpoint>();
+            publicRecipes.MapEndpoint<RecipePreviewEndpoint>();
 
-            // External REST API lead creation (X-Api-Key auth, rate limited)
-            CreateLeadViaApiEndpoint.Map(app);
-
-            // CSV import (authenticated)
-            UploadLeadsFromCsvEndpoint.Map(app);
-            GetImportStatusEndpoint.Map(app);
-            GetImportErrorsEndpoint.Map(app);
-
-            // Web forms (create/delete: authenticated; get/submit: anonymous)
-            CreateWebFormEndpoint.Map(app);
-            DeleteWebFormEndpoint.Map(app);
-            GetWebFormPageEndpoint.Map(app);
-            SubmitWebFormEndpoint.Map(app);
+            // Admin write endpoints (require authorization, D-11)
+            var adminRecipes = app.MapGroup("/api/recipes")
+                .WithTags("Platform Admin")
+                .RequireAuthorization();
+            adminRecipes.MapEndpoint<CreateRecipeEndpoint>();
+            adminRecipes.MapEndpoint<UpdateRecipeEndpoint>();
+            adminRecipes.MapEndpoint<DeactivateRecipeEndpoint>();
         }
 
         private RouteGroupBuilder MapPublicGroup(string? prefix = null)

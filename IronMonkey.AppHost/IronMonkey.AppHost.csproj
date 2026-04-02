@@ -13,4 +13,8 @@
     <ProjectReference Include="..\IronMonkey.Web\IronMonkey.Web.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="9.1.0" />
+  </ItemGroup>
+
 </Project>

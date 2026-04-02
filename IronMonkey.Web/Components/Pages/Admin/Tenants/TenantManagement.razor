@@ -1,0 +1,594 @@
+@page "/admin/tenants"
+@attribute [Authorize]
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+
+<PageTitle>Tenant Management — IronMonkey Admin</PageTitle>
+
+<div class="space-y-6">
+
+    <h1 class="text-2xl font-bold text-slate-900">Tenant Management</h1>
+
+    <!-- Tab selector -->
+    <div class="border-b border-slate-200">
+        <nav class="flex space-x-8">
+            @foreach (var tab in _tabs)
+            {
+                <button type="button" @onclick="() => _activeTab = tab"
+                        class="@(tab == _activeTab
+                            ? "border-b-2 border-indigo-600 text-indigo-600 font-medium"
+                            : "text-slate-600 hover:text-slate-900") px-1 py-4 text-sm transition-colors">
+                    @tab
+                </button>
+            }
+        </nav>
+    </div>
+
+    <!-- Error banner -->
+    @if (!string.IsNullOrEmpty(_errorBanner))
+    {
+        <div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            @_errorBanner
+        </div>
+    }
+
+    <!-- Success banner (used by Plan 11-03 approve/reject) -->
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
+            @_successMessage
+        </div>
+    }
+
+    <!-- Loading state -->
+    @if (_isLoading)
+    {
+        <div class="py-12 text-center">
+            <p class="text-sm text-slate-500">Loading...</p>
+        </div>
+    }
+
+    <!-- TENANTS TAB -->
+    @if (!_isLoading && _activeTab == "Tenants")
+    {
+        @if (_tenants.Count == 0)
+        {
+            <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
+                <p class="text-slate-600">No tenants yet — approve signup requests to create tenants</p>
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto rounded-lg border border-slate-200">
+                <table class="w-full">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Subscription Plan</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Provisioned</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Applied Recipe</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var tenant in _tenants)
+                        {
+                            <tr class="border-b border-slate-100 hover:bg-slate-50">
+                                <td class="px-6 py-4 text-sm text-slate-900">@tenant.Name</td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold @GetStatusBadgeClass(tenant.Status)">
+                                        @tenant.Status
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-slate-600">@tenant.SubscriptionPlan</td>
+                                <td class="px-6 py-4 text-sm">
+                                    @if (tenant.IsProvisioned)
+                                    {
+                                        <span class="text-green-600 font-semibold">&#10003;</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-slate-400">&#8212;</span>
+                                    }
+                                </td>
+                                <td class="px-6 py-4 text-sm text-slate-500">
+                                    @(tenant.AppliedRecipeId.HasValue ? tenant.AppliedRecipeId.Value.ToString("N").Substring(0, 8) + "..." : "—")
+                                </td>
+                                <td class="px-6 py-4 text-sm text-slate-500">@tenant.CreatedAt.ToString("yyyy-MM-dd")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+
+    <!-- SIGNUP REQUESTS TAB -->
+    @if (!_isLoading && _activeTab == "Signup Requests")
+    {
+        <!-- Status filter toggle -->
+        <div class="flex items-center gap-2">
+            <input type="checkbox" id="showAllSignups" @bind="_showAllSignups" class="rounded border-slate-300" />
+            <label for="showAllSignups" class="text-sm font-medium text-slate-700">Show all signup requests</label>
+        </div>
+
+        @if (DisplayedSignups.Count == 0)
+        {
+            <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
+                <p class="text-slate-600">No pending signup requests</p>
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto rounded-lg border border-slate-200">
+                <table class="w-full">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Company Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Admin Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Created</th>
+                            <th class="px-6 py-3 text-right text-xs font-semibold text-slate-900 uppercase tracking-wide">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var signup in DisplayedSignups)
+                        {
+                            <!-- Summary row — click to expand -->
+                            <tr class="border-b border-slate-100 hover:bg-slate-50 cursor-pointer"
+                                @onclick="() => ToggleExpandRow(signup.Id)">
+                                <td class="px-6 py-4 text-sm text-slate-900">@signup.CompanyName</td>
+                                <td class="px-6 py-4 text-sm text-slate-600">@signup.AdminEmail</td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold @GetSignupStatusBadgeClass(signup.Status)">
+                                        @signup.Status
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-slate-500">@signup.CreatedAt.ToString("yyyy-MM-dd")</td>
+                                <td class="px-6 py-4 text-right space-x-2" @onclick:stopPropagation="true">
+                                    @if (signup.Status == "Pending")
+                                    {
+                                        <!-- Action buttons wired in Plan 11-03 -->
+                                        <button type="button"
+                                                @onclick="() => OpenApproveModal(signup.Id)"
+                                                class="text-sm font-medium text-green-600 hover:text-green-700">
+                                            Approve
+                                        </button>
+                                        <button type="button"
+                                                @onclick="() => OpenRejectModal(signup.Id)"
+                                                class="text-sm font-medium text-red-600 hover:text-red-700">
+                                            Reject
+                                        </button>
+                                    }
+                                    @if (signup.Status == "Approved" && !signup.IsProvisioned)
+                                    {
+                                        <!-- Retry provision button for Approved-but-not-provisioned -->
+                                        <button type="button"
+                                                @onclick="() => RetryProvisionAsync(signup.Id)"
+                                                disabled="@(_isProvisioning && _provisioningId == signup.Id)"
+                                                class="text-sm font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50">
+                                            @(_isProvisioning && _provisioningId == signup.Id ? "..." : "Provision")
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+
+                            <!-- Expanded detail row — keyed by unique ID -->
+                            @if (_expandedRowId == signup.Id)
+                            {
+                                <tr class="bg-slate-50 border-b border-slate-100">
+                                    <td colspan="5" class="px-6 py-4">
+                                        @if (_isLoadingDetail)
+                                        {
+                                            <p class="text-sm text-slate-500">Loading details...</p>
+                                        }
+                                        else if (_expandedDetail is not null && _expandedDetail.Id == signup.Id)
+                                        {
+                                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                                <div><span class="font-semibold text-slate-700">Phone:</span> <span class="text-slate-600">@(_expandedDetail.Phone)</span></div>
+                                                <div><span class="font-semibold text-slate-700">Company Size:</span> <span class="text-slate-600">@(_expandedDetail.CompanySize)</span></div>
+                                                <div><span class="font-semibold text-slate-700">Address:</span> <span class="text-slate-600">@(_expandedDetail.Address)</span></div>
+                                                <div><span class="font-semibold text-slate-700">Billing Contact:</span> <span class="text-slate-600">@(_expandedDetail.BillingContact)</span></div>
+                                                <div><span class="font-semibold text-slate-700">Recipe ID:</span> <span class="text-slate-600">@(_expandedDetail.RecipeId?.ToString() ?? "—")</span></div>
+                                                <div><span class="font-semibold text-slate-700">Review Note:</span> <span class="text-slate-600">@(_expandedDetail.ReviewNote ?? "—")</span></div>
+                                            </div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+
+</div>
+
+<!-- Approve modal -->
+@if (_showApproveModal)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h2 class="text-lg font-semibold text-slate-900 mb-2">Approve Signup Request</h2>
+            <p class="text-sm text-slate-600 mb-4">
+                Approving will mark this request as approved and trigger tenant provisioning.
+            </p>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1" for="approvalNote">
+                    Approval Note <span class="text-slate-400 text-xs">(optional)</span>
+                </label>
+                <textarea id="approvalNote" rows="3"
+                          @bind="_approvalNote"
+                          placeholder="Optional note visible to the team..."
+                          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </textarea>
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button type="button" @onclick="CancelApproveModal"
+                        class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    Cancel
+                </button>
+                <button type="button" @onclick="HandleApproveAsync"
+                        disabled="@_isApproving"
+                        class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500 disabled:opacity-50">
+                    @(_isApproving ? "Approving..." : "Confirm Approve")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Reject modal -->
+@if (_showRejectModal)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h2 class="text-lg font-semibold text-slate-900 mb-2">Reject Signup Request</h2>
+            <p class="text-sm text-slate-600 mb-4">
+                Please provide a reason for rejection. This will be recorded on the request.
+            </p>
+            @if (!string.IsNullOrEmpty(_rejectValidationError))
+            {
+                <p class="text-sm text-red-600 mb-3">@_rejectValidationError</p>
+            }
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1" for="rejectReason">
+                    Rejection Reason <span class="text-red-500">*</span>
+                </label>
+                <textarea id="rejectReason" rows="3"
+                          @bind="_rejectionReason"
+                          placeholder="Required: explain why this request is rejected..."
+                          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </textarea>
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button type="button" @onclick="CancelRejectModal"
+                        class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    Cancel
+                </button>
+                <button type="button" @onclick="HandleRejectAsync"
+                        disabled="@_isRejecting"
+                        class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50">
+                    @(_isRejecting ? "Rejecting..." : "Confirm Reject")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // Tab state
+    private string _activeTab = "Tenants";
+    private readonly string[] _tabs = ["Tenants", "Signup Requests"];
+
+    // Tenant list state
+    private List<TenantListItem> _tenants = [];
+
+    // Signup list state
+    private List<SignupListItem> _signups = [];
+    private bool _showAllSignups = false;
+
+    // Expandable row state (keyed by ID, not index)
+    private Guid? _expandedRowId = null;
+    private SignupDetailItem? _expandedDetail = null;
+    private bool _isLoadingDetail = false;
+
+    // Global UI state
+    private bool _isLoading = true;
+    private string? _errorBanner = null;
+    private string? _successMessage = null;
+
+    // Modal state
+    private bool _showApproveModal = false;
+    private bool _showRejectModal = false;
+    private Guid? _actionSignupId = null;
+
+    // Approve modal state (D-14)
+    private string _approvalNote = string.Empty;
+    private bool _isApproving = false;
+
+    // Reject modal state (D-15)
+    private string _rejectionReason = string.Empty;
+    private string? _rejectValidationError = null;
+    private bool _isRejecting = false;
+
+    // Retry provision state (D-17)
+    private bool _isProvisioning = false;
+    private Guid? _provisioningId = null;
+
+    private List<SignupListItem> DisplayedSignups =>
+        _showAllSignups ? _signups : _signups.Where(s => s.Status == "Pending").ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAllDataAsync();
+    }
+
+    private async Task LoadAllDataAsync()
+    {
+        _isLoading = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var tenantsTask = client.GetFromJsonAsync<List<TenantListItem>>("/admin/tenants");
+            var signupsTask = client.GetFromJsonAsync<List<SignupListItem>>("/admin/signup");
+            await Task.WhenAll(tenantsTask, signupsTask);
+            _tenants = tenantsTask.Result ?? [];
+            _signups = signupsTask.Result ?? [];
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to load data: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task ToggleExpandRow(Guid id)
+    {
+        if (_expandedRowId == id)
+        {
+            _expandedRowId = null;
+            _expandedDetail = null;
+            return;
+        }
+        _expandedRowId = id;
+        _expandedDetail = null;
+        _isLoadingDetail = true;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            _expandedDetail = await client.GetFromJsonAsync<SignupDetailItem>($"/admin/signup/{id}");
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to load details: {ex.Message}";
+        }
+        finally
+        {
+            _isLoadingDetail = false;
+        }
+    }
+
+    // Modal openers — bodies implemented in Plan 11-03
+    private void OpenApproveModal(Guid id)
+    {
+        _actionSignupId = id;
+        _showApproveModal = true;
+    }
+
+    private void OpenRejectModal(Guid id)
+    {
+        _actionSignupId = id;
+        _showRejectModal = true;
+    }
+
+    private void CancelApproveModal()
+    {
+        _showApproveModal = false;
+        _approvalNote = string.Empty;
+        _actionSignupId = null;
+    }
+
+    private void CancelRejectModal()
+    {
+        _showRejectModal = false;
+        _rejectionReason = string.Empty;
+        _rejectValidationError = null;
+        _actionSignupId = null;
+    }
+
+    // D-14: Two-step approve + provision chain
+    private async Task HandleApproveAsync()
+    {
+        if (_actionSignupId is null) return;
+        _isApproving = true;
+        _errorBanner = null;
+        _successMessage = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var signupId = _actionSignupId.Value;
+
+            // Step 1: Approve signup request
+            var approveResponse = await client.PostAsJsonAsync(
+                $"/admin/signup/{signupId}/approve",
+                new { ApprovalNote = string.IsNullOrWhiteSpace(_approvalNote) ? (string?)null : _approvalNote });
+
+            if (!approveResponse.IsSuccessStatusCode)
+            {
+                _errorBanner = $"Approval failed (HTTP {(int)approveResponse.StatusCode}).";
+                return;
+            }
+
+            // Update row to Approved immediately
+            var signupItem = _signups.FirstOrDefault(s => s.Id == signupId);
+            if (signupItem is not null) signupItem.Status = "Approved";
+
+            // Step 2: Provision tenant (D-14 chaining)
+            var provisionResponse = await client.PostAsJsonAsync(
+                $"/admin/tenants/{signupId}/provision", new { });
+
+            if (provisionResponse.IsSuccessStatusCode)
+            {
+                // Both steps succeeded (D-16)
+                if (signupItem is not null) signupItem.IsProvisioned = true;
+                _successMessage = "Signup approved and tenant provisioned successfully.";
+            }
+            else
+            {
+                // D-17: Step 1 succeeded, Step 2 failed — show retry button
+                _errorBanner = "Approval succeeded but provisioning failed. Use the 'Provision' button to retry.";
+            }
+
+            _showApproveModal = false;
+            _approvalNote = string.Empty;
+            _actionSignupId = null;
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isApproving = false;
+        }
+    }
+
+    // D-15: Reject with required reason
+    private async Task HandleRejectAsync()
+    {
+        if (_actionSignupId is null) return;
+
+        // Front-end validation: reason is required (D-15)
+        if (string.IsNullOrWhiteSpace(_rejectionReason))
+        {
+            _rejectValidationError = "Rejection reason is required.";
+            return;
+        }
+
+        _isRejecting = true;
+        _rejectValidationError = null;
+        _errorBanner = null;
+        _successMessage = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var signupId = _actionSignupId.Value;
+
+            var response = await client.PostAsJsonAsync(
+                $"/admin/signup/{signupId}/reject",
+                new { RejectionReason = _rejectionReason });
+
+            if (response.IsSuccessStatusCode)
+            {
+                // D-16: Optimistic UI update
+                var item = _signups.FirstOrDefault(s => s.Id == signupId);
+                if (item is not null) item.Status = "Rejected";
+                _successMessage = "Signup request rejected.";
+                _showRejectModal = false;
+                _rejectionReason = string.Empty;
+                _actionSignupId = null;
+            }
+            else
+            {
+                _errorBanner = $"Rejection failed (HTTP {(int)response.StatusCode}).";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isRejecting = false;
+        }
+    }
+
+    // D-17: Retry provision for Approved-but-not-provisioned entries
+    private async Task RetryProvisionAsync(Guid id)
+    {
+        _isProvisioning = true;
+        _provisioningId = id;
+        _errorBanner = null;
+        _successMessage = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.PostAsJsonAsync($"/admin/tenants/{id}/provision", new { });
+            if (response.IsSuccessStatusCode)
+            {
+                var item = _signups.FirstOrDefault(s => s.Id == id);
+                if (item is not null) item.IsProvisioned = true;
+                _successMessage = "Tenant provisioned successfully.";
+            }
+            else
+            {
+                _errorBanner = $"Provisioning failed (HTTP {(int)response.StatusCode}).";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isProvisioning = false;
+            _provisioningId = null;
+        }
+    }
+
+    private static string GetStatusBadgeClass(string status) =>
+        status == "Active" ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600";
+
+    private static string GetSignupStatusBadgeClass(string status) =>
+        status switch
+        {
+            "Approved" => "bg-green-100 text-green-800",
+            "Rejected" => "bg-red-100 text-red-700",
+            _ => "bg-amber-100 text-amber-700"  // Pending and other states
+        };
+
+    // Local DTO classes that mirror backend response shapes
+    private class TenantListItem
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string SubscriptionPlan { get; set; } = string.Empty;
+        public bool IsProvisioned { get; set; }
+        public Guid? AppliedRecipeId { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    private class SignupListItem
+    {
+        public Guid Id { get; set; }
+        public string CompanyName { get; set; } = string.Empty;
+        public string AdminEmail { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        // IsProvisioned tracked locally after approve actions in Plan 11-03
+        public bool IsProvisioned { get; set; } = false;
+    }
+
+    private class SignupDetailItem
+    {
+        public Guid Id { get; set; }
+        public string CompanyName { get; set; } = string.Empty;
+        public string AdminEmail { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string CompanySize { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public string BillingContact { get; set; } = string.Empty;
+        public Guid? RecipeId { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string? ReviewNote { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+}

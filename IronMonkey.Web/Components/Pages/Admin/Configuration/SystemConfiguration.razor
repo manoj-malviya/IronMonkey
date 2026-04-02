@@ -1,0 +1,1519 @@
+@page "/admin/configuration"
+@attribute [Authorize]
+@inject IHttpClientFactory HttpClientFactory
+
+<PageTitle>System Configuration — IronMonkey Admin</PageTitle>
+
+<div class="space-y-6">
+
+    <h1 class="text-2xl font-bold text-slate-900">System Configuration</h1>
+
+    <!-- Tab selector -->
+    <div class="border-b border-slate-200">
+        <nav class="flex space-x-8">
+            @foreach (var tab in _tabs)
+            {
+                <button type="button" @onclick="() => SetTab(tab)"
+                        class="@(tab == _activeTab
+                            ? "border-b-2 border-indigo-600 text-indigo-600 font-medium"
+                            : "text-slate-600 hover:text-slate-900") px-1 py-4 text-sm transition-colors">
+                    @tab
+                </button>
+            }
+        </nav>
+    </div>
+
+    <!-- Error banner -->
+    @if (!string.IsNullOrEmpty(_errorBanner))
+    {
+        <div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            @_errorBanner
+        </div>
+    }
+
+    <!-- Success banner -->
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
+            @_successMessage
+        </div>
+    }
+
+    <!-- PIPELINE STAGES TAB -->
+    @if (_activeTab == "Pipeline Stages")
+    {
+        @if (_isLoading)
+        {
+            <div class="py-12 text-center">
+                <p class="text-sm text-slate-500">Loading...</p>
+            </div>
+        }
+        else if (_stages.Count == 0 && !_creatingStage)
+        {
+            <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
+                <p class="text-slate-600">No pipeline stages configured. Add your first stage to get started.</p>
+                <button type="button" @onclick="StartAddStage"
+                        class="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                    + Add Stage
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto rounded-lg border border-slate-200">
+                <table class="w-full">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Order</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Status</th>
+                            <th class="px-6 py-3 text-right text-xs font-semibold text-slate-900 uppercase tracking-wide">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var stage in _stages.OrderBy(s => s.Order))
+                        {
+                            @if (_editingStageId == stage.Id)
+                            {
+                                <!-- Edit mode row -->
+                                <tr @key="stage.Id" class="border-b border-slate-100 bg-indigo-50">
+                                    <td colspan="4" class="px-6 py-4">
+                                        <div class="flex flex-wrap gap-3 items-end">
+                                            <div>
+                                                <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Name</label>
+                                                <input type="text" @bind="_editingStage!.Name"
+                                                       class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600" />
+                                            </div>
+                                            <div class="flex gap-2">
+                                                <button type="button" @onclick="CancelEditStage"
+                                                        class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                                    Cancel
+                                                </button>
+                                                <button type="button" @onclick="SaveEditStageAsync" disabled="@_isSaving"
+                                                        class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                                                    @(_isSaving ? "Saving..." : "Save")
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                <!-- Display mode row -->
+                                <tr @key="stage.Id" class="border-b border-slate-100 hover:bg-slate-50">
+                                    <td class="px-6 py-4 text-sm text-slate-900">@stage.Order</td>
+                                    <td class="px-6 py-4 text-sm text-slate-900">@stage.Name</td>
+                                    <td class="px-6 py-4 text-sm text-slate-600">
+                                        @if (stage.IsActive)
+                                        {
+                                            <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold bg-green-100 text-green-800">Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold bg-slate-100 text-slate-600">Inactive</span>
+                                        }
+                                    </td>
+                                    <td class="px-6 py-4 text-right space-x-1">
+                                        <!-- Up arrow -->
+                                        <button type="button" @onclick="() => MoveStageUpAsync(stage.Id)"
+                                                disabled="@(stage.Order == _stages.Min(s => s.Order))"
+                                                title="Move up"
+                                                class="p-1 rounded text-slate-600 hover:bg-slate-100 disabled:text-slate-300">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18" />
+                                            </svg>
+                                        </button>
+                                        <!-- Down arrow -->
+                                        <button type="button" @onclick="() => MoveStageDownAsync(stage.Id)"
+                                                disabled="@(stage.Order == _stages.Max(s => s.Order))"
+                                                title="Move down"
+                                                class="p-1 rounded text-slate-600 hover:bg-slate-100 disabled:text-slate-300">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
+                                            </svg>
+                                        </button>
+                                        <button type="button" @onclick="() => StartEditStage(stage)"
+                                                class="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+                                            Edit
+                                        </button>
+                                        <button type="button" @onclick="() => OpenDeleteStageConfirm(stage.Id)"
+                                                class="text-sm font-medium text-red-600 hover:text-red-700">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+
+                        <!-- Add Stage row -->
+                        @if (_creatingStage && _editingStageId == null)
+                        {
+                            <tr class="border-b border-slate-100 bg-indigo-50">
+                                <td colspan="4" class="px-6 py-4">
+                                    <div class="flex flex-wrap gap-3 items-end">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Name</label>
+                                            <input type="text" @bind="_newStageName" placeholder="Stage name"
+                                                   class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600" />
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <button type="button" @onclick="CancelAddStage"
+                                                    class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                                Cancel
+                                            </button>
+                                            <button type="button" @onclick="SaveNewStageAsync" disabled="@_isSaving"
+                                                    class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                                                @(_isSaving ? "Saving..." : "Create")
+                                            </button>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Add Stage button (below table) -->
+            <div class="mt-4">
+                <button type="button" @onclick="StartAddStage"
+                        disabled="@(_creatingStage || _editingStageId != null)"
+                        class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                    + Add Stage
+                </button>
+            </div>
+        }
+    }
+
+    <!-- CUSTOM FIELDS TAB -->
+    @if (_activeTab == "Custom Fields")
+    {
+        @if (_isLoading)
+        {
+            <div class="py-12 text-center">
+                <p class="text-sm text-slate-500">Loading...</p>
+            </div>
+        }
+        else if (_fields.Count == 0 && !_creatingField)
+        {
+            <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
+                <p class="text-slate-600">No custom fields defined. Add fields to capture tenant-specific lead data.</p>
+                <button type="button" @onclick="StartAddField"
+                        class="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                    + Add Field
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto rounded-lg border border-slate-200">
+                <table class="w-full">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Required</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Options</th>
+                            <th class="px-6 py-3 text-right text-xs font-semibold text-slate-900 uppercase tracking-wide">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var field in _fields)
+                        {
+                            @if (_editingFieldId == field.Id)
+                            {
+                                <!-- Edit mode row -->
+                                <tr @key="field.Id" class="border-b border-slate-100 bg-indigo-50">
+                                    <td colspan="5" class="px-6 py-4">
+                                        <div class="flex flex-wrap gap-3 items-end">
+                                            <div>
+                                                <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Name</label>
+                                                <input type="text" @bind="_editingField!.FieldName"
+                                                       class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600" />
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Type</label>
+                                                <select @bind="_editingField!.FieldType"
+                                                        class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600">
+                                                    <option value="Text">Text</option>
+                                                    <option value="Number">Number</option>
+                                                    <option value="Date">Date</option>
+                                                    <option value="Dropdown">Dropdown</option>
+                                                    <option value="MultiSelect">MultiSelect</option>
+                                                    <option value="Currency">Currency</option>
+                                                    <option value="Boolean">Boolean</option>
+                                                </select>
+                                            </div>
+                                            <div class="flex items-center gap-1 mt-4">
+                                                <input type="checkbox" @bind="_editingField!.IsRequired" class="rounded border-slate-300" />
+                                                <label class="text-sm text-slate-700 ml-1">Required</label>
+                                            </div>
+                                            @if (_editingField!.FieldType is "Dropdown" or "MultiSelect")
+                                            {
+                                                <div>
+                                                    <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Options (comma-separated)</label>
+                                                    <input type="text" @bind="_editingFieldOptions" placeholder="Option A, Option B"
+                                                           class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 w-64" />
+                                                </div>
+                                            }
+                                            <div class="flex gap-2">
+                                                <button type="button" @onclick="CancelEditField"
+                                                        class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                                    Cancel
+                                                </button>
+                                                <button type="button" @onclick="SaveEditFieldAsync" disabled="@_isSaving"
+                                                        class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                                                    @(_isSaving ? "Saving..." : "Save")
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                <!-- Display mode row -->
+                                <tr @key="field.Id" class="border-b border-slate-100 hover:bg-slate-50">
+                                    <td class="px-6 py-4 text-sm text-slate-900">@field.FieldName</td>
+                                    <td class="px-6 py-4 text-sm text-slate-600">@field.FieldType</td>
+                                    <td class="px-6 py-4">
+                                        @if (field.IsRequired)
+                                        {
+                                            <span class="bg-indigo-50 text-indigo-700 text-xs font-medium px-2 py-0.5 rounded-full">Required</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-slate-400 text-xs">—</span>
+                                        }
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-slate-600">
+                                        @if ((field.FieldType is "Dropdown" or "MultiSelect") && field.Options.Count > 0)
+                                        {
+                                            @string.Join(", ", field.Options)
+                                        }
+                                        else
+                                        {
+                                            <span class="text-slate-400">—</span>
+                                        }
+                                    </td>
+                                    <td class="px-6 py-4 text-right space-x-1">
+                                        <button type="button" @onclick="() => StartEditField(field)"
+                                                class="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+                                            Edit
+                                        </button>
+                                        <button type="button" @onclick="() => OpenDeleteFieldConfirm(field.Id)"
+                                                class="text-sm font-medium text-red-600 hover:text-red-700">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+
+                        <!-- Add Field row -->
+                        @if (_creatingField && _editingFieldId == null)
+                        {
+                            <tr class="border-b border-slate-100 bg-indigo-50">
+                                <td colspan="5" class="px-6 py-4">
+                                    <div class="flex flex-wrap gap-3 items-end">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Name</label>
+                                            <input type="text" @bind="_newFieldName" placeholder="Field name"
+                                                   class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Type</label>
+                                            <select @bind="_newFieldType"
+                                                    class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600">
+                                                <option value="Text">Text</option>
+                                                <option value="Number">Number</option>
+                                                <option value="Date">Date</option>
+                                                <option value="Dropdown">Dropdown</option>
+                                                <option value="MultiSelect">MultiSelect</option>
+                                                <option value="Currency">Currency</option>
+                                                <option value="Boolean">Boolean</option>
+                                            </select>
+                                        </div>
+                                        <div class="flex items-center gap-1 mt-4">
+                                            <input type="checkbox" @bind="_newFieldRequired" class="rounded border-slate-300" />
+                                            <label class="text-sm text-slate-700 ml-1">Required</label>
+                                        </div>
+                                        @if (_newFieldType is "Dropdown" or "MultiSelect")
+                                        {
+                                            <div>
+                                                <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Options (comma-separated)</label>
+                                                <input type="text" @bind="_newFieldOptions" placeholder="Option A, Option B"
+                                                       class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 w-64" />
+                                            </div>
+                                        }
+                                        <div class="flex gap-2">
+                                            <button type="button" @onclick="CancelAddField"
+                                                    class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                                Cancel
+                                            </button>
+                                            <button type="button" @onclick="SaveNewFieldAsync" disabled="@_isSaving"
+                                                    class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                                                @(_isSaving ? "Saving..." : "Create")
+                                            </button>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Add Field button (below table) -->
+            <div class="mt-4">
+                <button type="button" @onclick="StartAddField"
+                        disabled="@(_creatingField || _editingFieldId != null)"
+                        class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                    + Add Field
+                </button>
+            </div>
+        }
+    }
+
+    <!-- ROUTING TAB -->
+    @if (_activeTab == "Routing")
+    {
+        @if (_isLoading)
+        {
+            <div class="py-12 text-center">
+                <p class="text-sm text-slate-500">Loading...</p>
+            </div>
+        }
+        else
+        {
+            <div class="space-y-6 max-w-2xl">
+                <div>
+                    <p class="text-sm font-semibold text-slate-900 mb-4">Lead Assignment Strategy</p>
+                    <div class="flex gap-6">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="routingMode" value="RoundRobin"
+                                   checked="@(_routingMode == "RoundRobin")"
+                                   @onchange="@((ChangeEventArgs e) => _routingMode = (string?)e.Value ?? "RoundRobin")"
+                                   class="border-slate-300" />
+                            <span class="text-sm text-slate-700">Round-Robin</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="routingMode" value="Territory"
+                                   checked="@(_routingMode == "Territory")"
+                                   @onchange="@((ChangeEventArgs e) => _routingMode = (string?)e.Value ?? "RoundRobin")"
+                                   class="border-slate-300" />
+                            <span class="text-sm text-slate-700">Territory-Based</span>
+                        </label>
+                    </div>
+                </div>
+
+                @if (_routingMode == "Territory")
+                {
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-2">
+                            Territory Rules (JSON)
+                        </label>
+                        <textarea @bind="_territoryJson"
+                                  placeholder='[{"territory": "West", "states": ["CA", "OR"]}]'
+                                  class="w-full h-48 rounded-lg border border-slate-300 px-4 py-3 font-mono text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600"></textarea>
+                    </div>
+                }
+
+                <div class="flex justify-end">
+                    <button @onclick="SaveRoutingConfigAsync" disabled="@_isSaving"
+                            class="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                        @(_isSaving ? "Saving..." : "Save Configuration")
+                    </button>
+                </div>
+            </div>
+        }
+    }
+
+    <!-- WORKFLOW RULES TAB -->
+    @if (_activeTab == "Workflow Rules")
+    {
+        @if (_isLoading)
+        {
+            <div class="py-12 text-center">
+                <p class="text-sm text-slate-500">Loading...</p>
+            </div>
+        }
+        else if (_rules.Count == 0 && !_creatingRule)
+        {
+            <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
+                <p class="text-slate-600">No workflow rules configured. Create rules to automate your lead pipeline.</p>
+                <button type="button" @onclick="StartAddRule"
+                        class="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                    + Add Rule
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto rounded-lg border border-slate-200">
+                <table class="w-full">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Trigger</th>
+                            <th class="px-6 py-3 text-center text-xs font-semibold text-slate-900 uppercase tracking-wide">Active</th>
+                            <th class="px-6 py-3 text-right text-xs font-semibold text-slate-900 uppercase tracking-wide">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var rule in _rules)
+                        {
+                            <tr @key="rule.Id" class="border-b border-slate-100 @(_editingRuleId == rule.Id ? "bg-indigo-50" : "hover:bg-slate-50")">
+                                <td class="px-6 py-4 text-sm font-medium text-slate-900">@rule.Name</td>
+                                <td class="px-6 py-4 text-sm text-slate-600">@rule.Trigger</td>
+                                <td class="px-6 py-4 text-center">
+                                    <button type="button" @onclick="() => ToggleRuleActiveAsync(rule.Id)"
+                                            title="@(rule.IsActive ? "Deactivate rule" : "Activate rule")"
+                                            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors @(rule.IsActive ? "bg-indigo-600" : "bg-slate-300")">
+                                        <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform @(rule.IsActive ? "translate-x-6" : "translate-x-1")"></span>
+                                    </button>
+                                </td>
+                                <td class="px-6 py-4 text-right space-x-2">
+                                    <button type="button" @onclick="() => StartEditRule(rule)"
+                                            class="text-sm font-medium text-indigo-600 hover:text-indigo-700">Edit</button>
+                                    <button type="button" @onclick="() => OpenDeleteRuleConfirm(rule.Id)"
+                                            class="text-sm font-medium text-red-600 hover:text-red-700">Delete</button>
+                                </td>
+                            </tr>
+
+                            @if (_editingRuleId == rule.Id && _editingRule != null)
+                            {
+                                <tr class="bg-indigo-50 border-b border-slate-100">
+                                    <td colspan="4" class="px-6 py-4">
+                                        <div class="space-y-4 max-w-2xl">
+                                            <div class="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Name</label>
+                                                    <input type="text" @bind="_editingRule!.Name"
+                                                           class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600" />
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Trigger</label>
+                                                    <select @bind="_editingRule!.Trigger"
+                                                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600">
+                                                        <option value="FieldChange">Field Change</option>
+                                                        <option value="StatusChange">Status Change</option>
+                                                        <option value="TimeElapsed">Time Elapsed</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Condition (JSON)</label>
+                                                <textarea @bind="_editingRule!.ConditionJson" rows="4"
+                                                          placeholder="{}"
+                                                          class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600"></textarea>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Action (JSON)</label>
+                                                <textarea @bind="_editingRule!.ActionJson" rows="4"
+                                                          placeholder="{}"
+                                                          class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600"></textarea>
+                                            </div>
+                                            <div class="flex gap-2 justify-end">
+                                                <button type="button" @onclick="CancelEditRule"
+                                                        class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
+                                                <button type="button" @onclick="SaveEditRuleAsync" disabled="@_isSaving"
+                                                        class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                                                    @(_isSaving ? "Saving..." : "Save")
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Add Rule inline section (below table) -->
+            @if (_creatingRule)
+            {
+                <div class="mt-4 rounded-lg border border-indigo-200 bg-indigo-50 px-6 py-4">
+                    <div class="space-y-4 max-w-2xl">
+                        <p class="text-sm font-semibold text-slate-900">New Workflow Rule</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Name</label>
+                                <input type="text" @bind="_newRuleName" placeholder="Rule name"
+                                       class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Trigger</label>
+                                <select @bind="_newRuleTrigger"
+                                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600">
+                                    <option value="FieldChange">Field Change</option>
+                                    <option value="StatusChange">Status Change</option>
+                                    <option value="TimeElapsed">Time Elapsed</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Condition (JSON)</label>
+                            <textarea @bind="_newRuleConditionJson" rows="4"
+                                      placeholder="{}"
+                                      class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Action (JSON)</label>
+                            <textarea @bind="_newRuleActionJson" rows="4"
+                                      placeholder="{}"
+                                      class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600"></textarea>
+                        </div>
+                        <div class="flex gap-2 justify-end">
+                            <button type="button" @onclick="CancelAddRule"
+                                    class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
+                            <button type="button" @onclick="SaveNewRuleAsync" disabled="@_isSaving"
+                                    class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                                @(_isSaving ? "Saving..." : "Create")
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Add Rule button (below table) -->
+            <div class="mt-4">
+                <button type="button" @onclick="StartAddRule"
+                        disabled="@(_creatingRule || _editingRuleId != null)"
+                        class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                    + Add Rule
+                </button>
+            </div>
+        }
+    }
+
+</div>
+
+<!-- Delete confirmation modal -->
+@if (_showDeleteConfirm)
+{
+    <div class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-lg max-w-sm w-full">
+            <div class="px-6 py-4 border-b border-slate-200">
+                <h3 class="text-lg font-semibold text-slate-900">@_deleteModalTitle</h3>
+            </div>
+            <div class="px-6 py-4">
+                <p class="text-sm text-slate-600">@_deleteModalMessage</p>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-200 flex gap-2 justify-end">
+                <button type="button" @onclick="CancelDelete"
+                        class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    Cancel
+                </button>
+                <button type="button" @onclick="ConfirmDeleteAsync" disabled="@_isSaving"
+                        class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+                    @(_isSaving ? "Deleting..." : "Delete")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // Tab state
+    private readonly string[] _tabs = ["Pipeline Stages", "Custom Fields", "Routing", "Workflow Rules"];
+    private string _activeTab = "Pipeline Stages";
+    private bool _isLoading = false;
+    private bool _isSaving = false;
+    private string? _errorBanner = null;
+    private string? _successMessage = null;
+
+    // Pipeline Stages
+    private List<StageItem> _stages = new();
+    private bool _stagesLoaded = false;
+    private Guid? _editingStageId = null;
+    private StageItem? _editingStage = null;
+    private bool _creatingStage = false;
+    private string _newStageName = string.Empty;
+
+    // Custom Fields state
+    private List<FieldItem> _fields = new();
+    private bool _fieldsLoaded = false;
+    private Guid? _editingFieldId = null;
+    private FieldItem? _editingField = null;
+    private string _editingFieldOptions = string.Empty;
+    private bool _creatingField = false;
+    private string _newFieldName = string.Empty;
+    private string _newFieldType = "Text";
+    private bool _newFieldRequired = false;
+    private string _newFieldOptions = string.Empty;
+
+    // Workflow Rules state
+    private List<RuleItem> _rules = new();
+    private bool _rulesLoaded = false;
+    private Guid? _editingRuleId = null;
+    private RuleItem? _editingRule = null;
+    private bool _creatingRule = false;
+    private string _newRuleName = string.Empty;
+    private string _newRuleTrigger = "FieldChange";
+    private string _newRuleConditionJson = "{}";
+    private string _newRuleActionJson = "{}";
+
+    // Delete modal (shared across all tabs)
+    private bool _showDeleteConfirm = false;
+    private string _deleteModalTitle = string.Empty;
+    private string _deleteModalMessage = string.Empty;
+    private Guid _deletingItemId = Guid.Empty;
+    private string _deletingItemType = string.Empty; // "stage", "field", "rule"
+
+    // Local DTO for stages — matches ListPipelineStagesEndpoint response (Id, Name, Order, IsActive)
+    private class StageItem
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int Order { get; set; }
+        public bool IsActive { get; set; }
+    }
+
+    // Local DTO for custom fields — matches ListCustomFieldsEndpoint response (Id, FieldName, FieldType, IsRequired, Options)
+    private class FieldItem
+    {
+        public Guid Id { get; set; }
+        public string FieldName { get; set; } = string.Empty;
+        public string FieldType { get; set; } = "Text";
+        public bool IsRequired { get; set; }
+        public List<string> Options { get; set; } = new();
+    }
+
+    // Local DTO for workflow rules — matches ListWorkflowRulesEndpoint response (Id, Name, Trigger, ConditionJson, ActionJson, IsActive)
+    private class RuleItem
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Trigger { get; set; } = "FieldChange";
+        public string ConditionJson { get; set; } = "{}";
+        public string ActionJson { get; set; } = "{}";
+        public bool IsActive { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStagesAsync();
+    }
+
+    private void SetTab(string tab)
+    {
+        _activeTab = tab;
+        _errorBanner = null;
+        if (tab == "Pipeline Stages" && !_stagesLoaded)
+        {
+            _ = LoadStagesAsync();
+        }
+        else if (tab == "Custom Fields" && !_fieldsLoaded)
+        {
+            _ = LoadFieldsAsync();
+        }
+        else if (tab == "Routing" && !_routingLoaded)
+        {
+            _ = LoadRoutingConfigAsync();
+        }
+        else if (tab == "Workflow Rules" && !_rulesLoaded)
+        {
+            _ = LoadRulesAsync();
+        }
+    }
+
+    private async Task LoadStagesAsync()
+    {
+        _isLoading = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var stages = await client.GetFromJsonAsync<List<StageItem>>("/api/pipeline-stages");
+            _stages = (stages ?? []).OrderBy(s => s.Order).ToList();
+            _stagesLoaded = true;
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to load pipeline stages: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void StartAddStage()
+    {
+        _creatingStage = true;
+        _editingStageId = null;
+        _newStageName = string.Empty;
+    }
+
+    private void CancelAddStage()
+    {
+        _creatingStage = false;
+        _newStageName = string.Empty;
+    }
+
+    private async Task SaveNewStageAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newStageName)) return;
+
+        _isSaving = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var newOrder = _stages.Count > 0 ? _stages.Max(s => s.Order) + 1 : 1;
+            var response = await client.PostAsJsonAsync("/api/pipeline-stages", new { Name = _newStageName, Order = newOrder });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var created = await response.Content.ReadFromJsonAsync<StageItem>();
+                if (created is not null)
+                {
+                    _stages.Add(created);
+                    _stages = _stages.OrderBy(s => s.Order).ToList();
+                }
+                _creatingStage = false;
+                _newStageName = string.Empty;
+                ShowSuccessMessage("Pipeline stage created.");
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _errorBanner = $"Failed to create stage. {error}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to create stage: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void StartEditStage(StageItem stage)
+    {
+        _editingStageId = stage.Id;
+        _editingStage = new StageItem { Id = stage.Id, Name = stage.Name, Order = stage.Order, IsActive = stage.IsActive };
+        _creatingStage = false;
+    }
+
+    private void CancelEditStage()
+    {
+        _editingStageId = null;
+        _editingStage = null;
+    }
+
+    private async Task SaveEditStageAsync()
+    {
+        if (_editingStage is null || _editingStageId is null) return;
+        if (string.IsNullOrWhiteSpace(_editingStage.Name)) return;
+
+        _isSaving = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.PutAsJsonAsync($"/api/pipeline-stages/{_editingStageId}", new { _editingStage.Name, _editingStage.Order });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var updated = await response.Content.ReadFromJsonAsync<StageItem>();
+                if (updated is not null)
+                {
+                    var idx = _stages.FindIndex(s => s.Id == updated.Id);
+                    if (idx >= 0) _stages[idx] = updated;
+                    _stages = _stages.OrderBy(s => s.Order).ToList();
+                }
+                _editingStageId = null;
+                _editingStage = null;
+                ShowSuccessMessage("Pipeline stage saved.");
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _errorBanner = $"Failed to save stage. {error}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to save stage: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task MoveStageUpAsync(Guid id)
+    {
+        var stage = _stages.FirstOrDefault(s => s.Id == id);
+        if (stage is null) return;
+
+        var above = _stages.Where(s => s.Order < stage.Order).OrderByDescending(s => s.Order).FirstOrDefault();
+        if (above is null) return;
+
+        // Optimistic swap
+        var stageOrder = stage.Order;
+        var aboveOrder = above.Order;
+        stage.Order = aboveOrder;
+        above.Order = stageOrder;
+        _stages = _stages.OrderBy(s => s.Order).ToList();
+
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var task1 = client.PutAsJsonAsync($"/api/pipeline-stages/{stage.Id}", new { stage.Name, stage.Order });
+            var task2 = client.PutAsJsonAsync($"/api/pipeline-stages/{above.Id}", new { above.Name, above.Order });
+            await Task.WhenAll(task1, task2);
+
+            if (!task1.Result.IsSuccessStatusCode || !task2.Result.IsSuccessStatusCode)
+            {
+                // Revert on failure
+                stage.Order = stageOrder;
+                above.Order = aboveOrder;
+                _stages = _stages.OrderBy(s => s.Order).ToList();
+                _errorBanner = "Failed to reorder stages. Please try again.";
+            }
+            else
+            {
+                ShowSuccessMessage("Stages reordered.");
+            }
+        }
+        catch (Exception ex)
+        {
+            // Revert on exception
+            stage.Order = stageOrder;
+            above.Order = aboveOrder;
+            _stages = _stages.OrderBy(s => s.Order).ToList();
+            _errorBanner = $"Failed to reorder stages: {ex.Message}";
+        }
+    }
+
+    private async Task MoveStageDownAsync(Guid id)
+    {
+        var stage = _stages.FirstOrDefault(s => s.Id == id);
+        if (stage is null) return;
+
+        var below = _stages.Where(s => s.Order > stage.Order).OrderBy(s => s.Order).FirstOrDefault();
+        if (below is null) return;
+
+        // Optimistic swap
+        var stageOrder = stage.Order;
+        var belowOrder = below.Order;
+        stage.Order = belowOrder;
+        below.Order = stageOrder;
+        _stages = _stages.OrderBy(s => s.Order).ToList();
+
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var task1 = client.PutAsJsonAsync($"/api/pipeline-stages/{stage.Id}", new { stage.Name, stage.Order });
+            var task2 = client.PutAsJsonAsync($"/api/pipeline-stages/{below.Id}", new { below.Name, below.Order });
+            await Task.WhenAll(task1, task2);
+
+            if (!task1.Result.IsSuccessStatusCode || !task2.Result.IsSuccessStatusCode)
+            {
+                // Revert on failure
+                stage.Order = stageOrder;
+                below.Order = belowOrder;
+                _stages = _stages.OrderBy(s => s.Order).ToList();
+                _errorBanner = "Failed to reorder stages. Please try again.";
+            }
+            else
+            {
+                ShowSuccessMessage("Stages reordered.");
+            }
+        }
+        catch (Exception ex)
+        {
+            // Revert on exception
+            stage.Order = stageOrder;
+            below.Order = belowOrder;
+            _stages = _stages.OrderBy(s => s.Order).ToList();
+            _errorBanner = $"Failed to reorder stages: {ex.Message}";
+        }
+    }
+
+    private void OpenDeleteStageConfirm(Guid id)
+    {
+        _showDeleteConfirm = true;
+        _deleteModalTitle = "Delete Pipeline Stage";
+        _deleteModalMessage = "Are you sure? Leads in this stage will be affected. This cannot be undone.";
+        _deletingItemId = id;
+        _deletingItemType = "stage";
+    }
+
+    private void CancelDelete()
+    {
+        _showDeleteConfirm = false;
+        _deletingItemId = Guid.Empty;
+        _deletingItemType = string.Empty;
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (_deletingItemType == "stage")
+        {
+            await DeleteStageAsync(_deletingItemId);
+        }
+        else if (_deletingItemType == "field")
+        {
+            await DeleteFieldAsync(_deletingItemId);
+        }
+        else if (_deletingItemType == "rule")
+        {
+            await DeleteRuleAsync(_deletingItemId);
+        }
+        _showDeleteConfirm = false;
+        _deletingItemId = Guid.Empty;
+        _deletingItemType = string.Empty;
+    }
+
+    private async Task DeleteStageAsync(Guid id)
+    {
+        _isSaving = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.DeleteAsync($"/api/pipeline-stages/{id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                _stages.RemoveAll(s => s.Id == id);
+                ShowSuccessMessage("Pipeline stage deleted.");
+            }
+            else
+            {
+                _errorBanner = "Failed to delete stage. It may be in use. Please refresh and try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to delete stage: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task DeleteFieldAsync(Guid id)
+    {
+        _isSaving = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.DeleteAsync($"/api/custom-fields/{id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                _fields.RemoveAll(f => f.Id == id);
+                ShowSuccessMessage("Custom field deleted.");
+            }
+            else
+            {
+                _errorBanner = "Failed to delete custom field. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to delete custom field: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void ShowSuccessMessage(string msg)
+    {
+        _successMessage = msg;
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(3000);
+            _successMessage = null;
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+
+    // ── Custom Fields ────────────────────────────────────────────────────────
+
+    private async Task LoadFieldsAsync()
+    {
+        _isLoading = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var fields = await client.GetFromJsonAsync<List<FieldItem>>("/api/custom-fields");
+            _fields = fields ?? new();
+            _fieldsLoaded = true;
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to load custom fields: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void StartAddField()
+    {
+        _creatingField = true;
+        _editingFieldId = null;
+        _newFieldName = string.Empty;
+        _newFieldType = "Text";
+        _newFieldRequired = false;
+        _newFieldOptions = string.Empty;
+    }
+
+    private void CancelAddField()
+    {
+        _creatingField = false;
+        _newFieldName = string.Empty;
+        _newFieldOptions = string.Empty;
+    }
+
+    private async Task SaveNewFieldAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newFieldName)) return;
+
+        _isSaving = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var options = ParseOptions(_newFieldOptions);
+            var response = await client.PostAsJsonAsync("/api/custom-fields", new
+            {
+                FieldName = _newFieldName,
+                FieldType = _newFieldType,
+                IsRequired = _newFieldRequired,
+                Options = options
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var created = await response.Content.ReadFromJsonAsync<FieldItem>();
+                if (created is not null)
+                {
+                    _fields.Add(created);
+                }
+                CancelAddField();
+                ShowSuccessMessage("Custom field created.");
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _errorBanner = $"Failed to create custom field. {error}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to create custom field: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void StartEditField(FieldItem f)
+    {
+        _editingFieldId = f.Id;
+        _editingField = new FieldItem
+        {
+            Id = f.Id,
+            FieldName = f.FieldName,
+            FieldType = f.FieldType,
+            IsRequired = f.IsRequired,
+            Options = new List<string>(f.Options)
+        };
+        _editingFieldOptions = string.Join(", ", f.Options);
+        _creatingField = false;
+    }
+
+    private void CancelEditField()
+    {
+        _editingFieldId = null;
+        _editingField = null;
+        _editingFieldOptions = string.Empty;
+    }
+
+    private async Task SaveEditFieldAsync()
+    {
+        if (_editingField is null || _editingFieldId is null) return;
+        if (string.IsNullOrWhiteSpace(_editingField.FieldName)) return;
+
+        _isSaving = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var options = ParseOptions(_editingFieldOptions);
+            var response = await client.PutAsJsonAsync($"/api/custom-fields/{_editingFieldId}", new
+            {
+                FieldName = _editingField.FieldName,
+                FieldType = _editingField.FieldType,
+                IsRequired = _editingField.IsRequired,
+                Options = options
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var updated = await response.Content.ReadFromJsonAsync<FieldItem>();
+                if (updated is not null)
+                {
+                    var idx = _fields.FindIndex(f => f.Id == updated.Id);
+                    if (idx >= 0) _fields[idx] = updated;
+                }
+                CancelEditField();
+                ShowSuccessMessage("Custom field saved.");
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _errorBanner = $"Failed to save custom field. {error}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to save custom field: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void OpenDeleteFieldConfirm(Guid id)
+    {
+        _showDeleteConfirm = true;
+        _deleteModalTitle = "Delete Custom Field";
+        _deleteModalMessage = "Are you sure? Data in this field cannot be recovered.";
+        _deletingItemId = id;
+        _deletingItemType = "field";
+    }
+
+    private static List<string> ParseOptions(string raw) =>
+        string.IsNullOrWhiteSpace(raw)
+            ? new List<string>()
+            : raw.Split(',').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s)).ToList();
+
+    // ── Routing ──────────────────────────────────────────────────────────────
+
+    private bool _routingLoaded = false;
+    private string _routingMode = "RoundRobin";
+    private string _territoryJson = string.Empty;
+
+    private async Task LoadRoutingConfigAsync()
+    {
+        _isLoading = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.GetAsync("/api/routing-config");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var config = await response.Content.ReadFromJsonAsync<RoutingConfigResponse>();
+                if (config is not null)
+                {
+                    _routingMode = config.Strategy ?? "RoundRobin";
+                    _territoryJson = config.TerritoryMapJson ?? string.Empty;
+                }
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                // No config yet — use defaults
+                _routingMode = "RoundRobin";
+                _territoryJson = string.Empty;
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _errorBanner = $"Failed to load routing configuration. {error}";
+            }
+            _routingLoaded = true;
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to load routing configuration: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveRoutingConfigAsync()
+    {
+        _isSaving = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.PostAsJsonAsync("/api/routing-config", new
+            {
+                Strategy = _routingMode,
+                Dimension = "Agent", // default dimension — required by endpoint
+                TerritoryMapJson = _routingMode == "Territory" ? _territoryJson : (string?)null,
+                CustomFieldKey = (string?)null
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                ShowSuccessMessage("Routing configuration saved.");
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _errorBanner = $"Failed to save routing configuration. {error}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to save routing configuration: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    // DTO for reading routing config response
+    private record RoutingConfigResponse(Guid Id, string Strategy, string Dimension,
+        string? TerritoryMapJson, string? CustomFieldKey, bool IsEnabled, int RoundRobinPointer);
+
+    // ── Workflow Rules ───────────────────────────────────────────────────────
+
+    private async Task LoadRulesAsync()
+    {
+        _isLoading = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var rules = await client.GetFromJsonAsync<List<RuleItem>>("/api/workflow-rules");
+            _rules = rules ?? new();
+            _rulesLoaded = true;
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to load workflow rules: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void StartAddRule()
+    {
+        _creatingRule = true;
+        _editingRuleId = null;
+        _newRuleName = string.Empty;
+        _newRuleTrigger = "FieldChange";
+        _newRuleConditionJson = "{}";
+        _newRuleActionJson = "{}";
+    }
+
+    private void CancelAddRule()
+    {
+        _creatingRule = false;
+        _newRuleName = string.Empty;
+        _newRuleConditionJson = "{}";
+        _newRuleActionJson = "{}";
+    }
+
+    private async Task SaveNewRuleAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newRuleName)) return;
+
+        _isSaving = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.PostAsJsonAsync("/api/workflow-rules", new
+            {
+                Name = _newRuleName,
+                Trigger = _newRuleTrigger,
+                ConditionJson = _newRuleConditionJson,
+                ActionJson = _newRuleActionJson
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var created = await response.Content.ReadFromJsonAsync<RuleItem>();
+                if (created is not null)
+                {
+                    _rules.Add(created);
+                }
+                CancelAddRule();
+                ShowSuccessMessage("Workflow rule created.");
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _errorBanner = $"Failed to create workflow rule. {error}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to create workflow rule: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void StartEditRule(RuleItem r)
+    {
+        _editingRuleId = r.Id;
+        _editingRule = new RuleItem
+        {
+            Id = r.Id,
+            Name = r.Name,
+            Trigger = r.Trigger,
+            ConditionJson = r.ConditionJson,
+            ActionJson = r.ActionJson,
+            IsActive = r.IsActive
+        };
+        _creatingRule = false;
+    }
+
+    private void CancelEditRule()
+    {
+        _editingRuleId = null;
+        _editingRule = null;
+    }
+
+    private async Task SaveEditRuleAsync()
+    {
+        if (_editingRule is null || _editingRuleId is null) return;
+        if (string.IsNullOrWhiteSpace(_editingRule.Name)) return;
+
+        _isSaving = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.PutAsJsonAsync($"/api/workflow-rules/{_editingRuleId}", new
+            {
+                Name = _editingRule.Name,
+                Trigger = _editingRule.Trigger,
+                ConditionJson = _editingRule.ConditionJson,
+                ActionJson = _editingRule.ActionJson
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var updated = await response.Content.ReadFromJsonAsync<RuleItem>();
+                if (updated is not null)
+                {
+                    var idx = _rules.FindIndex(r => r.Id == updated.Id);
+                    if (idx >= 0) _rules[idx] = updated;
+                }
+                CancelEditRule();
+                ShowSuccessMessage("Workflow rule saved.");
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _errorBanner = $"Failed to save workflow rule. {error}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to save workflow rule: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task ToggleRuleActiveAsync(Guid id)
+    {
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.PostAsync($"/api/workflow-rules/{id}/toggle",
+                new StringContent(string.Empty, System.Text.Encoding.UTF8, "application/json"));
+
+            if (response.IsSuccessStatusCode)
+            {
+                var rule = _rules.FirstOrDefault(r => r.Id == id);
+                if (rule is not null)
+                {
+                    rule.IsActive = !rule.IsActive;
+                    ShowSuccessMessage($"Rule is now {(rule.IsActive ? "active" : "inactive")}.");
+                }
+                StateHasChanged();
+            }
+            else
+            {
+                _errorBanner = "Failed to toggle rule status. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to toggle rule status: {ex.Message}";
+        }
+    }
+
+    private void OpenDeleteRuleConfirm(Guid id)
+    {
+        _showDeleteConfirm = true;
+        _deleteModalTitle = "Delete Workflow Rule";
+        _deleteModalMessage = "Are you sure? This rule will no longer execute.";
+        _deletingItemId = id;
+        _deletingItemType = "rule";
+    }
+
+    private async Task DeleteRuleAsync(Guid id)
+    {
+        _isSaving = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.DeleteAsync($"/api/workflow-rules/{id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                _rules.RemoveAll(r => r.Id == id);
+                ShowSuccessMessage("Workflow rule deleted.");
+            }
+            else
+            {
+                _errorBanner = "Failed to delete workflow rule. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to delete workflow rule: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

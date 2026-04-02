@@ -50,5 +50,7 @@ internal sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
 
         builder.Property(tenant => tenant.ApprovedAt);
         builder.Property(tenant => tenant.ProvisionedAt);
+        builder.Property(tenant => tenant.AppliedRecipeId);
+        builder.Property(tenant => tenant.AppliedRecipeVersion);
     }
 }

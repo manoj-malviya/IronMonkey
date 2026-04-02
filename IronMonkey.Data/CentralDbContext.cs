@@ -17,11 +17,13 @@ public class CentralDbContext(DbContextOptions<CentralDbContext> options) : DbCo
     public DbSet<UserTenantIndex> UserTenantIndex => Set<UserTenantIndex>();
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<WebForm> WebForms => Set<WebForm>();
+    public DbSet<IndustryRecipe> IndustryRecipes => Set<IndustryRecipe>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new TenantConfiguration());
         modelBuilder.ApplyConfiguration(new SignupRequestConfiguration());
+        modelBuilder.ApplyConfiguration(new IndustryRecipeConfiguration());
 
         modelBuilder.Entity<UserTenantIndex>(b =>
         {

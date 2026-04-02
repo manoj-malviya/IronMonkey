@@ -17,7 +17,7 @@ public class RejectTenantEndpoint : IEndpoint
     public record Request(string? RejectionReason);
     public record Response(string Message);
 
-    private static async Task<Results<Ok<Response>, NotFound, ValidationError>> Handle(
+    internal static async Task<Results<Ok<Response>, NotFound, ValidationError>> Handle(
         Guid id,
         Request request,
         CentralDbContext centralDb,

@@ -54,7 +54,7 @@ public class TenantProvisioningTests : IClassFixture<PostgreSqlFixture>
             adminEmail: email,
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0100",
-            industryType: "Technology",
+            recipeId: null,
             companySize: "50-100",
             address: "123 Main St",
             billingContact: "billing@testcompany.com");
@@ -86,7 +86,7 @@ public class TenantProvisioningTests : IClassFixture<PostgreSqlFixture>
             adminEmail: email,
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0200",
-            industryType: "Finance",
+            recipeId: null,
             companySize: "10-50",
             address: "456 Oak Ave",
             billingContact: "billing@approvetest.com");
@@ -124,7 +124,7 @@ public class TenantProvisioningTests : IClassFixture<PostgreSqlFixture>
             adminEmail: email,
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0300",
-            industryType: "Retail",
+            recipeId: null,
             companySize: "100+",
             address: "789 Pine Rd",
             billingContact: "billing@provision.com");
@@ -166,7 +166,7 @@ public class TenantProvisioningTests : IClassFixture<PostgreSqlFixture>
             adminEmail: email,
             adminPasswordHash: BC.HashPassword("SecurePass123!"),
             phone: "555-0400",
-            industryType: "Healthcare",
+            recipeId: null,
             companySize: "50-100",
             address: "321 Elm St",
             billingContact: "billing@seedtest.com");

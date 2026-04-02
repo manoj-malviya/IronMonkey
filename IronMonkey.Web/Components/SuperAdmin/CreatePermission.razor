@@ -1,4 +1,6 @@
 @page "/superadmin/create-permission"
+@inject ApiClient ApiClient
+@inject IJSRuntime JSRuntime
 
 <h1>Create Permission</h1>
 
@@ -10,7 +12,7 @@
 <button class="btn btn-primary" @onclick="HandleCreatePermission">Create</button>
 
 @code {
-    private string permissionName;
+    private string permissionName = string.Empty;
 
     private async Task HandleCreatePermission()
     {

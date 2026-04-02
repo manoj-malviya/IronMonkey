@@ -8,6 +8,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\IronMonkey.ServiceDefaults\IronMonkey.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\IronMonkey.Data\IronMonkey.Data.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.7.0" />
+  </ItemGroup>
+
+  <Target Name="BuildTailwindCSS" BeforeTargets="ResolveStaticWebAssets;Build">
+    <Exec Command="tailwindcss --input wwwroot/css/input.css --output wwwroot/css/output.css --minify" />
+  </Target>
 
 </Project>
