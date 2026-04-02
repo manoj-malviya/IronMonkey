@@ -66,10 +66,10 @@ Any business can configure their complete lead management workflow — fields, s
 - [x] Recipe management admin pages (list, create, edit, preview, deactivate) — Validated in Phase 10
 - [x] Tenant management admin pages (view, approve/reject signups) — Validated in Phase 11
 - [x] User & role management admin pages — Validated in Phase 12
-- [ ] Pipeline stage configuration UI
-- [ ] Custom field definition management UI
-- [ ] Lead routing configuration UI
-- [ ] Workflow rule management UI
+- [x] Pipeline stage configuration UI — Validated in Phase 13
+- [x] Custom field definition management UI — Validated in Phase 13
+- [x] Lead routing configuration UI — Validated in Phase 13
+- [x] Workflow rule management UI — Validated in Phase 13
 
 ### Future
 
@@ -146,4 +146,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-01 after Phase 12 (User & Role Management UI) completed*
+*Last updated: 2026-04-02 after Phase 13 (System Configuration UI) completed — v1.2 milestone complete*
