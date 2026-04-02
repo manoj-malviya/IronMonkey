@@ -40,10 +40,10 @@ Requirements for the Admin UI milestone. Each maps to roadmap phases.
 
 ### System Configuration
 
-- [ ] **CFUI-01**: Admin can view and manage pipeline stages (create, edit, reorder, delete)
-- [ ] **CFUI-02**: Admin can view and manage custom field definitions (create, edit, delete)
-- [ ] **CFUI-03**: Admin can view and manage lead routing configuration (round-robin, territory rules)
-- [ ] **CFUI-04**: Admin can view and manage workflow rules (triggers, conditions, actions)
+- [x] **CFUI-01**: Admin can view and manage pipeline stages (create, edit, reorder, delete)
+- [x] **CFUI-02**: Admin can view and manage custom field definitions (create, edit, delete)
+- [x] **CFUI-03**: Admin can view and manage lead routing configuration (round-robin, territory rules)
+- [x] **CFUI-04**: Admin can view and manage workflow rules (triggers, conditions, actions)
 
 ## Future Requirements
 
@@ -96,10 +96,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | USUI-02 | Phase 12 | Complete |
 | USUI-03 | Phase 12 | Complete |
 | USUI-04 | Phase 12 | Complete |
-| CFUI-01 | Phase 13 | Pending |
-| CFUI-02 | Phase 13 | Pending |
-| CFUI-03 | Phase 13 | Pending |
-| CFUI-04 | Phase 13 | Pending |
+| CFUI-01 | Phase 13 | Complete |
+| CFUI-02 | Phase 13 | Complete |
+| CFUI-03 | Phase 13 | Complete |
+| CFUI-04 | Phase 13 | Complete |
 
 **Coverage:**
 - v1.2 requirements: 23 total
