@@ -189,13 +189,245 @@
     <!-- CUSTOM FIELDS TAB -->
     @if (_activeTab == "Custom Fields")
     {
-        <p class="text-sm text-slate-500 py-8">Coming soon.</p>
+        @if (_isLoading)
+        {
+            <div class="py-12 text-center">
+                <p class="text-sm text-slate-500">Loading...</p>
+            </div>
+        }
+        else if (_fields.Count == 0 && !_creatingField)
+        {
+            <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
+                <p class="text-slate-600">No custom fields defined. Add fields to capture tenant-specific lead data.</p>
+                <button type="button" @onclick="StartAddField"
+                        class="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                    + Add Field
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto rounded-lg border border-slate-200">
+                <table class="w-full">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Required</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Options</th>
+                            <th class="px-6 py-3 text-right text-xs font-semibold text-slate-900 uppercase tracking-wide">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var field in _fields)
+                        {
+                            @if (_editingFieldId == field.Id)
+                            {
+                                <!-- Edit mode row -->
+                                <tr @key="field.Id" class="border-b border-slate-100 bg-indigo-50">
+                                    <td colspan="5" class="px-6 py-4">
+                                        <div class="flex flex-wrap gap-3 items-end">
+                                            <div>
+                                                <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Name</label>
+                                                <input type="text" @bind="_editingField!.FieldName"
+                                                       class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600" />
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Type</label>
+                                                <select @bind="_editingField!.FieldType"
+                                                        class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600">
+                                                    <option value="Text">Text</option>
+                                                    <option value="Number">Number</option>
+                                                    <option value="Date">Date</option>
+                                                    <option value="Dropdown">Dropdown</option>
+                                                    <option value="MultiSelect">MultiSelect</option>
+                                                    <option value="Currency">Currency</option>
+                                                    <option value="Boolean">Boolean</option>
+                                                </select>
+                                            </div>
+                                            <div class="flex items-center gap-1 mt-4">
+                                                <input type="checkbox" @bind="_editingField!.IsRequired" class="rounded border-slate-300" />
+                                                <label class="text-sm text-slate-700 ml-1">Required</label>
+                                            </div>
+                                            @if (_editingField!.FieldType is "Dropdown" or "MultiSelect")
+                                            {
+                                                <div>
+                                                    <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Options (comma-separated)</label>
+                                                    <input type="text" @bind="_editingFieldOptions" placeholder="Option A, Option B"
+                                                           class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 w-64" />
+                                                </div>
+                                            }
+                                            <div class="flex gap-2">
+                                                <button type="button" @onclick="CancelEditField"
+                                                        class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                                    Cancel
+                                                </button>
+                                                <button type="button" @onclick="SaveEditFieldAsync" disabled="@_isSaving"
+                                                        class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                                                    @(_isSaving ? "Saving..." : "Save")
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                <!-- Display mode row -->
+                                <tr @key="field.Id" class="border-b border-slate-100 hover:bg-slate-50">
+                                    <td class="px-6 py-4 text-sm text-slate-900">@field.FieldName</td>
+                                    <td class="px-6 py-4 text-sm text-slate-600">@field.FieldType</td>
+                                    <td class="px-6 py-4">
+                                        @if (field.IsRequired)
+                                        {
+                                            <span class="bg-indigo-50 text-indigo-700 text-xs font-medium px-2 py-0.5 rounded-full">Required</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-slate-400 text-xs">—</span>
+                                        }
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-slate-600">
+                                        @if ((field.FieldType is "Dropdown" or "MultiSelect") && field.Options.Count > 0)
+                                        {
+                                            @string.Join(", ", field.Options)
+                                        }
+                                        else
+                                        {
+                                            <span class="text-slate-400">—</span>
+                                        }
+                                    </td>
+                                    <td class="px-6 py-4 text-right space-x-1">
+                                        <button type="button" @onclick="() => StartEditField(field)"
+                                                class="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+                                            Edit
+                                        </button>
+                                        <button type="button" @onclick="() => OpenDeleteFieldConfirm(field.Id)"
+                                                class="text-sm font-medium text-red-600 hover:text-red-700">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+
+                        <!-- Add Field row -->
+                        @if (_creatingField && _editingFieldId == null)
+                        {
+                            <tr class="border-b border-slate-100 bg-indigo-50">
+                                <td colspan="5" class="px-6 py-4">
+                                    <div class="flex flex-wrap gap-3 items-end">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Name</label>
+                                            <input type="text" @bind="_newFieldName" placeholder="Field name"
+                                                   class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Type</label>
+                                            <select @bind="_newFieldType"
+                                                    class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600">
+                                                <option value="Text">Text</option>
+                                                <option value="Number">Number</option>
+                                                <option value="Date">Date</option>
+                                                <option value="Dropdown">Dropdown</option>
+                                                <option value="MultiSelect">MultiSelect</option>
+                                                <option value="Currency">Currency</option>
+                                                <option value="Boolean">Boolean</option>
+                                            </select>
+                                        </div>
+                                        <div class="flex items-center gap-1 mt-4">
+                                            <input type="checkbox" @bind="_newFieldRequired" class="rounded border-slate-300" />
+                                            <label class="text-sm text-slate-700 ml-1">Required</label>
+                                        </div>
+                                        @if (_newFieldType is "Dropdown" or "MultiSelect")
+                                        {
+                                            <div>
+                                                <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-1">Options (comma-separated)</label>
+                                                <input type="text" @bind="_newFieldOptions" placeholder="Option A, Option B"
+                                                       class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 w-64" />
+                                            </div>
+                                        }
+                                        <div class="flex gap-2">
+                                            <button type="button" @onclick="CancelAddField"
+                                                    class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                                Cancel
+                                            </button>
+                                            <button type="button" @onclick="SaveNewFieldAsync" disabled="@_isSaving"
+                                                    class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                                                @(_isSaving ? "Saving..." : "Create")
+                                            </button>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Add Field button (below table) -->
+            <div class="mt-4">
+                <button type="button" @onclick="StartAddField"
+                        disabled="@(_creatingField || _editingFieldId != null)"
+                        class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                    + Add Field
+                </button>
+            </div>
+        }
     }
 
     <!-- ROUTING TAB -->
     @if (_activeTab == "Routing")
     {
-        <p class="text-sm text-slate-500 py-8">Coming soon.</p>
+        @if (_isLoading)
+        {
+            <div class="py-12 text-center">
+                <p class="text-sm text-slate-500">Loading...</p>
+            </div>
+        }
+        else
+        {
+            <div class="space-y-6 max-w-2xl">
+                <div>
+                    <p class="text-sm font-semibold text-slate-900 mb-4">Lead Assignment Strategy</p>
+                    <div class="flex gap-6">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="routingMode" value="RoundRobin"
+                                   checked="@(_routingMode == "RoundRobin")"
+                                   @onchange="@((ChangeEventArgs e) => _routingMode = (string?)e.Value ?? "RoundRobin")"
+                                   class="border-slate-300" />
+                            <span class="text-sm text-slate-700">Round-Robin</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="routingMode" value="Territory"
+                                   checked="@(_routingMode == "Territory")"
+                                   @onchange="@((ChangeEventArgs e) => _routingMode = (string?)e.Value ?? "RoundRobin")"
+                                   class="border-slate-300" />
+                            <span class="text-sm text-slate-700">Territory-Based</span>
+                        </label>
+                    </div>
+                </div>
+
+                @if (_routingMode == "Territory")
+                {
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-900 uppercase tracking-wider mb-2">
+                            Territory Rules (JSON)
+                        </label>
+                        <textarea @bind="_territoryJson"
+                                  placeholder='[{"territory": "West", "states": ["CA", "OR"]}]'
+                                  class="w-full h-48 rounded-lg border border-slate-300 px-4 py-3 font-mono text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600"></textarea>
+                    </div>
+                }
+
+                <div class="flex justify-end">
+                    <button @onclick="SaveRoutingConfigAsync" disabled="@_isSaving"
+                            class="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                        @(_isSaving ? "Saving..." : "Save Configuration")
+                    </button>
+                </div>
+            </div>
+        }
     }
 
     <!-- WORKFLOW RULES TAB -->
@@ -248,6 +480,18 @@
     private bool _creatingStage = false;
     private string _newStageName = string.Empty;
 
+    // Custom Fields state
+    private List<FieldItem> _fields = new();
+    private bool _fieldsLoaded = false;
+    private Guid? _editingFieldId = null;
+    private FieldItem? _editingField = null;
+    private string _editingFieldOptions = string.Empty;
+    private bool _creatingField = false;
+    private string _newFieldName = string.Empty;
+    private string _newFieldType = "Text";
+    private bool _newFieldRequired = false;
+    private string _newFieldOptions = string.Empty;
+
     // Delete modal (shared across all tabs)
     private bool _showDeleteConfirm = false;
     private string _deleteModalTitle = string.Empty;
@@ -264,6 +508,16 @@
         public bool IsActive { get; set; }
     }
 
+    // Local DTO for custom fields — matches ListCustomFieldsEndpoint response (Id, FieldName, FieldType, IsRequired, Options)
+    private class FieldItem
+    {
+        public Guid Id { get; set; }
+        public string FieldName { get; set; } = string.Empty;
+        public string FieldType { get; set; } = "Text";
+        public bool IsRequired { get; set; }
+        public List<string> Options { get; set; } = new();
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await LoadStagesAsync();
@@ -276,6 +530,14 @@
         if (tab == "Pipeline Stages" && !_stagesLoaded)
         {
             _ = LoadStagesAsync();
+        }
+        else if (tab == "Custom Fields" && !_fieldsLoaded)
+        {
+            _ = LoadFieldsAsync();
+        }
+        else if (tab == "Routing" && !_routingLoaded)
+        {
+            _ = LoadRoutingConfigAsync();
         }
     }
 
@@ -521,6 +783,10 @@
         {
             await DeleteStageAsync(_deletingItemId);
         }
+        else if (_deletingItemType == "field")
+        {
+            await DeleteFieldAsync(_deletingItemId);
+        }
         _showDeleteConfirm = false;
         _deletingItemId = Guid.Empty;
         _deletingItemType = string.Empty;
@@ -555,6 +821,35 @@
         }
     }
 
+    private async Task DeleteFieldAsync(Guid id)
+    {
+        _isSaving = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.DeleteAsync($"/api/custom-fields/{id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                _fields.RemoveAll(f => f.Id == id);
+                ShowSuccessMessage("Custom field deleted.");
+            }
+            else
+            {
+                _errorBanner = "Failed to delete custom field. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to delete custom field: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
     private void ShowSuccessMessage(string msg)
     {
         _successMessage = msg;
@@ -565,4 +860,258 @@
             await InvokeAsync(StateHasChanged);
         });
     }
+
+    // ── Custom Fields ────────────────────────────────────────────────────────
+
+    private async Task LoadFieldsAsync()
+    {
+        _isLoading = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var fields = await client.GetFromJsonAsync<List<FieldItem>>("/api/custom-fields");
+            _fields = fields ?? new();
+            _fieldsLoaded = true;
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to load custom fields: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void StartAddField()
+    {
+        _creatingField = true;
+        _editingFieldId = null;
+        _newFieldName = string.Empty;
+        _newFieldType = "Text";
+        _newFieldRequired = false;
+        _newFieldOptions = string.Empty;
+    }
+
+    private void CancelAddField()
+    {
+        _creatingField = false;
+        _newFieldName = string.Empty;
+        _newFieldOptions = string.Empty;
+    }
+
+    private async Task SaveNewFieldAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newFieldName)) return;
+
+        _isSaving = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var options = ParseOptions(_newFieldOptions);
+            var response = await client.PostAsJsonAsync("/api/custom-fields", new
+            {
+                FieldName = _newFieldName,
+                FieldType = _newFieldType,
+                IsRequired = _newFieldRequired,
+                Options = options
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var created = await response.Content.ReadFromJsonAsync<FieldItem>();
+                if (created is not null)
+                {
+                    _fields.Add(created);
+                }
+                CancelAddField();
+                ShowSuccessMessage("Custom field created.");
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _errorBanner = $"Failed to create custom field. {error}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to create custom field: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void StartEditField(FieldItem f)
+    {
+        _editingFieldId = f.Id;
+        _editingField = new FieldItem
+        {
+            Id = f.Id,
+            FieldName = f.FieldName,
+            FieldType = f.FieldType,
+            IsRequired = f.IsRequired,
+            Options = new List<string>(f.Options)
+        };
+        _editingFieldOptions = string.Join(", ", f.Options);
+        _creatingField = false;
+    }
+
+    private void CancelEditField()
+    {
+        _editingFieldId = null;
+        _editingField = null;
+        _editingFieldOptions = string.Empty;
+    }
+
+    private async Task SaveEditFieldAsync()
+    {
+        if (_editingField is null || _editingFieldId is null) return;
+        if (string.IsNullOrWhiteSpace(_editingField.FieldName)) return;
+
+        _isSaving = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var options = ParseOptions(_editingFieldOptions);
+            var response = await client.PutAsJsonAsync($"/api/custom-fields/{_editingFieldId}", new
+            {
+                FieldName = _editingField.FieldName,
+                FieldType = _editingField.FieldType,
+                IsRequired = _editingField.IsRequired,
+                Options = options
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var updated = await response.Content.ReadFromJsonAsync<FieldItem>();
+                if (updated is not null)
+                {
+                    var idx = _fields.FindIndex(f => f.Id == updated.Id);
+                    if (idx >= 0) _fields[idx] = updated;
+                }
+                CancelEditField();
+                ShowSuccessMessage("Custom field saved.");
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _errorBanner = $"Failed to save custom field. {error}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to save custom field: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void OpenDeleteFieldConfirm(Guid id)
+    {
+        _showDeleteConfirm = true;
+        _deleteModalTitle = "Delete Custom Field";
+        _deleteModalMessage = "Are you sure? Data in this field cannot be recovered.";
+        _deletingItemId = id;
+        _deletingItemType = "field";
+    }
+
+    private static List<string> ParseOptions(string raw) =>
+        string.IsNullOrWhiteSpace(raw)
+            ? new List<string>()
+            : raw.Split(',').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s)).ToList();
+
+    // ── Routing ──────────────────────────────────────────────────────────────
+
+    private bool _routingLoaded = false;
+    private string _routingMode = "RoundRobin";
+    private string _territoryJson = string.Empty;
+
+    private async Task LoadRoutingConfigAsync()
+    {
+        _isLoading = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.GetAsync("/api/routing-config");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var config = await response.Content.ReadFromJsonAsync<RoutingConfigResponse>();
+                if (config is not null)
+                {
+                    _routingMode = config.Strategy ?? "RoundRobin";
+                    _territoryJson = config.TerritoryMapJson ?? string.Empty;
+                }
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                // No config yet — use defaults
+                _routingMode = "RoundRobin";
+                _territoryJson = string.Empty;
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _errorBanner = $"Failed to load routing configuration. {error}";
+            }
+            _routingLoaded = true;
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to load routing configuration: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveRoutingConfigAsync()
+    {
+        _isSaving = true;
+        _errorBanner = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.PostAsJsonAsync("/api/routing-config", new
+            {
+                Strategy = _routingMode,
+                Dimension = "Agent", // default dimension — required by endpoint
+                TerritoryMapJson = _routingMode == "Territory" ? _territoryJson : (string?)null,
+                CustomFieldKey = (string?)null
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                ShowSuccessMessage("Routing configuration saved.");
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _errorBanner = $"Failed to save routing configuration. {error}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Failed to save routing configuration: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    // DTO for reading routing config response
+    private record RoutingConfigResponse(Guid Id, string Strategy, string Dimension,
+        string? TerritoryMapJson, string? CustomFieldKey, bool IsEnabled, int RoundRobinPointer);
 }
