@@ -9,7 +9,7 @@
 ## Phases
 
 - [x] **Phase 14: Landing Page** — Visitor sees a compelling, responsive public landing page with navigation to login and signup (completed 2026-04-03)
-- [ ] **Phase 15: Tenant Signup Flow** — Visitor can complete the full signup process including recipe selection and confirmation
+- [x] **Phase 15: Tenant Signup Flow** — Visitor can complete the full signup process including recipe selection and confirmation (completed 2026-04-03)
 
 ## Phase Details
 
@@ -46,7 +46,7 @@ Plans:
 
 Plans:
 - [x] 15-01-PLAN.md — RecipePreviewCard.razor + RecipePreviewPanel.razor (reusable recipe selection components)
-- [ ] 15-02-PLAN.md — Signup.razor (full signup form wired to POST /auth/signup with recipe browser)
+- [x] 15-02-PLAN.md — Signup.razor (full signup form wired to POST /auth/signup with recipe browser)
 - [x] 15-03-PLAN.md — SignupSuccessPage.razor + Login.razor cross-link + Routes.razor /signup/success
 
 **UI hint**: yes
@@ -56,7 +56,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 14. Landing Page | 3/3 | Complete    | 2026-04-03 |
-| 15. Tenant Signup Flow | 2/3 | In Progress|  |
+| 15. Tenant Signup Flow | 3/3 | Complete   | 2026-04-03 |
 
 ---
 *Roadmap created: 2026-04-03 for milestone v1.3*
