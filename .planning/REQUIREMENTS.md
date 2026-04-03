@@ -50,22 +50,22 @@ Requirements for v1.3 Public Landing & Tenant Signup. Each maps to roadmap phase
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LAND-01 | TBD | Pending |
-| LAND-02 | TBD | Pending |
-| LAND-03 | TBD | Pending |
-| LAND-04 | TBD | Pending |
-| SIGN-01 | TBD | Pending |
-| SIGN-02 | TBD | Pending |
-| SIGN-03 | TBD | Pending |
-| SIGN-04 | TBD | Pending |
-| NAV-01 | TBD | Pending |
-| NAV-02 | TBD | Pending |
+| LAND-01 | Phase 14 | Pending |
+| LAND-02 | Phase 14 | Pending |
+| LAND-03 | Phase 14 | Pending |
+| LAND-04 | Phase 14 | Pending |
+| NAV-01 | Phase 14 | Pending |
+| SIGN-01 | Phase 15 | Pending |
+| SIGN-02 | Phase 15 | Pending |
+| SIGN-03 | Phase 15 | Pending |
+| SIGN-04 | Phase 15 | Pending |
+| NAV-02 | Phase 15 | Pending |
 
 **Coverage:**
 - v1.3 requirements: 10 total
-- Mapped to phases: 0
-- Unmapped: 10 ⚠️
+- Mapped to phases: 10
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-03*
-*Last updated: 2026-04-03 after initial definition*
+*Last updated: 2026-04-03 after roadmap creation — all 10 requirements mapped*
