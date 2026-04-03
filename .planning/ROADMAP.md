@@ -49,7 +49,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 14. Landing Page | 3/3 | Complete   | 2026-04-03 |
+| 14. Landing Page | 3/3 | Complete    | 2026-04-03 |
 | 15. Tenant Signup Flow | 0/? | Not started | - |
 
 ---
