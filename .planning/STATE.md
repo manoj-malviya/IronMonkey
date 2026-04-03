@@ -2,15 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: milestone
-status: planning
-stopped_at: Phase 14 UI-SPEC approved
-last_updated: "2026-04-03T17:35:04.285Z"
-last_activity: 2026-04-03 — v1.3 roadmap created (2 phases, 10 requirements)
+status: Ready to execute
+stopped_at: Completed 14-01-PLAN.md
+last_updated: "2026-04-03T17:48:45.016Z"
 progress:
   total_phases: 2
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
 ---
 
 # Project State
@@ -20,18 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-03)
 
 **Core value:** Any business can configure their complete lead management workflow without writing code
-**Current focus:** v1.3 — Public landing page and tenant signup flow
+**Current focus:** Phase 14 — landing-page
 
 ## Current Position
 
-Phase: 14 (Landing Page) — Not started
-Plan: —
-Status: Roadmap created, ready to plan Phase 14
-Last activity: 2026-04-03 — v1.3 roadmap created (2 phases, 10 requirements)
-
-```
-v1.3 Progress: [          ] 0/2 phases complete
-```
+Phase: 14 (landing-page) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -52,6 +45,8 @@ Key decisions for v1.3 (pre-planning):
 - Phase 15 introduces /signup as a new Blazor page — no backend changes needed (POST /auth/signup already exists)
 - Recipe catalog already has GET /api/recipes (list) and GET /api/recipes/{id} (preview) — signup form can call these directly
 - NAV-01 grouped with Phase 14 (landing page owns its outbound nav links); NAV-02 grouped with Phase 15 (cross-linking login/signup is signup feature's responsibility)
+- [Phase 14]: PublicLayout nav uses bg-transparent so hero gradient shows through — white text on dark gradient
+- [Phase 14]: FeatureCard uses MarkupString for Icon to accept inline SVG without HTML encoding — correct Blazor pattern for Heroicons
 
 ### Pending Todos
 
@@ -64,7 +59,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-03T17:35:04.281Z
-Stopped at: Phase 14 UI-SPEC approved
-Resume file: .planning/phases/14-landing-page/14-UI-SPEC.md
+Last session: 2026-04-03T17:48:45.012Z
+Stopped at: Completed 14-01-PLAN.md
+Resume file: None
 Next action: `/gsd:plan-phase 14`
