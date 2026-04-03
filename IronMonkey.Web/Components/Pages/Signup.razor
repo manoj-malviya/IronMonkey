@@ -1,0 +1,296 @@
+@page "/signup"
+@layout IronMonkey.Web.Components.Layout.PublicLayout
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+
+<PageTitle>Sign Up — IronMonkey</PageTitle>
+
+<div class="min-h-screen bg-gradient-to-br from-slate-100 to-slate-50 px-4 py-12">
+
+    <!-- Form card section -->
+    <div class="max-w-md mx-auto">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 px-8 py-10">
+            <h2 class="text-xl font-semibold text-slate-800 mb-6">Create your account</h2>
+
+            <!-- Error banner -->
+            @if (!string.IsNullOrEmpty(_errorBanner))
+            {
+                <div class="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                    @_errorBanner
+                </div>
+            }
+
+            <EditForm Model="_model" OnValidSubmit="HandleSignupAsync">
+                <DataAnnotationsValidator />
+
+                <!-- Company name -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1" for="company-name">Company name</label>
+                    <InputText id="company-name" @bind-Value="_model.CompanyName" placeholder="Acme Corporation"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                    <ValidationMessage For="() => _model.CompanyName" class="mt-1 text-xs text-red-600" />
+                </div>
+
+                <!-- Admin email -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1" for="admin-email">Admin email address</label>
+                    <InputText id="admin-email" @bind-Value="_model.AdminEmail" type="email" placeholder="admin@acme.com"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                    <ValidationMessage For="() => _model.AdminEmail" class="mt-1 text-xs text-red-600" />
+                </div>
+
+                <!-- Password -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1" for="admin-password">Password</label>
+                    <InputText id="admin-password" @bind-Value="_model.AdminPassword" type="password" placeholder="••••••••"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                    <p class="mt-1 text-xs text-slate-500">Minimum 8 characters</p>
+                    <ValidationMessage For="() => _model.AdminPassword" class="mt-1 text-xs text-red-600" />
+                </div>
+
+                <!-- Phone -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1" for="phone">Phone number</label>
+                    <InputText id="phone" @bind-Value="_model.Phone" placeholder="+1 (555) 123-4567"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                    <ValidationMessage For="() => _model.Phone" class="mt-1 text-xs text-red-600" />
+                </div>
+
+                <!-- Company size -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1" for="company-size">Company size</label>
+                    <InputSelect id="company-size" @bind-Value="_model.CompanySize"
+                                 class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        <option value="">Select company size</option>
+                        <option value="1-10">1-10</option>
+                        <option value="11-50">11-50</option>
+                        <option value="51-200">51-200</option>
+                        <option value="201-500">201-500</option>
+                        <option value="500+">500+</option>
+                    </InputSelect>
+                    <ValidationMessage For="() => _model.CompanySize" class="mt-1 text-xs text-red-600" />
+                </div>
+
+                <!-- Address -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1" for="address">Company address</label>
+                    <InputText id="address" @bind-Value="_model.Address" placeholder="123 Main Street, San Francisco, CA 94102"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                    <ValidationMessage For="() => _model.Address" class="mt-1 text-xs text-red-600" />
+                </div>
+
+                <!-- Billing contact -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-slate-700 mb-1" for="billing-contact">Billing contact name</label>
+                    <InputText id="billing-contact" @bind-Value="_model.BillingContact" placeholder="Jane Smith"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                    <ValidationMessage For="() => _model.BillingContact" class="mt-1 text-xs text-red-600" />
+                </div>
+
+                <!-- Submit button -->
+                <button type="submit"
+                        disabled="@_isLoading"
+                        class="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed transition-colors min-h-[44px]">
+                    @if (_isLoading) { <span>Submitting...</span> } else { <span>Create Account</span> }
+                </button>
+            </EditForm>
+        </div>
+
+        <!-- Cross-link to login (D-12, D-14) -->
+        <p class="text-center text-sm text-slate-600 mt-4">
+            Already have an account? <a href="/login" class="text-indigo-600 hover:text-indigo-500 font-medium">Sign in</a>
+        </p>
+    </div>
+
+    <!-- Recipe browser section (D-05, D-07, D-08) -->
+    <div class="max-w-2xl mx-auto mt-10 pb-12">
+        <h3 class="text-base font-medium text-slate-700 mb-4">Choose an industry recipe (optional)</h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <!-- Blank option first (D-07) -->
+            <button type="button" @onclick="() => HandleRecipeClick(Guid.Empty)"
+                    class="@BlankCardClass w-full text-left rounded-lg bg-white px-4 py-6 shadow-sm cursor-pointer hover:opacity-95 transition-all">
+                <h3 class="text-base font-semibold text-slate-900">Start blank</h3>
+                <p class="mt-1 text-sm text-slate-600">Configure everything yourself</p>
+            </button>
+
+            @foreach (var recipe in _recipes)
+            {
+                <RecipePreviewCard Id="recipe.Id"
+                                   Name="recipe.Name"
+                                   Description="recipe.Description"
+                                   IndustrySlug="recipe.IndustrySlug"
+                                   StageCount="recipe.StageCount"
+                                   FieldCount="recipe.FieldCount"
+                                   RuleCount="recipe.RuleCount"
+                                   IsSelected="recipe.Id == _selectedRecipeId && _selectedRecipeId != Guid.Empty"
+                                   OnClick="HandleRecipeClick" />
+            }
+        </div>
+
+        <!-- Recipe preview panel -->
+        @if (_selectedRecipeId != Guid.Empty && _selectedRecipePreview is not null)
+        {
+            <RecipePreviewPanel Recipe="_selectedRecipePreview" />
+        }
+        @if (_isLoadingPreview)
+        {
+            <p class="mt-4 text-sm text-slate-500">Loading preview...</p>
+        }
+    </div>
+
+</div>
+
+@code {
+    private readonly SignupModel _model = new();
+    private bool _isLoading = false;
+    private string? _errorBanner = null;
+
+    // Recipe browser state
+    private List<RecipeListItem> _recipes = [];
+    private Guid _selectedRecipeId = Guid.Empty;  // Guid.Empty = blank selected (default)
+    private RecipePreviewPanel.RecipePreviewResponse? _selectedRecipePreview = null;
+    private bool _isLoadingPreview = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var recipes = await client.GetFromJsonAsync<List<RecipeListItem>>("/api/recipes");
+            // Filter out IsBlank from the main list — we render blank manually as first card
+            _recipes = recipes?.Where(r => !r.IsBlank).ToList() ?? [];
+        }
+        catch
+        {
+            // Silently fail — recipe browser is optional (SIGN-02 says "optionally select one")
+        }
+    }
+
+    private async Task HandleRecipeClick(Guid id)
+    {
+        // Toggle off if already selected
+        if (_selectedRecipeId == id)
+        {
+            _selectedRecipeId = Guid.Empty;
+            _selectedRecipePreview = null;
+            return;
+        }
+
+        _selectedRecipeId = id;
+        _selectedRecipePreview = null;
+
+        // Blank = Guid.Empty, no preview needed
+        if (id == Guid.Empty) return;
+
+        _isLoadingPreview = true;
+        StateHasChanged();
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            _selectedRecipePreview = await client.GetFromJsonAsync<RecipePreviewPanel.RecipePreviewResponse>($"/api/recipes/{id}");
+        }
+        catch
+        {
+            // Preview failed — recipe is still selected, just no content shown
+        }
+        finally
+        {
+            _isLoadingPreview = false;
+        }
+    }
+
+    private string BlankCardClass => _selectedRecipeId == Guid.Empty
+        ? "border-2 border-indigo-600"
+        : "border border-slate-200";
+
+    private async Task HandleSignupAsync()
+    {
+        _isLoading = true;
+        _errorBanner = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.PostAsJsonAsync("/auth/signup", new
+            {
+                _model.CompanyName,
+                _model.AdminEmail,
+                _model.AdminPassword,
+                _model.Phone,
+                RecipeId = _selectedRecipeId == Guid.Empty ? (Guid?)null : _selectedRecipeId,
+                _model.CompanySize,
+                _model.Address,
+                _model.BillingContact
+            });
+
+            if (response.StatusCode == System.Net.HttpStatusCode.Created)
+            {
+                Nav.NavigateTo("/signup/success");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            {
+                _errorBanner = "Unable to create account. Please check your details and try again.";
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Conflict ||
+                     (int)response.StatusCode == 422)
+            {
+                _errorBanner = "An account with this email already exists.";
+            }
+            else
+            {
+                _errorBanner = "Unable to create account. Please try again.";
+            }
+        }
+        catch
+        {
+            _errorBanner = "Unable to reach the server. Please try again.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    // Response record for GET /api/recipes list items
+    private record RecipeListItem(
+        Guid Id,
+        string Name,
+        string Description,
+        string IconIdentifier,
+        string IndustrySlug,
+        bool IsBlank,
+        int Version,
+        int StageCount,
+        int FieldCount,
+        int RuleCount,
+        int RoleCount);
+
+    // Model for the EditForm with DataAnnotations validation
+    private class SignupModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Company name is required")]
+        public string CompanyName { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "A valid admin email is required")]
+        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "Enter a valid email address")]
+        public string AdminEmail { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Password must be at least 8 characters")]
+        [System.ComponentModel.DataAnnotations.MinLength(8, ErrorMessage = "Password must be at least 8 characters")]
+        public string AdminPassword { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Phone is required")]
+        public string Phone { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Company size is required")]
+        public string CompanySize { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Address is required")]
+        public string Address { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Billing contact is required")]
+        public string BillingContact { get; set; } = string.Empty;
+    }
+}
