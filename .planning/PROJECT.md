@@ -58,9 +58,9 @@ Any business can configure their complete lead management workflow — fields, s
 ### Active
 
 - ✓ Public SaaS landing page with product feature showcase — v1.3 (LAND-01..04), validated Phase 14
-- [ ] Tenant self-service signup form wired to existing API — v1.3 (SIGN-01..03)
+- ✓ Tenant self-service signup form wired to existing API — v1.3 (SIGN-01..04), validated Phase 15
 - ✓ Navigation from landing to login and signup — v1.3 (NAV-01), validated Phase 14
-- [ ] Navigation cross-links between login and signup — v1.3 (NAV-02)
+- ✓ Navigation cross-links between login and signup — v1.3 (NAV-02), validated Phase 15
 
 ## Current Milestone: v1.3 Public Landing & Tenant Signup
 
@@ -150,4 +150,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-03 after Phase 14 (Landing Page) completed*
+*Last updated: 2026-04-03 after Phase 15 (Tenant Signup Flow) completed — v1.3 milestone complete*
