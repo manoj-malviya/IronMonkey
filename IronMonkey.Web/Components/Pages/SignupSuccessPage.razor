@@ -1,0 +1,46 @@
+@page "/signup/success"
+@layout IronMonkey.Web.Components.Layout.PublicLayout
+
+<PageTitle>Signup Successful — IronMonkey</PageTitle>
+
+<div class="min-h-screen bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center px-4 py-24">
+    <div class="w-full max-w-md text-center">
+
+        <!-- Check icon (Heroicons v2 CheckCircle, 64px, indigo-600 background) -->
+        <div class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-indigo-600">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                 stroke="currentColor" class="h-8 w-8 text-white" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+            </svg>
+        </div>
+
+        <!-- Heading -->
+        <h1 class="text-3xl font-bold text-slate-900 leading-tight">
+            Your request has been submitted!
+        </h1>
+
+        <!-- Subtext -->
+        <p class="mt-4 text-base text-slate-600">
+            Our team will review your signup and get back to you within 24 hours.
+        </p>
+
+        <!-- Additional note -->
+        <p class="mt-2 text-sm text-slate-500">
+            You'll receive a confirmation email shortly.
+        </p>
+
+        <!-- Action links -->
+        <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a href="/"
+               class="inline-flex rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors min-h-[44px] items-center">
+                Back to home
+            </a>
+            <a href="/login"
+               class="inline-flex rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 transition-colors min-h-[44px] items-center">
+                Sign in
+            </a>
+        </div>
+
+    </div>
+</div>
