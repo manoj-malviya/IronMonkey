@@ -4,7 +4,9 @@
             <NotAuthorized>
                 @{
                     // D-11: Blazor-native auth guard — redirect to login on unauthorized access
-                    if (context.User.Identity?.IsAuthenticated != true)
+                    // Public pages (/, /login, /signup) are excluded from the redirect
+                    var path = Nav.Uri.Replace(Nav.BaseUri, "/").TrimEnd('/');
+                    if (path != "/" && path != "/login" && path != "/signup" && !string.IsNullOrEmpty(path))
                     {
                         Nav.NavigateTo("/login", forceLoad: false);
                     }
