@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 15-01-PLAN.md
-last_updated: "2026-04-03T18:28:58.623Z"
+stopped_at: Completed 15-03-PLAN.md
+last_updated: "2026-04-03T18:32:13.568Z"
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-03)
 ## Current Position
 
 Phase: 15 (tenant-signup-flow) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Key decisions for v1.3 (pre-planning):
 - [Phase 14-landing-page]: Path-check approach in Routes.razor NotAuthorized block: extract path from NavigationManager.Uri, suppress redirect for /, /login, /signup
 - [Phase 14-landing-page]: Login.razor uses @layout IronMonkey.Web.Components.Layout.PublicLayout as line 2 — overrides DefaultLayout=MainLayout from Routes.razor
 - [Phase 15-01]: RecipePreviewPanel defines RecipePreviewResponse record inline so Signup.razor can reference it as deserialization type without cross-page @code issues
+- [Phase 15]: Routes.razor path exclusion extended with /signup/success to allow unauthenticated access to confirmation page
 
 ### Pending Todos
 
@@ -63,7 +64,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-03T18:28:58.620Z
-Stopped at: Completed 15-01-PLAN.md
+Last session: 2026-04-03T18:32:13.566Z
+Stopped at: Completed 15-03-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 14`

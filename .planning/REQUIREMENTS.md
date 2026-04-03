@@ -18,13 +18,13 @@ Requirements for v1.3 Public Landing & Tenant Signup. Each maps to roadmap phase
 
 - [ ] **SIGN-01**: Visitor can submit a signup form with company name, admin email, password, phone, company size, address, and billing contact
 - [x] **SIGN-02**: Visitor can browse and preview industry recipes during signup and optionally select one
-- [ ] **SIGN-03**: Visitor sees a confirmation page after successful signup submission
+- [x] **SIGN-03**: Visitor sees a confirmation page after successful signup submission
 - [ ] **SIGN-04**: Signup form validates all required fields with inline error messages
 
 ### Navigation
 
 - [x] **NAV-01**: Landing page has clear navigation to login and signup pages
-- [ ] **NAV-02**: Login page links to signup, signup page links to login
+- [x] **NAV-02**: Login page links to signup, signup page links to login
 
 ## Future Requirements
 
@@ -57,9 +57,9 @@ Requirements for v1.3 Public Landing & Tenant Signup. Each maps to roadmap phase
 | NAV-01 | Phase 14 | Complete |
 | SIGN-01 | Phase 15 | Pending |
 | SIGN-02 | Phase 15 | Complete |
-| SIGN-03 | Phase 15 | Pending |
+| SIGN-03 | Phase 15 | Complete |
 | SIGN-04 | Phase 15 | Pending |
-| NAV-02 | Phase 15 | Pending |
+| NAV-02 | Phase 15 | Complete |
 
 **Coverage:**
 - v1.3 requirements: 10 total
