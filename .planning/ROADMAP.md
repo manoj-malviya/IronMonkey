@@ -42,7 +42,13 @@ Plans:
   3. After successful submission, visitor is shown a confirmation page indicating their request is pending admin review
   4. Submitting with any required field empty shows an inline validation error on that field without navigating away
   5. Login page shows a link to /signup; signup page shows a link to /login
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 15-01-PLAN.md — RecipePreviewCard.razor + RecipePreviewPanel.razor (reusable recipe selection components)
+- [ ] 15-02-PLAN.md — Signup.razor (full signup form wired to POST /auth/signup with recipe browser)
+- [ ] 15-03-PLAN.md — SignupSuccessPage.razor + Login.razor cross-link + Routes.razor /signup/success
+
 **UI hint**: yes
 
 ## Progress Table
@@ -50,7 +56,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 14. Landing Page | 3/3 | Complete    | 2026-04-03 |
-| 15. Tenant Signup Flow | 0/? | Not started | - |
+| 15. Tenant Signup Flow | 0/3 | Not started | - |
 
 ---
 *Roadmap created: 2026-04-03 for milestone v1.3*
