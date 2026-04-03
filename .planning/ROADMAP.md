@@ -23,7 +23,13 @@
   3. Page layout reflows correctly at desktop (1280px+), tablet (768px), and mobile (375px) breakpoints
   4. Default Blazor content is fully replaced — Home.razor renders the new landing page with no placeholder text
   5. Navbar contains clearly visible links to /login and /signup
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 14-01-PLAN.md — PublicLayout.razor + FeatureCard.razor (layout shell and reusable card component)
+- [ ] 14-02-PLAN.md — Home.razor replacement (hero section, feature grid, responsive landing page)
+- [ ] 14-03-PLAN.md — Routes.razor + Login.razor wiring (public route access, login page uses PublicLayout)
+
 **UI hint**: yes
 
 ### Phase 15: Tenant Signup Flow
@@ -43,7 +49,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 14. Landing Page | 0/? | Not started | - |
+| 14. Landing Page | 0/3 | Not started | - |
 | 15. Tenant Signup Flow | 0/? | Not started | - |
 
 ---
