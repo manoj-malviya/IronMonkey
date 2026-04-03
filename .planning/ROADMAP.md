@@ -45,7 +45,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 15-01-PLAN.md — RecipePreviewCard.razor + RecipePreviewPanel.razor (reusable recipe selection components)
+- [x] 15-01-PLAN.md — RecipePreviewCard.razor + RecipePreviewPanel.razor (reusable recipe selection components)
 - [ ] 15-02-PLAN.md — Signup.razor (full signup form wired to POST /auth/signup with recipe browser)
 - [ ] 15-03-PLAN.md — SignupSuccessPage.razor + Login.razor cross-link + Routes.razor /signup/success
 
@@ -56,7 +56,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 14. Landing Page | 3/3 | Complete    | 2026-04-03 |
-| 15. Tenant Signup Flow | 0/3 | Not started | - |
+| 15. Tenant Signup Flow | 1/3 | In Progress|  |
 
 ---
 *Roadmap created: 2026-04-03 for milestone v1.3*
