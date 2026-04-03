@@ -57,7 +57,20 @@ Any business can configure their complete lead management workflow — fields, s
 
 ### Active
 
-(None — next milestone not yet defined)
+- [ ] Public SaaS landing page with product feature showcase — v1.3 (LAND-01..04)
+- [ ] Tenant self-service signup form wired to existing API — v1.3 (SIGN-01..03)
+- [ ] Navigation between landing, login, and signup — v1.3 (LAND-05)
+
+## Current Milestone: v1.3 Public Landing & Tenant Signup
+
+**Goal:** Give IronMonkey a public-facing identity — a modern SaaS landing page showcasing features, plus a working tenant signup flow wired to the existing API.
+
+**Target features:**
+- Modern SaaS landing page (hero section, feature grid, stats, CTAs)
+- Login navigation from landing page to existing /login page
+- Tenant signup form wired to POST /auth/signup (CompanyName, AdminEmail, AdminPassword, Phone, RecipeId, CompanySize, Address, BillingContact)
+- Industry recipe picker integrated into signup (optional RecipeId with recipe catalog preview)
+- Signup confirmation/status page after submission
 
 ### Future
 
@@ -68,7 +81,7 @@ Any business can configure their complete lead management workflow — fields, s
 - [ ] Omnichannel communications: email to leads
 - [ ] Omnichannel communications: SMS to leads
 - [ ] Omnichannel communications: WhatsApp Business API
-- [ ] Production SaaS: tenant signup and onboarding flow
+- [ ] Production SaaS: tenant signup and onboarding flow (partially addressed in v1.3)
 - [ ] Production SaaS: API documentation
 - [ ] Production SaaS: billing integration (model TBD)
 
@@ -136,4 +149,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-02 after v1.2 Admin UI milestone completed*
+*Last updated: 2026-04-03 after v1.3 Public Landing & Tenant Signup milestone started*

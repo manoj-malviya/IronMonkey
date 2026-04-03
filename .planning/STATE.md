@@ -1,30 +1,32 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Admin UI
-status: v1.2 milestone complete
-stopped_at: Completed 13-04-PLAN.md — Workflow Rules tab and AdminSidebar nav link
-last_updated: "2026-04-02T03:02:57.951Z"
+milestone: v1.3
+milestone_name: Public Landing & Tenant Signup
+status: Defining requirements
+stopped_at: Milestone v1.3 started
+last_updated: "2026-04-03T00:00:00.000Z"
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 16
-  completed_plans: 16
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-27)
+See: .planning/PROJECT.md (updated 2026-04-03)
 
 **Core value:** Any business can configure their complete lead management workflow without writing code
-**Current focus:** Phase 13 — system-configuration-ui
+**Current focus:** Defining requirements for v1.3
 
 ## Current Position
 
-Phase: 13
-Plan: Not started
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-03 — Milestone v1.3 started
 
 ## Performance Metrics
 
