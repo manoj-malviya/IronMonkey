@@ -9,10 +9,10 @@ Requirements for v1.3 Public Landing & Tenant Signup. Each maps to roadmap phase
 
 ### Landing Page
 
-- [ ] **LAND-01**: Visitor sees a hero section with product tagline, description, and CTA buttons
-- [ ] **LAND-02**: Visitor sees a feature grid showcasing key capabilities (multi-tenant, configurable leads, industry recipes, pipeline management)
-- [ ] **LAND-03**: Landing page is responsive across desktop, tablet, and mobile
-- [ ] **LAND-04**: Landing page replaces the current Home.razor default content
+- [x] **LAND-01**: Visitor sees a hero section with product tagline, description, and CTA buttons
+- [x] **LAND-02**: Visitor sees a feature grid showcasing key capabilities (multi-tenant, configurable leads, industry recipes, pipeline management)
+- [x] **LAND-03**: Landing page is responsive across desktop, tablet, and mobile
+- [x] **LAND-04**: Landing page replaces the current Home.razor default content
 
 ### Tenant Signup
 
@@ -23,7 +23,7 @@ Requirements for v1.3 Public Landing & Tenant Signup. Each maps to roadmap phase
 
 ### Navigation
 
-- [ ] **NAV-01**: Landing page has clear navigation to login and signup pages
+- [x] **NAV-01**: Landing page has clear navigation to login and signup pages
 - [ ] **NAV-02**: Login page links to signup, signup page links to login
 
 ## Future Requirements
@@ -50,11 +50,11 @@ Requirements for v1.3 Public Landing & Tenant Signup. Each maps to roadmap phase
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LAND-01 | Phase 14 | Pending |
-| LAND-02 | Phase 14 | Pending |
-| LAND-03 | Phase 14 | Pending |
-| LAND-04 | Phase 14 | Pending |
-| NAV-01 | Phase 14 | Pending |
+| LAND-01 | Phase 14 | Complete |
+| LAND-02 | Phase 14 | Complete |
+| LAND-03 | Phase 14 | Complete |
+| LAND-04 | Phase 14 | Complete |
+| NAV-01 | Phase 14 | Complete |
 | SIGN-01 | Phase 15 | Pending |
 | SIGN-02 | Phase 15 | Pending |
 | SIGN-03 | Phase 15 | Pending |

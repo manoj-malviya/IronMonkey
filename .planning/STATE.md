@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 14-01-PLAN.md
-last_updated: "2026-04-03T17:48:45.016Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 14-03-PLAN.md - Routes.razor public path exclusion and Login.razor PublicLayout
+last_updated: "2026-04-03T17:52:17.241Z"
 progress:
   total_phases: 2
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 3
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-03)
 ## Current Position
 
 Phase: 14 (landing-page) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -47,6 +47,9 @@ Key decisions for v1.3 (pre-planning):
 - NAV-01 grouped with Phase 14 (landing page owns its outbound nav links); NAV-02 grouped with Phase 15 (cross-linking login/signup is signup feature's responsibility)
 - [Phase 14]: PublicLayout nav uses bg-transparent so hero gradient shows through — white text on dark gradient
 - [Phase 14]: FeatureCard uses MarkupString for Icon to accept inline SVG without HTML encoding — correct Blazor pattern for Heroicons
+- [Phase 14-landing-page]: Home.razor uses fully qualified @layout namespace (IronMonkey.Web.Components.Layout.PublicLayout) since _Imports.razor only imports root Components namespace
+- [Phase 14-landing-page]: Path-check approach in Routes.razor NotAuthorized block: extract path from NavigationManager.Uri, suppress redirect for /, /login, /signup
+- [Phase 14-landing-page]: Login.razor uses @layout IronMonkey.Web.Components.Layout.PublicLayout as line 2 — overrides DefaultLayout=MainLayout from Routes.razor
 
 ### Pending Todos
 
@@ -59,7 +62,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-03T17:48:45.012Z
-Stopped at: Completed 14-01-PLAN.md
+Last session: 2026-04-03T17:52:17.237Z
+Stopped at: Completed 14-03-PLAN.md - Routes.razor public path exclusion and Login.razor PublicLayout
 Resume file: None
 Next action: `/gsd:plan-phase 14`

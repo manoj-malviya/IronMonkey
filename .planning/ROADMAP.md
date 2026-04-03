@@ -8,7 +8,7 @@
 
 ## Phases
 
-- [ ] **Phase 14: Landing Page** — Visitor sees a compelling, responsive public landing page with navigation to login and signup
+- [x] **Phase 14: Landing Page** — Visitor sees a compelling, responsive public landing page with navigation to login and signup (completed 2026-04-03)
 - [ ] **Phase 15: Tenant Signup Flow** — Visitor can complete the full signup process including recipe selection and confirmation
 
 ## Phase Details
@@ -27,8 +27,8 @@
 
 Plans:
 - [x] 14-01-PLAN.md — PublicLayout.razor + FeatureCard.razor (layout shell and reusable card component)
-- [ ] 14-02-PLAN.md — Home.razor replacement (hero section, feature grid, responsive landing page)
-- [ ] 14-03-PLAN.md — Routes.razor + Login.razor wiring (public route access, login page uses PublicLayout)
+- [x] 14-02-PLAN.md — Home.razor replacement (hero section, feature grid, responsive landing page)
+- [x] 14-03-PLAN.md — Routes.razor + Login.razor wiring (public route access, login page uses PublicLayout)
 
 **UI hint**: yes
 
@@ -49,7 +49,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 14. Landing Page | 1/3 | In Progress|  |
+| 14. Landing Page | 3/3 | Complete   | 2026-04-03 |
 | 15. Tenant Signup Flow | 0/? | Not started | - |
 
 ---
