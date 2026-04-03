@@ -56,7 +56,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 14. Landing Page | 3/3 | Complete    | 2026-04-03 |
-| 15. Tenant Signup Flow | 3/3 | Complete   | 2026-04-03 |
+| 15. Tenant Signup Flow | 3/3 | Complete    | 2026-04-03 |
 
 ---
 *Roadmap created: 2026-04-03 for milestone v1.3*
