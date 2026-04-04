@@ -90,13 +90,65 @@
 
 ---
 
+## Milestone: v1.2 — Admin UI
+
+**Shipped:** 2026-04-02
+**Phases:** 5 | **Plans:** 16 | **Tasks:** 20
+
+*(Retrospective not captured at time of completion — see MILESTONES.md for details)*
+
+---
+
+## Milestone: v1.3 — Public Landing & Tenant Signup
+
+**Shipped:** 2026-04-03
+**Phases:** 2 | **Plans:** 6 | **Tasks:** 10
+
+### What Was Built
+- PublicLayout.razor — clean public layout shell (no admin sidebar) with sticky nav and dark footer
+- Responsive SaaS landing page at / — dark gradient hero, tagline, dual CTAs, 4-feature grid
+- Public routing: Routes.razor allows /, /login, /signup, /signup/success without auth redirect
+- Tenant signup form at /signup with 7 validated fields, recipe browser with toggle-select preview
+- SignupSuccessPage at /signup/success with confirmation message and navigation links
+- Bidirectional login/signup cross-links completing full public navigation flow
+
+### What Worked
+- PublicLayout.razor as separate layout cleanly separated public and admin concerns — no conditional rendering
+- Reusing Login.razor patterns (EditForm, DataAnnotationsValidator, HttpClientFactory) made signup form fast to build
+- UI-SPEC design contracts locked visual decisions before planning — zero design drift during execution
+- All backend APIs already existed (POST /auth/signup, GET /api/recipes) — pure frontend milestone
+- Wave-based execution: Wave 1 (infrastructure) → Wave 2 (pages in parallel) — clean dependency flow
+
+### What Was Inefficient
+- v1.2 milestone retrospective was not captured — lost context on Admin UI lessons
+- Recipe preview panel defines its own RecipePreviewResponse record instead of sharing a DTO — minor duplication
+
+### Patterns Established
+- Dual layout architecture: PublicLayout (public pages) vs MainLayout (admin pages) via @layout directive
+- FeatureCard.razor with MarkupString Icon parameter for inline SVG — reusable marketing component
+- RecipePreviewCard/RecipePreviewPanel as self-contained components with EventCallback wiring
+- Path-based auth exclusion in Routes.razor NotAuthorized block for public routes
+
+### Key Lessons
+- Tailwind dark gradient hero (from-indigo-950 to-indigo-600) creates strong visual identity with minimal effort
+- Blazor @layout directive is the cleanest way to switch layouts — no conditional rendering needed
+- Self-contained record types inside components (RecipePreviewResponse) simplify API deserialization without shared DTOs
+- Small milestones (2 phases) can complete in a single session when patterns are established
+
+### Cost Observations
+- Model mix: ~15% opus (orchestration), ~65% sonnet (execution), ~20% haiku (research/verification)
+- Sessions: 1 (entire milestone in single session)
+- Notable: Fastest milestone yet — 2 phases completed and verified in one session
+
+---
+
 ## Cross-Milestone Trends
 
-| Metric | v1.0 | v1.1 |
-|--------|------|------|
-| Phases | 5 | 3 |
-| Plans | 30 | 9 |
-| Tasks | 59 | 16 |
-| LOC | 19,106 | ~28,000 (cumulative) |
-| Test Count | 108+ | 143+ |
-| Duration | 6 days | 1 day |
+| Metric | v1.0 | v1.1 | v1.2 | v1.3 |
+|--------|------|------|------|------|
+| Phases | 5 | 3 | 5 | 2 |
+| Plans | 30 | 9 | 16 | 6 |
+| Tasks | 59 | 16 | 20 | 10 |
+| LOC | 19,106 | ~28,000 | ~30,000+ | ~636 new |
+| Test Count | 108+ | 143+ | 143+ | 143+ (no new tests) |
+| Duration | 6 days | 1 day | ~2 days | 1 session |

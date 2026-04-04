@@ -4,7 +4,7 @@
 
 A multi-tenant, domain-agnostic Lead Management SaaS platform. Any business — automobile dealerships, real estate agencies, insurance brokers, service providers, educational institutions — can sign up as a tenant and fully configure the system to match their lead workflow without any code changes. Built on .NET Aspire with Blazor Server frontend.
 
-**Current State:** v1.2 shipped 2026-04-02. 13 phases across 3 milestones, 55 plans, 143+ integration tests. Full multi-tenant CRM with configurable leads, multi-channel ingestion, pipeline workflow engine, reporting dashboards, industry recipe onboarding, and complete Blazor Server admin UI. Built on .NET 10.0, .NET Aspire 13.1, EF Core 10.0.5, PostgreSQL, Tailwind CSS v4 (standalone CLI).
+**Current State:** v1.3 shipped 2026-04-03. 15 phases across 4 milestones, 61 plans, 143+ integration tests. Full multi-tenant CRM with configurable leads, multi-channel ingestion, pipeline workflow engine, reporting dashboards, industry recipe onboarding, complete Blazor Server admin UI, public SaaS landing page, and tenant self-service signup flow. Built on .NET 10.0, .NET Aspire 13.1, EF Core 10.0.5, PostgreSQL, Tailwind CSS v4 (standalone CLI).
 
 ## Core Value
 
@@ -55,23 +55,13 @@ Any business can configure their complete lead management workflow — fields, s
 - ✓ User & role management admin pages — v1.2 (USUI-01..04)
 - ✓ System configuration UI (pipeline stages, custom fields, routing, workflow rules) — v1.2 (CFUI-01..04)
 
+- ✓ Public SaaS landing page with product feature showcase — v1.3 (LAND-01..04)
+- ✓ Tenant self-service signup form with recipe selection — v1.3 (SIGN-01..04)
+- ✓ Navigation between landing, login, and signup pages — v1.3 (NAV-01, NAV-02)
+
 ### Active
 
-- ✓ Public SaaS landing page with product feature showcase — v1.3 (LAND-01..04), validated Phase 14
-- ✓ Tenant self-service signup form wired to existing API — v1.3 (SIGN-01..04), validated Phase 15
-- ✓ Navigation from landing to login and signup — v1.3 (NAV-01), validated Phase 14
-- ✓ Navigation cross-links between login and signup — v1.3 (NAV-02), validated Phase 15
-
-## Current Milestone: v1.3 Public Landing & Tenant Signup
-
-**Goal:** Give IronMonkey a public-facing identity — a modern SaaS landing page showcasing features, plus a working tenant signup flow wired to the existing API.
-
-**Target features:**
-- Modern SaaS landing page (hero section, feature grid, stats, CTAs)
-- Login navigation from landing page to existing /login page
-- Tenant signup form wired to POST /auth/signup (CompanyName, AdminEmail, AdminPassword, Phone, RecipeId, CompanySize, Address, BillingContact)
-- Industry recipe picker integrated into signup (optional RecipeId with recipe catalog preview)
-- Signup confirmation/status page after submission
+(None — next milestone not yet defined)
 
 ### Future
 
@@ -99,7 +89,7 @@ Any business can configure their complete lead management workflow — fields, s
 
 ## Context
 
-Shipped v1.1 with ~28,000 LOC across 75+ new files (v1.1 added 8,800+ lines). Tech stack: .NET 10.0, .NET Aspire 13.1, EF Core 10.0.5, PostgreSQL (Npgsql 10.0.1), Hangfire, Serilog, BCrypt, FuzzySharp, CsvHelper. 143+ integration tests using Testcontainers (postgres:15-alpine). All API endpoints are backend-only (Minimal API); Blazor Server frontend exists but is not yet wired to API endpoints.
+Shipped v1.3 with 15 phases across 4 milestones. Tech stack: .NET 10.0, .NET Aspire 13.1, EF Core 10.0.5, PostgreSQL (Npgsql 10.0.1), Hangfire, Serilog, BCrypt, FuzzySharp, CsvHelper, Tailwind CSS v4 (standalone CLI). 143+ integration tests using Testcontainers (postgres:15-alpine). v1.3 added public-facing SaaS landing page and tenant signup flow — 7 new Blazor components (~636 LOC). Blazor Server admin UI complete; public pages use separate PublicLayout.razor.
 
 The system must be truly domain-agnostic — the data model for leads, statuses, workflows, and fields is entirely tenant-defined. Industry "recipes" (automobile, real estate, insurance, etc.) provide sensible defaults but everything is customizable.
 
@@ -150,4 +140,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-03 after Phase 15 (Tenant Signup Flow) completed — v1.3 milestone complete*
+*Last updated: 2026-04-04 after v1.3 Public Landing & Tenant Signup milestone completed*
