@@ -11,7 +11,7 @@
           "lib/netcoreapp2.1/FuzzySharp.dll": {}
         }
       },
-      "Microsoft.AspNetCore.App.Internal.Assets/10.0.4": {
+      "Microsoft.AspNetCore.App.Internal.Assets/10.0.10": {
         "type": "package",
         "build": {
           "build/Microsoft.AspNetCore.App.Internal.Assets.props": {},
@@ -722,10 +722,10 @@
         "lib/netstandard2.1/FuzzySharp.dll"
       ]
     },
-    "Microsoft.AspNetCore.App.Internal.Assets/10.0.4": {
-      "sha512": "M942X5Vy726SlvFBuoAC4cDczEMlPAFt1mmyFlrkw/QcpdVwVU0DkF4P9JabxX6eWNm9RvaYZHe25FN7oXoxpQ==",
+    "Microsoft.AspNetCore.App.Internal.Assets/10.0.10": {
+      "sha512": "8k0KoYKvNrSqP8E3oDJMBVKavlTEE6BacdLGtEDcxv9Hz0XxWFkD6JdLJsxXUlGeAfZ6YfvWmxKenl73qeCTSA==",
       "type": "package",
-      "path": "microsoft.aspnetcore.app.internal.assets/10.0.4",
+      "path": "microsoft.aspnetcore.app.internal.assets/10.0.10",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -741,7 +741,7 @@
         "build/Microsoft.AspNetCore.App.Internal.Assets.targets",
         "buildMultiTargeting/Microsoft.AspNetCore.App.Internal.Assets.targets",
         "buildTransitive/Microsoft.AspNetCore.App.Internal.Assets.targets",
-        "microsoft.aspnetcore.app.internal.assets.10.0.4.nupkg.sha512",
+        "microsoft.aspnetcore.app.internal.assets.10.0.10.nupkg.sha512",
         "microsoft.aspnetcore.app.internal.assets.nuspec"
       ]
     },
@@ -1679,7 +1679,7 @@
     "net10.0": [
       "IronMonkey.Data >= 1.0.0",
       "IronMonkey.ServiceDefaults >= 1.0.0",
-      "Microsoft.AspNetCore.App.Internal.Assets >= 10.0.4",
+      "Microsoft.AspNetCore.App.Internal.Assets >= 10.0.10",
       "System.IdentityModel.Tokens.Jwt >= 8.7.0"
     ]
   },
@@ -1737,7 +1737,7 @@
           "Microsoft.AspNetCore.App.Internal.Assets": {
             "suppressParent": "All",
             "target": "Package",
-            "version": "[10.0.4, )",
+            "version": "[10.0.10, )",
             "autoReferenced": true
           },
           "System.IdentityModel.Tokens.Jwt": {
@@ -1764,7 +1764,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.104/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.110/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.AspNetCore": "(,10.0.32767]",
           "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",
@@ -2181,5 +2181,47 @@
         }
       }
     }
-  }
+  },
+  "logs": [
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "Package 'OpenTelemetry.Api' 1.14.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-g94r-2vxg-569j",
+      "libraryId": "OpenTelemetry.Api",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "Package 'OpenTelemetry.Exporter.OpenTelemetryProtocol' 1.14.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-4625-4j76-fww9",
+      "libraryId": "OpenTelemetry.Exporter.OpenTelemetryProtocol",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "Package 'OpenTelemetry.Exporter.OpenTelemetryProtocol' 1.14.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-mr8r-92fq-pj8p",
+      "libraryId": "OpenTelemetry.Exporter.OpenTelemetryProtocol",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "Package 'OpenTelemetry.Exporter.OpenTelemetryProtocol' 1.14.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-q834-8qmm-v933",
+      "libraryId": "OpenTelemetry.Exporter.OpenTelemetryProtocol",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    }
+  ]
 }

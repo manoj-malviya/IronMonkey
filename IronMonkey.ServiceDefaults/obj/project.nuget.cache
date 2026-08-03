@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "7OeL3gSRlV8=",
+  "dgSpecHash": "OcTOjdIJkxw=",
   "success": true,
   "projectFilePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj",
   "expectedPackageFiles": [
@@ -27,5 +27,54 @@
     "/home/manoj/.nuget/packages/polly.extensions/8.4.2/polly.extensions.8.4.2.nupkg.sha512",
     "/home/manoj/.nuget/packages/polly.ratelimiting/8.4.2/polly.ratelimiting.8.4.2.nupkg.sha512"
   ],
-  "logs": []
+  "logs": [
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'OpenTelemetry.Api' 1.14.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-g94r-2vxg-569j",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj",
+      "warningLevel": 1,
+      "filePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj",
+      "libraryId": "OpenTelemetry.Api",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'OpenTelemetry.Exporter.OpenTelemetryProtocol' 1.14.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-4625-4j76-fww9",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj",
+      "warningLevel": 1,
+      "filePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj",
+      "libraryId": "OpenTelemetry.Exporter.OpenTelemetryProtocol",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'OpenTelemetry.Exporter.OpenTelemetryProtocol' 1.14.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-mr8r-92fq-pj8p",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj",
+      "warningLevel": 1,
+      "filePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj",
+      "libraryId": "OpenTelemetry.Exporter.OpenTelemetryProtocol",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'OpenTelemetry.Exporter.OpenTelemetryProtocol' 1.14.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-q834-8qmm-v933",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj",
+      "warningLevel": 1,
+      "filePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj",
+      "libraryId": "OpenTelemetry.Exporter.OpenTelemetryProtocol",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    }
+  ]
 }

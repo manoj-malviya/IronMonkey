@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "+YUgzU2D0+c=",
+  "dgSpecHash": "nngr7/0Xa7A=",
   "success": true,
   "projectFilePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
   "expectedPackageFiles": [
@@ -71,5 +71,138 @@
     "/home/manoj/.nuget/packages/system.io.hashing/9.0.10/system.io.hashing.9.0.10.nupkg.sha512",
     "/home/manoj/.nuget/packages/yamldotnet/16.3.0/yamldotnet.16.3.0.nupkg.sha512"
   ],
-  "logs": []
+  "logs": [
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'MessagePack' 2.5.192 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-2f33-pr97-265q",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "warningLevel": 1,
+      "filePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "libraryId": "MessagePack",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'MessagePack' 2.5.192 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-2x83-8g95-xh59",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "warningLevel": 1,
+      "filePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "libraryId": "MessagePack",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'MessagePack' 2.5.192 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-cj9g-3mj2-g8vv",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "warningLevel": 1,
+      "filePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "libraryId": "MessagePack",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'MessagePack' 2.5.192 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-cxmj-83gh-fp49",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "warningLevel": 1,
+      "filePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "libraryId": "MessagePack",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'MessagePack' 2.5.192 has a known high severity vulnerability, https://github.com/advisories/GHSA-hv8m-jj95-wg3x",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "warningLevel": 1,
+      "filePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "libraryId": "MessagePack",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'MessagePack' 2.5.192 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-q2h6-ghwm-5qm8",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "warningLevel": 1,
+      "filePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "libraryId": "MessagePack",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'MessagePack' 2.5.192 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-qhmf-xw27-6rqr",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "warningLevel": 1,
+      "filePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "libraryId": "MessagePack",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'MessagePack' 2.5.192 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-v72x-2h86-7f8m",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "warningLevel": 1,
+      "filePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "libraryId": "MessagePack",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'MessagePack' 2.5.192 has a known high severity vulnerability, https://github.com/advisories/GHSA-vh6j-jc39-fggf",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "warningLevel": 1,
+      "filePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "libraryId": "MessagePack",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'MessagePack' 2.5.192 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-w567-gjr2-hm5j",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "warningLevel": 1,
+      "filePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "libraryId": "MessagePack",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'MessagePack' 2.5.192 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-wfr3-xj75-pfwh",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "warningLevel": 1,
+      "filePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.AppHost/IronMonkey.AppHost.csproj",
+      "libraryId": "MessagePack",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    }
+  ]
 }
