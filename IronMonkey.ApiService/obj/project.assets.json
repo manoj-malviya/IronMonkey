@@ -5013,11 +5013,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.ApiService/IronMonkey.ApiService.csproj",
+      "projectUniqueName": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ApiService/IronMonkey.ApiService.csproj",
       "projectName": "IronMonkey.ApiService",
-      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.ApiService/IronMonkey.ApiService.csproj",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ApiService/IronMonkey.ApiService.csproj",
       "packagesPath": "/home/manoj/.nuget/packages/",
-      "outputPath": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.ApiService/obj/",
+      "outputPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ApiService/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/home/manoj/.nuget/NuGet/NuGet.Config"
@@ -5033,14 +5033,14 @@
         "net10.0": {
           "targetAlias": "net10.0",
           "projectReferences": {
-            "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.Common/IronMonkey.Common.csproj": {
-              "projectPath": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.Common/IronMonkey.Common.csproj"
+            "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Common/IronMonkey.Common.csproj": {
+              "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Common/IronMonkey.Common.csproj"
             },
-            "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.Data/IronMonkey.Data.csproj": {
-              "projectPath": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.Data/IronMonkey.Data.csproj"
+            "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Data/IronMonkey.Data.csproj": {
+              "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Data/IronMonkey.Data.csproj"
             },
-            "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj": {
-              "projectPath": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj"
+            "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj": {
+              "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj"
             }
           }
         }

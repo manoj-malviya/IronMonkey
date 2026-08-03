@@ -29,6 +29,8 @@ public class AdminAuthenticationStateProvider : AuthenticationStateProvider
         if (_initialized && _cachedPrincipal != null)
             return new AuthenticationState(_cachedPrincipal);
 
+        // During prerendering, ProtectedSessionStorage may throw because JS interop is not ready.
+        // Return anonymous state for prerender and allow later initialization after first render.
         try
         {
             var tokenResult = await _sessionStorage.GetAsync<string>("auth_token");
@@ -45,12 +47,52 @@ public class AdminAuthenticationStateProvider : AuthenticationStateProvider
             _initialized = true;
             return new AuthenticationState(principal);
         }
+        catch (InvalidOperationException)
+        {
+            // JS is not available during prerender. Defer reading until OnAfterRenderAsync.
+            _cachedPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
+            return new AuthenticationState(_cachedPrincipal);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error reading authentication state from session storage");
             _cachedPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
             _initialized = true;
             return new AuthenticationState(_cachedPrincipal);
+        }
+    }
+
+    public async Task InitializeAsync()
+    {
+        if (_initialized)
+            return;
+
+        try
+        {
+            var tokenResult = await _sessionStorage.GetAsync<string>("auth_token");
+
+            if (!tokenResult.Success || string.IsNullOrEmpty(tokenResult.Value))
+            {
+                _cachedPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
+            }
+            else
+            {
+                _cachedPrincipal = ValidateAndGetPrincipal(tokenResult.Value);
+            }
+
+            _initialized = true;
+            NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(_cachedPrincipal)));
+        }
+        catch (InvalidOperationException)
+        {
+            // Still prerendering or JS not ready; skip and try again later.
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initializing authentication state");
+            _cachedPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
+            _initialized = true;
+            NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(_cachedPrincipal)));
         }
     }
 

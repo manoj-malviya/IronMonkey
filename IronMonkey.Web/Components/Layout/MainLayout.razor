@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject IJSRuntime JS
+@inject AdminAuthenticationStateProvider AuthProvider
 
 <CascadingAuthenticationState>
     <!-- Mobile topbar (D-16) -->
@@ -29,6 +30,9 @@
             // Detect initial viewport width to set mobile/desktop mode
             var width = await JS.InvokeAsync<int>("eval", "window.innerWidth");
             _isMobile = width < 768;  // D-14: md breakpoint
+
+            // Initialize authentication state after JS interop is available.
+            await AuthProvider.InitializeAsync();
             StateHasChanged();
         }
     }

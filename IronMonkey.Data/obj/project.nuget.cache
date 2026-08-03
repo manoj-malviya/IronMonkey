@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "b24skfRwAmI=",
+  "dgSpecHash": "Li4dNHDtQLs=",
   "success": true,
-  "projectFilePath": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.Data/IronMonkey.Data.csproj",
+  "projectFilePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Data/IronMonkey.Data.csproj",
   "expectedPackageFiles": [
     "/home/manoj/.nuget/packages/fuzzysharp/2.0.0/fuzzysharp.2.0.0.nupkg.sha512",
     "/home/manoj/.nuget/packages/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg.sha512",

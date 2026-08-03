@@ -6,85 +6,143 @@
 
 <PageTitle>Sign In — IronMonkey</PageTitle>
 
-<div class="min-h-screen bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center px-4 py-12">
-    <div class="w-full max-w-md">
-        <!-- Branding (D-03) -->
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-slate-900">IronMonkey</h1>
-            <p class="mt-1 text-sm text-slate-500">Admin Console</p>
-        </div>
-
-        <!-- Card -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 px-8 py-10">
-            <h2 class="text-xl font-semibold text-slate-800 mb-6">Sign in to your account</h2>
-
-            <!-- Summary banner (D-02) -->
-            @if (!string.IsNullOrEmpty(_errorBanner))
-            {
-                <div class="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-                    @_errorBanner
-                </div>
-            }
-
-            <EditForm Model="_model" OnValidSubmit="HandleLoginAsync">
-                <DataAnnotationsValidator />
-
-                <!-- Email field -->
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-slate-700 mb-1" for="email">Email address</label>
-                    <InputText id="email"
-                               @bind-Value="_model.Email"
-                               type="email"
-                               autocomplete="username"
-                               placeholder="admin@example.com"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
-                    <!-- Inline error (D-02) -->
-                    <ValidationMessage For="() => _model.Email" class="mt-1 text-xs text-red-600" />
-                </div>
-
-                <!-- Password field -->
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-slate-700 mb-1" for="password">Password</label>
-                    <InputText id="password"
-                               @bind-Value="_model.Password"
-                               type="password"
-                               autocomplete="current-password"
-                               placeholder="••••••••"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
-                    <ValidationMessage For="() => _model.Password" class="mt-1 text-xs text-red-600" />
-                </div>
-
-                <!-- Submit button with loading state (D-04) -->
-                <button type="submit"
-                        disabled="@_isLoading"
-                        class="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed transition-colors">
-                    @if (_isLoading)
-                    {
-                        <span>Signing in...</span>
-                    }
-                    else
-                    {
-                        <span>Sign in</span>
-                    }
-                </button>
-            </EditForm>
-        </div>
-
-        <p class="text-center text-sm text-slate-600 mt-4">
-            Don't have an account? <a href="/signup" class="text-indigo-600 hover:text-indigo-500 font-medium">Sign up</a>
-        </p>
+<!-- Header -->
+<header class="w-full px-8 py-8 flex justify-between items-center max-w-7xl mx-auto">
+    <a href="/" class="text-2xl font-bold tracking-tighter text-primary uppercase font-headline">
+        IronMonkey
+    </a>
+    <div class="hidden md:block">
+        <a class="text-on-surface-variant hover:text-primary transition-colors font-label text-sm uppercase tracking-widest" href="/signup">
+            Don't have an account? <span class="text-primary font-bold">Sign Up</span>
+        </a>
     </div>
-</div>
+</header>
+
+<main class="flex-grow flex flex-col items-center justify-center px-4 py-12">
+    <div class="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+
+        <!-- Left Column: Branding -->
+        <div class="lg:col-span-5 space-y-8 lg:sticky lg:top-12">
+            <h1 class="text-5xl lg:text-7xl font-headline font-bold leading-none tracking-tighter uppercase italic text-on-background">
+                Welcome <span class="text-primary">Back.</span>
+            </h1>
+            <p class="text-lg text-on-surface-variant leading-relaxed font-body max-w-md">
+                Sign in to your command center. Your pipeline, analytics, and automation engine await.
+            </p>
+            <div class="space-y-4 pt-4">
+                <div class="flex items-center gap-4 text-on-background">
+                    <span class="material-symbols-outlined text-primary">check_circle</span>
+                    <span class="font-label text-sm uppercase tracking-widest font-semibold">Real-time Pipeline Dashboard</span>
+                </div>
+                <div class="flex items-center gap-4 text-on-background">
+                    <span class="material-symbols-outlined text-primary">check_circle</span>
+                    <span class="font-label text-sm uppercase tracking-widest font-semibold">Automated Workflow Engine</span>
+                </div>
+                <div class="flex items-center gap-4 text-on-background">
+                    <span class="material-symbols-outlined text-primary">check_circle</span>
+                    <span class="font-label text-sm uppercase tracking-widest font-semibold">Enterprise-Grade Security</span>
+                </div>
+            </div>
+            <div class="relative rounded-xl overflow-hidden group border border-outline-variant/30">
+                <img class="w-full h-48 object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500"
+                     src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8kh61tUs2aPw97kI6UkYUm20tA2Dbmd5ItOmDyqqtBZHSc8wANaFq7edfBFHQk_tNdYN9q5GGaWXGr3psiBHCPSYPu_0mIS9QFfkUZnbprCFAcWdem7XvavTyWsS5g_sln0dUDol_cdqMMoxH-pd4JK-tIRmW1CXIkM5eow4QUEDuK5ma3gLevoiw1yc1XrFcsjg-oJI-10eAuwo2qd2qUMu1fDc9FNoN0BkvTH7c3373WTPaBJgbvUCVLeOGMd2Lh5FXvs2hfA"
+                     alt="Industrial abstract" />
+                <div class="absolute inset-0 bg-gradient-to-t from-surface/80 to-transparent"></div>
+            </div>
+        </div>
+
+        <!-- Right Column: Login Form -->
+        <div class="lg:col-span-7 space-y-8">
+            <div class="bg-white rounded-xl p-8 lg:p-10 orange-glow-light border border-outline-variant/30 border-l-4 border-l-primary">
+                <h2 class="text-2xl font-headline font-bold uppercase tracking-tight mb-8 text-on-background">Sign In</h2>
+
+                @if (!string.IsNullOrEmpty(_errorBanner))
+                {
+                    <div class="mb-6 rounded-lg bg-error-container border border-error/20 px-4 py-3 text-sm text-error font-medium">
+                        @_errorBanner
+                    </div>
+                }
+
+                <EditForm Model="_model" FormName="login-form" OnValidSubmit="HandleLoginAsync">
+                    <DataAnnotationsValidator />
+
+                    <div class="space-y-6">
+                        <!-- Email -->
+                        <div class="space-y-2">
+                            <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant px-1 font-bold">Email Address</label>
+                            <InputText id="email"
+                                       @bind-Value="_model.Email"
+                                       type="email"
+                                       autocomplete="username"
+                                       placeholder="admin@company.com"
+                                       class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-on-surface placeholder:text-outline p-4 transition-all" />
+                            <ValidationMessage For="() => _model.Email" class="text-xs text-error font-medium" />
+                        </div>
+
+                        <!-- Password -->
+                        <div class="space-y-2">
+                            <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant px-1 font-bold">Password</label>
+                            <InputText id="password"
+                                       @bind-Value="_model.Password"
+                                       type="password"
+                                       autocomplete="current-password"
+                                       placeholder="••••••••••••"
+                                       class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-on-surface placeholder:text-outline p-4 transition-all" />
+                            <ValidationMessage For="() => _model.Password" class="text-xs text-error font-medium" />
+                        </div>
+
+                        <!-- Submit -->
+                        <button type="submit"
+                                disabled="@_isLoading"
+                                class="w-full bg-primary text-white py-5 rounded-lg font-headline font-black uppercase tracking-widest text-lg hover:bg-primary-dim hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex justify-center items-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed">
+                            @if (_isLoading)
+                            {
+                                <span>Signing in...</span>
+                            }
+                            else
+                            {
+                                <span>Sign In</span>
+                                <span class="material-symbols-outlined font-black">login</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+
+            <!-- Mobile signup link -->
+            <div class="md:hidden text-center pb-8">
+                <a class="text-on-surface-variant hover:text-primary transition-colors font-label text-sm uppercase tracking-widest" href="/signup">
+                    Don't have an account? <span class="text-primary font-bold">Sign Up</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Footer -->
+<footer class="w-full border-t border-outline-variant/30 mt-20 bg-surface-container-lowest">
+    <div class="max-w-7xl mx-auto px-8 py-12 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div class="text-lg font-black text-on-surface-variant font-headline uppercase tracking-tighter">
+            IRONMONKEY
+        </div>
+        <div class="flex flex-wrap justify-center gap-8">
+            <a class="text-xs font-label uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors font-semibold" href="#">Resources</a>
+            <a class="text-xs font-label uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors font-semibold" href="#">Company</a>
+            <a class="text-xs font-label uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors font-semibold" href="#">Legal</a>
+        </div>
+        <div class="text-[10px] text-outline font-label uppercase tracking-[0.2em]">
+            &copy; 2026 IRONMONKEY CRM. KINETIC INDUSTRIALISM.
+        </div>
+    </div>
+</footer>
 
 @code {
-    // D-12: Login form starts clean each time — no "remember email" feature
     private readonly LoginModel _model = new();
     private bool _isLoading = false;
     private string? _errorBanner = null;
 
     protected override async Task OnInitializedAsync()
     {
-        // If already authenticated, redirect to admin
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
@@ -122,7 +180,6 @@
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
-                // D-02: Validation errors display inline with summary banner at top
                 _errorBanner = "Invalid email address or password.";
             }
             else
@@ -140,10 +197,8 @@
         }
     }
 
-    // Response shape from POST /auth/login
     private record LoginResponse(string Token, Guid TenantId);
 
-    // Model with data annotations for client-side validation
     private class LoginModel
     {
         [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Email address is required")]

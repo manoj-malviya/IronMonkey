@@ -965,11 +965,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj",
+      "projectUniqueName": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj",
       "projectName": "IronMonkey.ServiceDefaults",
-      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj",
       "packagesPath": "/home/manoj/.nuget/packages/",
-      "outputPath": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.ServiceDefaults/obj/",
+      "outputPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/home/manoj/.nuget/NuGet/NuGet.Config"

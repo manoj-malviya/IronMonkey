@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "surface-tint": "#ff5d2b",
+                  "primary-fixed-dim": "#ff5d2b",
+                  "surface-container-low": "#f7f7f7",
+                  "inverse-on-surface": "#f4f0ef",
+                  "secondary": "#525f70",
+                  "tertiary-fixed": "#e699fd",
+                  "on-surface-variant": "#484847",
+                  "on-background": "#1c1b1b",
+                  "secondary-dim": "#b9c8da",
+                  "on-primary-fixed-variant": "#581300",
+                  "secondary-container": "#d4e4f6",
+                  "error-dim": "#e2a09f",
+                  "surface": "#fffbff",
+                  "primary": "#ff5d2b",
+                  "on-primary-fixed": "#ffffff",
+                  "on-secondary-container": "#0e1d2a",
+                  "primary-dim": "#ff5d2b",
+                  "tertiary": "#785381",
+                  "surface-bright": "#fcf9f8",
+                  "tertiary-dim": "#e8b9f1",
+                  "on-tertiary-container": "#2e1139",
+                  "on-tertiary-fixed-variant": "#611b79",
+                  "surface-container-lowest": "#ffffff",
+                  "surface-container": "#f1f1f0",
+                  "on-secondary-fixed-variant": "#3a4857",
+                  "on-primary-container": "#410d00",
+                  "error": "#ba1a1a",
+                  "on-secondary": "#ffffff",
+                  "inverse-primary": "#ffb5a0",
+                  "outline-variant": "#c9c5c4",
+                  "surface-variant": "#e7e0de",
+                  "on-primary": "#ffffff",
+                  "inverse-surface": "#313030",
+                  "on-tertiary-fixed": "#2e003c",
+                  "primary-container": "#ffdbd1",
+                  "secondary-fixed": "#d4e4f6",
+                  "surface-dim": "#ddd9d8",
+                  "surface-container-highest": "#e5e2e1",
+                  "tertiary-fixed-dim": "#e8b9f1",
+                  "tertiary-container": "#ffd6ff",
+                  "secondary-fixed-dim": "#b9c8da",
+                  "on-secondary-fixed": "#0e1d2a",
+                  "on-error": "#ffffff",
+                  "on-error-container": "#410002",
+                  "surface-container-high": "#ebe8e7",
+                  "on-surface": "#1c1b1b",
+                  "primary-fixed": "#ffdbd1",
+                  "error-container": "#ffdad6",
+                  "outline": "#7a7574",
+                  "on-tertiary": "#ffffff",
+                  "background": "#fffbff"
+          },
+          "borderRadius": {
+                  "DEFAULT": "0.125rem",
+                  "lg": "0.25rem",
+                  "xl": "0.5rem",
+                  "full": "0.75rem"
+          },
+          "fontFamily": {
+                  "headline": ["Space Grotesk"],
+                  "body": ["Inter"],
+                  "label": ["Inter"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body { font-family: 'Inter', sans-serif; }
+    .headline { font-family: 'Space Grotesk', sans-serif; }
+    .glass-effect {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(20px);
+    }
+    .orange-glow-light {
+      box-shadow: 0 10px 30px rgba(255, 93, 43, 0.08);
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col">
+<!-- Top Navigation -->
+<header class="w-full px-8 py-8 flex justify-between items-center max-w-7xl mx-auto">
+<div class="text-2xl font-bold tracking-tighter text-primary uppercase font-headline">
+      IronMonkey
+    </div>
+<div class="hidden md:block">
+<a class="text-on-surface-variant hover:text-primary transition-colors font-label text-sm uppercase tracking-widest" href="#">
+        Already have an account? <span class="text-primary font-bold">Log In</span>
+</a>
+</div>
+</header>
+<main class="flex-grow flex flex-col items-center justify-center px-4 py-12">
+<div class="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+<!-- Left Column: Branding & Value Prop -->
+<div class="lg:col-span-5 space-y-8 lg:sticky lg:top-12">
+<h1 class="text-5xl lg:text-7xl font-headline font-bold leading-none tracking-tighter uppercase italic text-on-background">
+          Ignite Your <span class="text-primary">Growth.</span>
+</h1>
+<p class="text-lg text-on-surface-variant leading-relaxed font-body max-w-md">
+          Precision-engineered CRM for industrial-scale operations. High-contrast visibility into your pipeline. Zero friction, maximum power.
+        </p>
+<div class="space-y-4 pt-4">
+<div class="flex items-center gap-4 text-on-background">
+<span class="material-symbols-outlined text-primary" data-icon="check_circle">check_circle</span>
+<span class="font-label text-sm uppercase tracking-widest font-semibold">Automated Lead Routing</span>
+</div>
+<div class="flex items-center gap-4 text-on-background">
+<span class="material-symbols-outlined text-primary" data-icon="check_circle">check_circle</span>
+<span class="font-label text-sm uppercase tracking-widest font-semibold">Real-time Heatmap Analytics</span>
+</div>
+<div class="flex items-center gap-4 text-on-background">
+<span class="material-symbols-outlined text-primary" data-icon="check_circle">check_circle</span>
+<span class="font-label text-sm uppercase tracking-widest font-semibold">Enterprise-Grade Security</span>
+</div>
+</div>
+<div class="relative rounded-xl overflow-hidden group border border-outline-variant/30">
+<img class="w-full h-48 object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500" data-alt="Abstract macro shot of brushed carbon fiber with glowing orange neon lines reflecting on the metallic surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8kh61tUs2aPw97kI6UkYUm20tA2Dbmd5ItOmDyqqtBZHSc8wANaFq7edfBFHQk_tNdYN9q5GGaWXGr3psiBHCPSYPu_0mIS9QFfkUZnbprCFAcWdem7XvavTyWsS5g_sln0dUDol_cdqMMoxH-pd4JK-tIRmW1CXIkM5eow4QUEDuK5ma3gLevoiw1yc1XrFcsjg-oJI-10eAuwo2qd2qUMu1fDc9FNoN0BkvTH7c3373WTPaBJgbvUCVLeOGMd2Lh5FXvs2hfA"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface/80 to-transparent"></div>
+</div>
+</div>
+<!-- Right Column: Signup Form & Plan Selection -->
+<div class="lg:col-span-7 space-y-8">
+<!-- Form Section -->
+<div class="bg-white rounded-xl p-8 lg:p-10 orange-glow-light border border-outline-variant/30 border-l-4 border-l-primary">
+<h2 class="text-2xl font-headline font-bold uppercase tracking-tight mb-8 text-on-background">Account Configuration</h2>
+<form class="space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="font-label text-xs uppercase tracking-widest text-on-surface-variant px-1 font-bold">Full Name</label>
+<input class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-on-surface placeholder:text-outline p-4 transition-all" placeholder="John Doe" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="font-label text-xs uppercase tracking-widest text-on-surface-variant px-1 font-bold">Business Email</label>
+<input class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-on-surface placeholder:text-outline p-4 transition-all" placeholder="john@company.com" type="email"/>
+</div>
+</div>
+<div class="space-y-2">
+<label class="font-label text-xs uppercase tracking-widest text-on-surface-variant px-1 font-bold">Company Name</label>
+<input class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-on-surface placeholder:text-outline p-4 transition-all" placeholder="IronMonkey Industrial Ltd." type="text"/>
+</div>
+<div class="space-y-2">
+<label class="font-label text-xs uppercase tracking-widest text-on-surface-variant px-1 font-bold">Password</label>
+<input class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-on-surface placeholder:text-outline p-4 transition-all" placeholder="••••••••••••" type="password"/>
+</div>
+<!-- Plan Selection Section -->
+<div class="pt-6 space-y-4">
+<label class="font-label text-xs uppercase tracking-widest text-on-surface-variant px-1 block mb-2 font-bold">Select Your Plan</label>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+<!-- Starter -->
+<label class="relative cursor-pointer group">
+<input class="peer sr-only" name="plan" type="radio"/>
+<div class="h-full p-4 rounded-lg bg-surface-container border border-transparent peer-checked:border-primary peer-checked:bg-primary-container/20 transition-all">
+<div class="font-headline font-bold uppercase text-sm mb-1 text-on-background">Starter</div>
+<div class="text-xl font-headline font-black text-primary">$29<span class="text-xs text-on-surface-variant font-normal">/mo</span></div>
+</div>
+</label>
+<!-- Pro -->
+<label class="relative cursor-pointer group">
+<input checked="" class="peer sr-only" name="plan" type="radio"/>
+<div class="h-full p-4 rounded-lg bg-surface-container border border-transparent peer-checked:border-primary peer-checked:bg-primary-container/20 ring-2 ring-primary ring-opacity-20 transition-all">
+<div class="flex justify-between items-start mb-1">
+<div class="font-headline font-bold uppercase text-sm text-on-background">Pro</div>
+<span class="text-[10px] bg-primary text-white px-2 py-0.5 font-bold uppercase rounded-full">Best</span>
+</div>
+<div class="text-xl font-headline font-black text-primary">$99<span class="text-xs text-on-surface-variant font-normal">/mo</span></div>
+</div>
+</label>
+<!-- Enterprise -->
+<label class="relative cursor-pointer group">
+<input class="peer sr-only" name="plan" type="radio"/>
+<div class="h-full p-4 rounded-lg bg-surface-container border border-transparent peer-checked:border-primary peer-checked:bg-primary-container/20 transition-all">
+<div class="font-headline font-bold uppercase text-sm mb-1 text-on-background">Enterprise</div>
+<div class="text-xl font-headline font-black text-primary">Custom</div>
+</div>
+</label>
+</div>
+</div>
+<button class="w-full bg-primary text-white py-5 rounded-lg font-headline font-black uppercase tracking-widest text-lg hover:bg-primary-fixed-dim hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex justify-center items-center gap-3" type="submit">
+<span>Create Your Account</span>
+<span class="material-symbols-outlined font-black" data-icon="bolt">bolt</span>
+</button>
+<p class="text-center text-xs text-on-surface-variant font-label uppercase tracking-widest">
+              By signing up, you agree to our <a class="underline font-bold hover:text-primary" href="#">Terms of Service</a> &amp; <a class="underline font-bold hover:text-primary" href="#">Privacy Policy</a>.
+            </p>
+</form>
+</div>
+<!-- Mobile Login Link (Fallback) -->
+<div class="md:hidden text-center pb-8">
+<a class="text-on-surface-variant hover:text-primary transition-colors font-label text-sm uppercase tracking-widest" href="#">
+            Already have an account? <span class="text-primary font-bold">Log In</span>
+</a>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full border-t border-outline-variant/30 mt-20 bg-surface-container-lowest">
+<div class="max-w-7xl mx-auto px-8 py-12 flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="text-lg font-black text-on-surface-variant font-headline uppercase tracking-tighter">
+        IRONMONKEY
+      </div>
+<div class="flex flex-wrap justify-center gap-8">
+<a class="text-xs font-label uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors font-semibold" href="#">Resources</a>
+<a class="text-xs font-label uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors font-semibold" href="#">Company</a>
+<a class="text-xs font-label uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors font-semibold" href="#">Legal</a>
+<a class="text-xs font-label uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors font-semibold" href="#">Twitter</a>
+</div>
+<div class="text-[10px] text-outline font-label uppercase tracking-[0.2em]">
+        © 2024 IRONMONKEY CRM. KINETIC INDUSTRIALISM.
+      </div>
+</div>
+</footer>
+</body></html>

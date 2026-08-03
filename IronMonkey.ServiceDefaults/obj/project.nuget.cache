@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "4Sh9aq1epQg=",
+  "dgSpecHash": "7OeL3gSRlV8=",
   "success": true,
-  "projectFilePath": "/home/manoj/projects/sandbox/IronMonkey/.claude/worktrees/agent-a06636e7/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj",
+  "projectFilePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.ServiceDefaults/IronMonkey.ServiceDefaults.csproj",
   "expectedPackageFiles": [
     "/home/manoj/.nuget/packages/microsoft.extensions.ambientmetadata.application/10.1.0/microsoft.extensions.ambientmetadata.application.10.1.0.nupkg.sha512",
     "/home/manoj/.nuget/packages/microsoft.extensions.compliance.abstractions/10.1.0/microsoft.extensions.compliance.abstractions.10.1.0.nupkg.sha512",
