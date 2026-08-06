@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Threading.RateLimiting;
 using IronMonkey.ApiService.Authentication.Services;
 using IronMonkey.ApiService.BackgroundJobs;
+using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Common.Cache;
 using IronMonkey.ApiService.Common.Services;
@@ -40,6 +41,11 @@ public static class ConfigureServices
             builder.AddSerilog();
             builder.AddSwagger();
             builder.Services.ConfigureDb(builder.Configuration);
+
+            // Keeps /health unhealthy until the central database is migrated.
+            builder.Services.AddSingleton<DatabaseReadinessState>();
+            builder.Services.AddHealthChecks()
+                .AddCheck<DatabaseReadinessHealthCheck>("central-db-ready");
             builder.Services.AddValidatorsFromAssembly(typeof(ConfigureServices).Assembly);
             builder.AddJwtAuthentication();
             builder.AddAuthorization();

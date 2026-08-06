@@ -10,11 +10,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <HeadOutlet />
+    <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
 <body>
-    <Routes />
+    @* Applied at the root so every routed page and its children are interactive.
+       Without it, pages render as static SSR: @bind-Value never captures input and
+       @onclick handlers never fire, so forms post empty models. *@
+    <Routes @rendermode="InteractiveServer" />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>
 

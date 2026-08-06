@@ -200,14 +200,14 @@
 
         @foreach (var recipe in _recipes)
         {
-            <RecipePreviewCard Id="recipe.Id"
-                               Name="recipe.Name"
-                               Description="recipe.Description"
-                               IndustrySlug="recipe.IndustrySlug"
-                               StageCount="recipe.StageCount"
-                               FieldCount="recipe.FieldCount"
-                               RuleCount="recipe.RuleCount"
-                               IsSelected="recipe.Id == _selectedRecipeId && _selectedRecipeId != Guid.Empty"
+            <RecipePreviewCard Id="@recipe.Id"
+                               Name="@recipe.Name"
+                               Description="@recipe.Description"
+                               IndustrySlug="@recipe.IndustrySlug"
+                               StageCount="@recipe.StageCount"
+                               FieldCount="@recipe.FieldCount"
+                               RuleCount="@recipe.RuleCount"
+                               IsSelected="@(recipe.Id == _selectedRecipeId && _selectedRecipeId != Guid.Empty)"
                                OnClick="HandleRecipeClick" />
         }
     </div>

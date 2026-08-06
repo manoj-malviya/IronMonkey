@@ -14,6 +14,17 @@ public class AdminAuthenticationStateProvider : AuthenticationStateProvider
     private ClaimsPrincipal? _cachedPrincipal;
     private bool _initialized = false;
 
+    // Session storage is only reachable through JS interop, which is unavailable during
+    // prerendering. Cache the token in the circuit so callers on the request path (e.g.
+    // BearerTokenHandler) can attach it without triggering another interop call.
+    private string? _cachedToken;
+
+    /// <summary>
+    /// The current JWT, or null if unknown. Never performs JS interop, so it is safe to
+    /// call while prerendering — it returns null rather than throwing.
+    /// </summary>
+    public string? CachedToken => _cachedToken;
+
     public AdminAuthenticationStateProvider(
         ProtectedSessionStorage sessionStorage,
         ILogger<AdminAuthenticationStateProvider> logger,
@@ -37,11 +48,13 @@ public class AdminAuthenticationStateProvider : AuthenticationStateProvider
 
             if (!tokenResult.Success || string.IsNullOrEmpty(tokenResult.Value))
             {
+                _cachedToken = null;
                 _cachedPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
                 _initialized = true;
                 return new AuthenticationState(_cachedPrincipal);
             }
 
+            _cachedToken = tokenResult.Value;
             var principal = ValidateAndGetPrincipal(tokenResult.Value);
             _cachedPrincipal = principal;
             _initialized = true;
@@ -73,10 +86,12 @@ public class AdminAuthenticationStateProvider : AuthenticationStateProvider
 
             if (!tokenResult.Success || string.IsNullOrEmpty(tokenResult.Value))
             {
+                _cachedToken = null;
                 _cachedPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
             }
             else
             {
+                _cachedToken = tokenResult.Value;
                 _cachedPrincipal = ValidateAndGetPrincipal(tokenResult.Value);
             }
 
@@ -101,6 +116,7 @@ public class AdminAuthenticationStateProvider : AuthenticationStateProvider
         try
         {
             await _sessionStorage.SetAsync("auth_token", token);
+            _cachedToken = token;
             var principal = ValidateAndGetPrincipal(token);
             _cachedPrincipal = principal;
             _initialized = true;
@@ -119,6 +135,7 @@ public class AdminAuthenticationStateProvider : AuthenticationStateProvider
         try
         {
             await _sessionStorage.DeleteAsync("auth_token");
+            _cachedToken = null;
             _cachedPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
             _initialized = false;
             NotifyAuthenticationStateChanged(Task.FromResult(
@@ -134,13 +151,20 @@ public class AdminAuthenticationStateProvider : AuthenticationStateProvider
 
     public async Task<string?> GetTokenAsync()
     {
+        if (_cachedToken is not null)
+            return _cachedToken;
+
         try
         {
             var result = await _sessionStorage.GetAsync<string>("auth_token");
-            return result.Success ? result.Value : null;
+            if (result.Success && !string.IsNullOrEmpty(result.Value))
+                _cachedToken = result.Value;
+
+            return _cachedToken;
         }
         catch
         {
+            // JS interop unavailable (prerender). Caller treats null as "not authenticated".
             return null;
         }
     }

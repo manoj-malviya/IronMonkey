@@ -74,7 +74,9 @@ public static class Endpoints
 
         private void MapPlatformAdminEndpoints()
         {
-            var endpoints = app.MapGroup("/admin")
+            // No prefix: each endpoint below declares its own absolute route
+            // (e.g. "/signup/{id}/approve"). A group prefix would double it.
+            var endpoints = app.MapGroup(string.Empty)
                 .WithTags("Platform Admin")
                 .RequireAuthorization();
 
@@ -89,16 +91,17 @@ public static class Endpoints
 
         private void MapUserEndpoints()
         {
-            var endpoints = app.MapGroup("/users")
-                .WithTags("Users");
-
-            endpoints.MapPublicGroup()
-                .MapEndpoint<CreateUser>();
+            // CreateUser is superseded by CreateTenantUserEndpoint (see
+            // MapUserManagementEndpoints). Both declare POST /users, so registering both
+            // makes every request to that route fail with AmbiguousMatchException. The
+            // legacy one also targets the obsolete AppDbContext, which points at the
+            // central database where User/Role do not exist, so it could not succeed.
+            // Left registered-but-unused code out rather than deleting the type.
         }
 
         private void MapTenantEndpoints()
         {
-            var endpoints = app.MapGroup("/tenant")
+            var endpoints = app.MapGroup(string.Empty)
                 .WithTags("Tenant");
 
             endpoints.MapPublicGroup()
@@ -107,7 +110,7 @@ public static class Endpoints
 
         private void MapUserManagementEndpoints()
         {
-            var endpoints = app.MapGroup("/user-management")
+            var endpoints = app.MapGroup(string.Empty)
                 .WithTags("User Management");
 
             // Existing public endpoints (role/permission management)
@@ -203,14 +206,14 @@ public static class Endpoints
         private void MapRecipeEndpoints()
         {
             // Public read endpoints (anonymous — required for signup flow, D-10)
-            var publicRecipes = app.MapGroup("/api/recipes")
+            var publicRecipes = app.MapGroup(string.Empty)
                 .WithTags("Recipes")
                 .AllowAnonymous();
             publicRecipes.MapEndpoint<RecipeListEndpoint>();
             publicRecipes.MapEndpoint<RecipePreviewEndpoint>();
 
             // Admin write endpoints (require authorization, D-11)
-            var adminRecipes = app.MapGroup("/api/recipes")
+            var adminRecipes = app.MapGroup(string.Empty)
                 .WithTags("Platform Admin")
                 .RequireAuthorization();
             adminRecipes.MapEndpoint<CreateRecipeEndpoint>();

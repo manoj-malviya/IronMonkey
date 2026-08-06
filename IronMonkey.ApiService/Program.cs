@@ -29,6 +29,6 @@ if (app.Environment.IsDevelopment())
 }
 
 // app.UserCors();
-app.Configure();
+await app.Configure();
 
 app.Run();
