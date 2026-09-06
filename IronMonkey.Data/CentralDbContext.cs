@@ -15,6 +15,7 @@ public class CentralDbContext(DbContextOptions<CentralDbContext> options) : DbCo
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<SignupRequest> SignupRequests => Set<SignupRequest>();
     public DbSet<UserTenantIndex> UserTenantIndex => Set<UserTenantIndex>();
+    public DbSet<PlatformUser> PlatformUsers => Set<PlatformUser>();
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<WebForm> WebForms => Set<WebForm>();
     public DbSet<IndustryRecipe> IndustryRecipes => Set<IndustryRecipe>();
@@ -31,6 +32,18 @@ public class CentralDbContext(DbContextOptions<CentralDbContext> options) : DbCo
             b.HasKey(x => x.Id);
             b.HasIndex(x => x.Email);
             b.Property(x => x.Email).IsRequired().HasMaxLength(320);
+        });
+
+        modelBuilder.Entity<PlatformUser>(b =>
+        {
+            b.ToTable("PlatformUsers");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => x.Email).IsUnique();
+            b.Property(x => x.Name).IsRequired().HasMaxLength(200);
+            b.Property(x => x.Email).IsRequired().HasMaxLength(320);
+            b.Property(x => x.PasswordHash).IsRequired();
+            b.Property(x => x.Role).IsRequired().HasMaxLength(50);
+            b.HasQueryFilter(x => !x.IsDeleted);
         });
 
         modelBuilder.Entity<ApiKey>(b =>

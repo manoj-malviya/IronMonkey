@@ -1,11 +1,13 @@
+using IronMonkey.Common.Auth;
+
 namespace IronMonkey.Data.Entities;
 
 public sealed class Role
 {
-    public static readonly Role SuperAdmin = new(1, "SuperAdmin");
-    public static readonly Role Admin = new(201, "Admin");
-    public static readonly Role Owner = new(301, "Owner");
-    public static readonly Role TeleCaller = new(302, "TeleCaller");
+    public static readonly Role SuperAdmin = new(1, RoleConstants.SuperAdmin);
+    public static readonly Role Admin = new(201, RoleConstants.Admin);
+    public static readonly Role Owner = new(301, RoleConstants.Owner);
+    public static readonly Role TeleCaller = new(302, RoleConstants.TeleCaller);
 
     private Role(int id, string name)
     {

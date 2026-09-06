@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using IronMonkey.ApiService.Authentication.Endpoints;
 using IronMonkey.ApiService.Common;
+using IronMonkey.Common.Auth;
 using IronMonkey.ApiService.Features.Leads;
 using IronMonkey.ApiService.Features.Leads.CustomFields;
 using IronMonkey.ApiService.Features.Leads.PipelineStages;
@@ -74,11 +75,12 @@ public static class Endpoints
 
         private void MapPlatformAdminEndpoints()
         {
-            // No prefix: each endpoint below declares its own absolute route
-            // (e.g. "/signup/{id}/approve"). A group prefix would double it.
-            var endpoints = app.MapGroup(string.Empty)
+            // Namespaced under /admin: each endpoint below declares a route relative
+            // to it (e.g. "/signup/{id}/approve" -> "/admin/signup/{id}/approve"),
+            // which keeps the admin surface distinct from the public POST /auth/signup.
+            var endpoints = app.MapGroup("/admin")
                 .WithTags("Platform Admin")
-                .RequireAuthorization();
+                .RequireAuthorization(PermissionConstants.AdminAccess);
 
             endpoints.MapEndpoint<ApproveTenantEndpoint>();
             endpoints.MapEndpoint<RejectTenantEndpoint>();

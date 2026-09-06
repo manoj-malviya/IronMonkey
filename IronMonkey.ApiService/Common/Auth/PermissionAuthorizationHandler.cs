@@ -27,7 +27,11 @@ internal sealed class PermissionAuthorizationHandler : AuthorizationHandler<Perm
 
         string identityId = context.User.GetIdentityId();
 
-        HashSet<string> permissions = await authorizationService.GetPermissionsForUserAsync(identityId);
+        // Guid.Empty means a platform operator, which is a valid caller here —
+        // its permissions come from the central DB rather than a tenant DB.
+        Guid tenantId = context.User.GetTenantId() ?? Guid.Empty;
+
+        HashSet<string> permissions = await authorizationService.GetPermissionsForUserAsync(identityId, tenantId);
 
         if (permissions.Contains(requirement.Permission))
         {

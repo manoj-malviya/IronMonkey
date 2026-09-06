@@ -108,4 +108,8 @@ yarn.lock
 *.bak
 *.swp
 *.swo
-*.DS_Store.claude/worktrees/
+*.DS_Store
+.claude/worktrees/
+
+# Makefile runtime state (pids, logs)
+.run/

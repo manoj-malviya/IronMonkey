@@ -51,9 +51,35 @@ dotnet ef migrations add <Name> --project IronMonkey.Data --startup-project Iron
 - Typed results pattern: `Results<Ok<Response>, ValidationError, NotFound>`.
 
 ### Authentication Flow
-1. `LoginEndpoint` looks up email in `UserTenantIndex` (central DB) for O(1) tenant resolution.
-2. Loads user from tenant DB, verifies BCrypt password.
-3. JWT token includes `tenant_id` claim. `IUserContext` extracts current user/tenant from claims.
+1. `LoginEndpoint` checks `PlatformUsers` (central DB) first — see Platform Admin below.
+2. Otherwise looks up email in `UserTenantIndex` (central DB) for O(1) tenant resolution.
+3. Loads user from tenant DB, verifies BCrypt password.
+4. JWT token includes `tenant_id` claim. `IUserContext` extracts current user/tenant from claims.
+
+### Platform Admin (SuperAdmin)
+- **Two kinds of caller.** A `PlatformUser` (central DB, `PlatformUsers` table) belongs to no
+  tenant and administers the platform. A `User` (tenant DB) is a member of one tenant. They are
+  separate entities in separate databases; a platform admin has no tenant DB row.
+- **Roles.** Tenants get `Admin` (role 201), created from signup credentials during provisioning.
+  `SuperAdmin` (role 1) is the platform operator only.
+- **Permissions.** Tenant users resolve permissions from their tenant's `role_permissions` rows.
+  Platform users have no such rows, so their grants come from
+  `PermissionConstants.ForPlatformRole`. The `tenant_id` claim selects the path
+  (`Guid.Empty` = platform). Both live in `AuthorizationService`.
+- **Seeding.** `PlatformAdminSeeder` runs at startup from the `PlatformAdmin` config section and
+  is idempotent — it never overwrites an existing row, so a rotated password survives restarts.
+  Seeding is **skipped unless `PlatformAdmin:Password` is set**, so no working credential is
+  committed. To create the SuperAdmin locally:
+  ```bash
+  PlatformAdmin__Password='<choose-a-password>' dotnet run --project IronMonkey.AppHost
+  ```
+- **Identity claim is the user's primary key, not `User.IdentityId`.** Nothing populates
+  `IdentityId` during provisioning, so it is `""` for every tenant user. Authorization must
+  never key on it — doing so matches every user in the tenant and unions their permissions
+  (privilege escalation). `LoginEndpoint` puts `User.Id` / `PlatformUser.Id` in the claim.
+- **Admin endpoints** are under `/admin/*` and require the `admin:access` permission
+  (applied to the whole group in `Endpoints.cs`), e.g. `POST /admin/signup/{id}/approve`,
+  `POST /admin/tenants/{id}/provision`. A tenant `Admin` is deliberately denied `admin:access`.
 
 ### Background Jobs
 - Hangfire with PostgreSQL storage, queues: `default`, `tenant`.

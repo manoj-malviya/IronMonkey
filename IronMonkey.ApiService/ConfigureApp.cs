@@ -1,6 +1,7 @@
 using Hangfire;
 using Hangfire.Dashboard;
 using Microsoft.EntityFrameworkCore;
+using IronMonkey.ApiService.Authentication.Services;
 using IronMonkey.ApiService.BackgroundJobs;
 using IronMonkey.ApiService.Common;
 using IronMonkey.Data;
@@ -42,6 +43,8 @@ public static class ConfigureApp
         {
             await app.EnsureDatabaseCreated();
 
+            await app.SeedPlatformAdmin();
+
             // Must follow migration — Hangfire shares the central database, so
             // scheduling against a database that does not exist yet throws 3D000.
             RecurringJob.AddOrUpdate<TimeElapsedRuleScanJob>(
@@ -57,6 +60,13 @@ public static class ConfigureApp
             app.Logger.LogCritical(ex, "Database initialization failed; shutting down.");
             app.Lifetime.StopApplication();
         }
+    }
+
+    private static async Task SeedPlatformAdmin(this WebApplication app)
+    {
+        using var scope = app.Services.CreateScope();
+        var seeder = scope.ServiceProvider.GetRequiredService<IPlatformAdminSeeder>();
+        await seeder.SeedAsync();
     }
 
     private static async Task EnsureDatabaseCreated(this WebApplication app)

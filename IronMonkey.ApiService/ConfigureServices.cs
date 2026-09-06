@@ -56,6 +56,7 @@ public static class ConfigureServices
             builder.addCors();
 
             builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
+            builder.AddPlatformAdmin();
             builder.Services.AddScoped<IDuplicateDetectionService, DuplicateDetectionService>();
             builder.Services.AddScoped<ILeadMergeService, LeadMergeService>();
             builder.Services.AddScoped<IWebFormService, WebFormService>();
@@ -151,8 +152,6 @@ public static class ConfigureServices
         {
             builder.Services.AddScoped<AuthorizationService>();
 
-            builder.Services.AddTransient<IClaimsTransformation, CustomClaimsTransformation>();
-
             builder.Services.AddTransient<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
             builder.Services.AddTransient<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
@@ -163,6 +162,12 @@ public static class ConfigureServices
             builder.Services.AddDistributedMemoryCache();
 
             builder.Services.AddSingleton<ICacheService, CacheService>();
+        }
+
+        private void AddPlatformAdmin()
+        {
+            builder.Services.Configure<PlatformAdminOptions>(builder.Configuration.GetSection("PlatformAdmin"));
+            builder.Services.AddScoped<IPlatformAdminSeeder, PlatformAdminSeeder>();
         }
 
         private void AddEmailServices()
