@@ -19,6 +19,7 @@ public class CentralDbContext(DbContextOptions<CentralDbContext> options) : DbCo
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<WebForm> WebForms => Set<WebForm>();
     public DbSet<IndustryRecipe> IndustryRecipes => Set<IndustryRecipe>();
+    public DbSet<TenantImpersonation> TenantImpersonations => Set<TenantImpersonation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,7 +31,9 @@ public class CentralDbContext(DbContextOptions<CentralDbContext> options) : DbCo
         {
             b.ToTable("UserTenantIndex");
             b.HasKey(x => x.Id);
-            b.HasIndex(x => x.Email);
+            // Unique: this table is the email -> tenant map LoginEndpoint reads with
+            // SingleOrDefault, so a duplicate email would throw there rather than 401.
+            b.HasIndex(x => x.Email).IsUnique();
             b.Property(x => x.Email).IsRequired().HasMaxLength(320);
         });
 
@@ -44,6 +47,18 @@ public class CentralDbContext(DbContextOptions<CentralDbContext> options) : DbCo
             b.Property(x => x.PasswordHash).IsRequired();
             b.Property(x => x.Role).IsRequired().HasMaxLength(50);
             b.HasQueryFilter(x => !x.IsDeleted);
+        });
+
+        modelBuilder.Entity<TenantImpersonation>(b =>
+        {
+            b.ToTable("TenantImpersonations");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => x.TenantId);
+            b.HasIndex(x => x.PlatformUserId);
+            b.Property(x => x.PlatformUserEmail).IsRequired().HasMaxLength(320);
+            b.Property(x => x.ImpersonatedUserEmail).IsRequired().HasMaxLength(320);
+            b.Property(x => x.ExpiresAt).IsRequired();
+            b.Property(x => x.Reason).HasMaxLength(500);
         });
 
         modelBuilder.Entity<ApiKey>(b =>

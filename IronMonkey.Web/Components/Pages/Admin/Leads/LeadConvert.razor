@@ -1,0 +1,174 @@
+@page "/admin/leads/{Id:guid}/convert"
+@attribute [Authorize]
+@using IronMonkey.Web.Components.Shared
+@using System.ComponentModel.DataAnnotations
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>Convert Lead — IronMonkey</PageTitle>
+
+<div class="max-w-3xl">
+
+    <a href="@BackHref" class="mb-4 inline-block text-sm text-indigo-600 hover:text-indigo-700">
+        &larr; Back to Leads
+    </a>
+
+    <h1 class="mb-2 text-2xl font-bold text-slate-900">Convert Lead</h1>
+
+    @if (_lead is not null)
+    {
+        <p class="mb-6 text-sm text-slate-600">
+            Converting <span class="font-semibold text-slate-900">@_lead.FirstName @_lead.LastName</span>
+            (@_lead.Email) into a contact@(_model.CreateOpportunity ? " and an opportunity" : "").
+        </p>
+    }
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">@_error</div>
+    }
+
+    @if (_isLoading)
+    {
+        <p class="text-sm text-slate-500">Loading...</p>
+    }
+    else if (_lead is not null)
+    {
+        <EditForm Model="_model" OnValidSubmit="ConvertAsync">
+            <DataAnnotationsValidator />
+
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+                <label class="flex items-center gap-2">
+                    <input type="checkbox" @bind="_model.CreateOpportunity" class="rounded border-slate-300" />
+                    <span class="text-sm font-medium text-slate-700">Also create an opportunity (deal)</span>
+                </label>
+            </div>
+
+            @if (_model.CreateOpportunity)
+            {
+                <div class="mt-4 space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700">Opportunity title</label>
+                        <InputText @bind-Value="_model.OpportunityTitle"
+                                   class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        <ValidationMessage For="() => _model.OpportunityTitle" class="mt-1 text-xs text-red-600" />
+                    </div>
+
+                    <div class="grid gap-4 sm:grid-cols-3">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Amount</label>
+                            <InputNumber @bind-Value="_model.Amount"
+                                         class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Expected close</label>
+                            <InputDate @bind-Value="_model.ExpectedCloseDate"
+                                       class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Stage</label>
+                            <select @bind="_model.Stage"
+                                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                @foreach (var s in IronMonkey.Common.OpportunityStages.All)
+                                {
+                                    <option value="@s">@s</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="mt-6 flex justify-end">
+                <button type="submit" disabled="@_isSaving"
+                        class="rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 disabled:opacity-60">
+                    @(_isSaving ? "Converting..." : "Convert Lead")
+                </button>
+            </div>
+        </EditForm>
+    }
+</div>
+
+@code {
+    // Carries the list's filter/sort/page state so returning restores the view the user
+    // left. Validated rather than used verbatim — it arrives from the query string.
+    [SupplyParameterFromQuery(Name = "returnUrl")] public string? ReturnUrl { get; set; }
+
+    private string BackHref => ListReturn.Resolve(ReturnUrl, "/admin/leads");
+
+    [Parameter] public Guid Id { get; set; }
+
+    private ConvertForm _model = new();
+    private LeadDetail? _lead;
+    private bool _isLoading = true;
+    private bool _isSaving;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _lead = await Api.GetFromJsonAsync<LeadDetail>($"/api/leads/{Id}");
+        if (_lead is null) _error = "Lead not found.";
+        else if (_lead.IsConverted) _error = "This lead has already been converted.";
+        else _model.OpportunityTitle = $"{_lead.FirstName} {_lead.LastName}".Trim();
+
+        _isLoading = false;
+    }
+
+    private async Task ConvertAsync()
+    {
+        _isSaving = true;
+        _error = null;
+        try
+        {
+            var res = await Api.PostAsJsonAsync($"/api/leads/{Id}/convert", new
+            {
+                _model.CreateOpportunity,
+                _model.OpportunityTitle,
+                _model.Amount,
+                ExpectedCloseDate = DateTime.SpecifyKind(_model.ExpectedCloseDate, DateTimeKind.Utc),
+                _model.Stage
+            });
+
+            if (res.IsSuccessStatusCode)
+            {
+                var result = await res.Content.ReadFromJsonAsync<ConvertResponse>();
+                // Land on the thing that was just created, so the conversion is visible.
+                Nav.NavigateTo(result?.OpportunityId is not null
+                    ? "/admin/opportunities"
+                    : "/admin/contacts");
+                return;
+            }
+
+            if (res.StatusCode == System.Net.HttpStatusCode.Unauthorized) { Nav.NavigateTo("/login"); return; }
+            _error = await res.Content.ReadAsStringAsync();
+        }
+        catch (Exception ex) { _error = $"Unable to convert: {ex.Message}"; }
+        finally { _isSaving = false; }
+    }
+
+    private class ConvertForm
+    {
+        public bool CreateOpportunity { get; set; } = true;
+
+        [Required(ErrorMessage = "An opportunity title is required.")]
+        public string OpportunityTitle { get; set; } = "";
+
+        public decimal Amount { get; set; }
+        public DateTime ExpectedCloseDate { get; set; } = DateTime.UtcNow.AddDays(30);
+        public string Stage { get; set; } = IronMonkey.Common.OpportunityStages.Qualification;
+    }
+
+    private class LeadDetail
+    {
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public bool IsConverted { get; set; }
+    }
+
+    private class ConvertResponse
+    {
+        public Guid ContactId { get; set; }
+        public Guid? OpportunityId { get; set; }
+    }
+}

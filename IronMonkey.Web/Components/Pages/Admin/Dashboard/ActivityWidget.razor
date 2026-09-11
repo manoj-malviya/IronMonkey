@@ -1,0 +1,119 @@
+@using IronMonkey.Web.Components.Pages.Admin.Dashboard
+
+<DashboardWidget Title="Recent activity"
+                 Subtitle="@Subtitle"
+                 IsLoading="State.IsLoading"
+                 HasData="State.HasData"
+                 HasError="State.HasError"
+                 ErrorMessage="@State.ErrorMessage"
+                 IsStale="State.IsStale"
+                 OnRetry="OnRetry">
+    @if (State.Data is { } data)
+    {
+        @if (data.RecentActivity.Count == 0 && data.RecentConversions.Count == 0)
+        {
+            <div class="py-6 text-center">
+                <p class="text-sm text-slate-600">No activity recorded in this date range.</p>
+                <p class="mt-1 text-xs text-slate-500">Edits, stage moves and conversions appear here as they happen.</p>
+            </div>
+        }
+        else
+        {
+            <div class="space-y-5">
+                @if (data.RecentConversions.Count > 0)
+                {
+                    <div>
+                        <div class="mb-2 flex items-baseline justify-between gap-2">
+                            <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Recent conversions</h3>
+                            <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+                                @data.ConversionCount
+                            </span>
+                        </div>
+                        <ul class="space-y-1.5">
+                            @foreach (var conversion in data.RecentConversions)
+                            {
+                                <li>
+                                    <a href="@($"/admin/leads/{conversion.LeadId}")"
+                                       class="block rounded-lg px-2 py-1.5 hover:bg-slate-50"
+                                       title="@($"Open {conversion.LeadName}")">
+                                        <div class="flex items-baseline justify-between gap-3">
+                                            <span class="truncate text-sm text-slate-800">@conversion.LeadName</span>
+                                            @if (conversion.Amount is { } amount)
+                                            {
+                                                <span class="shrink-0 text-sm font-semibold tabular-nums text-emerald-700">@MoneyFormat.Amount(amount)</span>
+                                            }
+                                        </div>
+                                        <p class="truncate text-xs text-slate-500">
+                                            @* A conversion without an opportunity is the contact-only path, not missing data. *@
+                                            @(conversion.OpportunityTitle ?? "Converted to contact")
+                                            · @Relative(conversion.ConvertedAt)
+                                        </p>
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                @if (data.RecentActivity.Count > 0)
+                {
+                    <div>
+                        <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Latest changes</h3>
+                        <ul class="space-y-1.5">
+                            @foreach (var item in data.RecentActivity)
+                            {
+                                <li class="px-2 py-1">
+                                    <div class="flex items-baseline justify-between gap-3">
+                                        <span class="truncate text-sm text-slate-700">
+                                            @Humanize(item.EventType)
+                                            <span class="text-slate-400">· @item.SubjectType</span>
+                                        </span>
+                                        <span class="shrink-0 text-xs text-slate-400">@Relative(item.OccurredAt)</span>
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(item.ActorName))
+                                    {
+                                        <p class="truncate text-xs text-slate-500">by @item.ActorName</p>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+            </div>
+        }
+    }
+</DashboardWidget>
+
+@code {
+    [Parameter, EditorRequired] public WidgetState<DashboardActivity> State { get; set; } = new();
+    [Parameter] public EventCallback OnRetry { get; set; }
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>
+    /// Event types arrive as PascalCase identifiers ("LeadStageChanged"); split them so the
+    /// feed reads as prose rather than as code.
+    /// </summary>
+    private static string Humanize(string eventType)
+    {
+        if (string.IsNullOrWhiteSpace(eventType))
+            return "Updated";
+
+        var spaced = System.Text.RegularExpressions.Regex.Replace(
+            eventType, "(?<=[a-z0-9])(?=[A-Z])", " ");
+        return spaced;
+    }
+
+    private static string Relative(DateTime utc)
+    {
+        var delta = DateTime.UtcNow - utc;
+
+        // A clock skew or a freshly-written row can put the timestamp marginally ahead of
+        // now; "just now" is truer than a negative duration.
+        if (delta < TimeSpan.Zero) return "just now";
+        if (delta.TotalMinutes < 1) return "just now";
+        if (delta.TotalMinutes < 60) return $"{(int)delta.TotalMinutes}m ago";
+        if (delta.TotalHours < 24) return $"{(int)delta.TotalHours}h ago";
+        if (delta.TotalDays < 7) return $"{(int)delta.TotalDays}d ago";
+        return utc.ToLocalTime().ToString("MMM d");
+    }
+}

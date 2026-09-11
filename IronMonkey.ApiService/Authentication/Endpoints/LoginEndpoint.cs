@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using IronMonkey.ApiService.Common;
+using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Common.Extensions;
 using IronMonkey.ApiService.Common.Results;
 using IronMonkey.Common.Auth;
@@ -37,13 +38,15 @@ public class LoginEndpoint : IEndpoint
         CentralDbContext centralDb,
         ITenantDbContextFactory tenantContextFactory,
         Jwt jwt,
-        CancellationToken cancellationToken)
-        => Handle(request, centralDb, tenantContextFactory, jwt, cancellationToken);
+        CancellationToken cancellationToken,
+        ITenantConnectionStringResolver? connectionStringResolver = null)
+        => Handle(request, centralDb, tenantContextFactory, connectionStringResolver, jwt, cancellationToken);
 
     private static async Task<Results<Ok<Response>, ValidationError, UnauthorizedHttpResult>> Handle(
         Request request,
         CentralDbContext centralDb,
         ITenantDbContextFactory tenantContextFactory,
+        ITenantConnectionStringResolver? connectionStringResolver,
         Jwt jwt,
         CancellationToken cancellationToken)
     {
@@ -89,7 +92,9 @@ public class LoginEndpoint : IEndpoint
 
         // Step 3: Open tenant DB and verify password
         await using var tenantDb = tenantContextFactory.CreateForTenant(
-            tenant.DatabaseConnectionString, tenant.Id);
+            connectionStringResolver?.Resolve(tenant.DatabaseConnectionString)
+                ?? tenant.DatabaseConnectionString,
+            tenant.Id);
 
         var user = await tenantDb.Users
             .Include(u => u.Roles)

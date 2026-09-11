@@ -1,0 +1,293 @@
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+
+@* Shared timeline for any CRM record. SubjectType must be "Lead", "Contact" or
+   "Opportunity" — the API validates the same set. *@
+
+<div class="rounded-xl border border-slate-200 bg-white">
+
+    <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <h2 class="text-sm font-semibold text-slate-900">Activity</h2>
+        <span class="text-xs text-slate-500">@_totalCount event@(_totalCount == 1 ? "" : "s")</span>
+    </div>
+
+    <div class="border-b border-slate-100 px-5 py-4">
+        <div class="flex items-start gap-2">
+            <textarea @bind="_noteText" rows="2" placeholder="Add a note..."
+                      class="flex-1 resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            <button type="button" @onclick="AddNoteAsync"
+                    disabled="@(_isSavingNote || string.IsNullOrWhiteSpace(_noteText))"
+                    class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50">
+                @(_isSavingNote ? "..." : "Add")
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">@_error</div>
+    }
+
+    <div class="px-5 py-4">
+        @if (_isLoading)
+        {
+            <p class="py-6 text-center text-sm text-slate-500">Loading activity...</p>
+        }
+        else if (_events.Count == 0)
+        {
+            <p class="py-6 text-center text-sm text-slate-500">No activity recorded yet.</p>
+        }
+        else
+        {
+            <ol class="relative space-y-5 border-l border-slate-200 pl-5">
+                @foreach (var e in _events)
+                {
+                    <li class="relative">
+                        <span class="absolute -left-[26px] top-1 flex h-3 w-3 items-center justify-center">
+                            <span class="h-2.5 w-2.5 rounded-full @DotClass(e.EventType)"></span>
+                        </span>
+
+                        <div class="flex flex-wrap items-baseline gap-x-2">
+                            <span class="text-sm font-medium text-slate-900">@Headline(e)</span>
+                            <span class="text-xs text-slate-500">@(e.ActorName ?? "System")</span>
+                            <span class="text-xs text-slate-400" title="@e.OccurredAt.ToString("f")">@Relative(e.OccurredAt)</span>
+                        </div>
+
+                        @if (e.EventType == "Note")
+                        {
+                            <p class="mt-1 whitespace-pre-wrap rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">@NoteContent(e)</p>
+                        }
+                        else if (Changes(e).Count > 0)
+                        {
+                            <ul class="mt-1 space-y-0.5">
+                                @foreach (var c in Changes(e))
+                                {
+                                    <li class="text-xs text-slate-600">
+                                        <span class="font-medium text-slate-700">@Label(c.Field):&nbsp;</span>
+                                        @if (string.IsNullOrEmpty(c.From))
+                                        {
+                                            <span class="font-medium text-slate-900">@c.To</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-slate-400 line-through">@c.From</span>
+                                            <span>&nbsp;&rarr;&nbsp;</span>
+                                            <span class="font-medium text-slate-900">@c.To</span>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </li>
+                }
+            </ol>
+
+            @if (_hasMore)
+            {
+                <button type="button" @onclick="LoadMoreAsync" disabled="@_isLoadingMore"
+                        class="mt-5 w-full rounded-lg border border-slate-300 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60">
+                    @(_isLoadingMore ? "Loading..." : "Load older activity")
+                </button>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string SubjectType { get; set; } = "";
+    [Parameter, EditorRequired] public Guid SubjectId { get; set; }
+
+    private readonly List<ActivityEvent> _events = [];
+    private bool _isLoading = true;
+    private bool _isLoadingMore;
+    private bool _hasMore;
+    private int _page;
+    private int _totalCount;
+    private string _noteText = "";
+    private bool _isSavingNote;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync(reset: true);
+
+    private async Task LoadAsync(bool reset)
+    {
+        if (reset) { _page = 0; _events.Clear(); _isLoading = true; }
+        _error = null;
+
+        try
+        {
+            var res = await Api.GetFromJsonAsync<TimelineResponse>(
+                $"/api/activity/{SubjectType}/{SubjectId}?page={_page}");
+
+            if (res is not null)
+            {
+                _events.AddRange(res.Events);
+                _hasMore = res.HasMore;
+                _totalCount = res.TotalCount;
+            }
+        }
+        catch (Exception ex) { _error = $"Failed to load activity: {ex.Message}"; }
+        finally { _isLoading = false; _isLoadingMore = false; }
+    }
+
+    private async Task LoadMoreAsync()
+    {
+        _isLoadingMore = true;
+        _page++;
+        await LoadAsync(reset: false);
+    }
+
+    private async Task AddNoteAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_noteText)) return;
+
+        _isSavingNote = true;
+        _error = null;
+        try
+        {
+            var res = await Api.PostAsJsonAsync(
+                $"/api/activity/{SubjectType}/{SubjectId}/notes", new { Content = _noteText });
+
+            if (res.IsSuccessStatusCode)
+            {
+                _noteText = "";
+                await LoadAsync(reset: true);
+            }
+            else _error = await res.Content.ReadAsStringAsync();
+        }
+        catch (Exception ex) { _error = $"Unable to add note: {ex.Message}"; }
+        finally { _isSavingNote = false; }
+    }
+
+    private static string Headline(ActivityEvent e) => e.EventType switch
+    {
+        "Note" => "Note added",
+        "Created" => $"{Humanize(e.EntityType)} created",
+        "Deleted" => $"{Humanize(e.EntityType)} deleted",
+        _ => $"{Humanize(e.EntityType)} updated"
+    };
+
+    private static string Humanize(string entityType) => entityType switch
+    {
+        "LeadTask" => "Task",
+        _ => entityType
+    };
+
+    private static string DotClass(string eventType) => eventType switch
+    {
+        "Note" => "bg-amber-400",
+        "Created" => "bg-emerald-500",
+        "Deleted" => "bg-red-500",
+        _ => "bg-indigo-500"
+    };
+
+    private static string NoteContent(ActivityEvent e) =>
+        e.NewValues is not null && e.NewValues.TryGetValue("Content", out var c) ? Stringify(c) : "";
+
+    private record FieldChange(string Field, string From, string To);
+
+    // A Created event has no old values, so every field reads as "set to X". Only the
+    // fields a reader cares about are shown — ids and audit columns are noise.
+    private static readonly HashSet<string> Hidden =
+        ["Id", "TenantId", "CreatedAt", "UpdatedAt", "DeletedAt", "IsDeleted", "CustomFields"];
+
+    // Foreign keys render as raw GUIDs, which tell a reader nothing. The record they point
+    // at is already shown in the Details panel, so a "Contact changed" line without a
+    // resolvable name is noise rather than information.
+    private static bool IsOpaqueId(string field, string from, string to) =>
+        field.EndsWith("Id") && (Guid.TryParse(from, out _) || Guid.TryParse(to, out _));
+
+    private static List<FieldChange> Changes(ActivityEvent e)
+    {
+        var result = new List<FieldChange>();
+        var newVals = e.NewValues ?? [];
+        var oldVals = e.OldValues ?? [];
+
+        foreach (var (key, value) in newVals)
+        {
+            if (Hidden.Contains(key)) continue;
+
+            var to = Format(key, value);
+            var from = oldVals.TryGetValue(key, out var o) ? Format(key, o) : "";
+            if (from == to) continue;
+            if (string.IsNullOrEmpty(from) && string.IsNullOrEmpty(to)) continue;
+            if (IsOpaqueId(key, from, to)) continue;
+
+            result.Add(new FieldChange(key, from, to));
+        }
+
+        return result;
+    }
+
+    private static readonly HashSet<string> MoneyFields = ["Amount"];
+
+    /// <summary>Formats a value for display, using the field name for context.</summary>
+    private static string Format(string field, object? value)
+    {
+        var text = Stringify(value);
+        if (text.Length == 0) return text;
+
+        if (MoneyFields.Contains(field) && decimal.TryParse(text, out var amount))
+            return amount.ToString("N0");
+
+        // Dates arrive as full ISO timestamps; only the day is meaningful on a timeline.
+        if (field.EndsWith("Date") && DateTime.TryParse(text, out var date))
+            return date.ToString("MMM d, yyyy");
+
+        return text;
+    }
+
+    private static string Stringify(object? value)
+    {
+        if (value is null) return "";
+
+        // Values come back as JsonElement because the API stores them in a jsonb dictionary.
+        if (value is System.Text.Json.JsonElement je)
+        {
+            return je.ValueKind switch
+            {
+                System.Text.Json.JsonValueKind.Null or System.Text.Json.JsonValueKind.Undefined => "",
+                System.Text.Json.JsonValueKind.String => je.GetString() ?? "",
+                _ => je.ToString()
+            };
+        }
+
+        return value.ToString() ?? "";
+    }
+
+    // "PipelineStageId" reads better as "Pipeline stage".
+    private static string Label(string field)
+    {
+        var trimmed = field.EndsWith("Id") && field.Length > 2 ? field[..^2] : field;
+        var spaced = System.Text.RegularExpressions.Regex.Replace(trimmed, "(?<!^)([A-Z])", " $1");
+        return char.ToUpperInvariant(spaced[0]) + spaced[1..].ToLowerInvariant();
+    }
+
+    private static string Relative(DateTime utc)
+    {
+        var delta = DateTime.UtcNow - utc;
+        if (delta.TotalMinutes < 1) return "just now";
+        if (delta.TotalMinutes < 60) return $"{(int)delta.TotalMinutes}m ago";
+        if (delta.TotalHours < 24) return $"{(int)delta.TotalHours}h ago";
+        if (delta.TotalDays < 7) return $"{(int)delta.TotalDays}d ago";
+        return utc.ToString("MMM d, yyyy");
+    }
+
+    private class TimelineResponse
+    {
+        public List<ActivityEvent> Events { get; set; } = [];
+        public bool HasMore { get; set; }
+        public int TotalCount { get; set; }
+    }
+
+    private class ActivityEvent
+    {
+        public Guid Id { get; set; }
+        public string EventType { get; set; } = "";
+        public string EntityType { get; set; } = "";
+        public Guid? ActorId { get; set; }
+        public string? ActorName { get; set; }
+        public DateTime OccurredAt { get; set; }
+        public Dictionary<string, object?>? OldValues { get; set; }
+        public Dictionary<string, object?>? NewValues { get; set; }
+    }
+}

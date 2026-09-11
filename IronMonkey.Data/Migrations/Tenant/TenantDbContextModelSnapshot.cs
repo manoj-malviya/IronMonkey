@@ -28,7 +28,7 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("ActorId")
+                    b.Property<Guid?>("ActorId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
@@ -52,7 +52,7 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("LeadId")
+                    b.Property<Guid?>("LeadId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("NewValues")
@@ -60,6 +60,16 @@ namespace IronMonkey.Data.Migrations.Tenant
 
                     b.Property<string>("OldValues")
                         .HasColumnType("jsonb");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SubjectType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("Lead");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
@@ -82,6 +92,9 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.HasIndex("TenantId", "LeadId")
                         .HasDatabaseName("IX_ActivityLogs_TenantId_LeadId");
 
+                    b.HasIndex("TenantId", "SubjectType", "SubjectId", "CreatedAt")
+                        .HasDatabaseName("IX_ActivityLogs_TenantId_Subject_CreatedAt");
+
                     b.ToTable("ActivityLogs");
                 });
 
@@ -93,6 +106,11 @@ namespace IronMonkey.Data.Migrations.Tenant
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CustomFields")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("custom_field_values");
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
@@ -136,11 +154,33 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AppliesTo")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("Lead");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DefaultValue")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DisplayOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("FieldKey")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasDefaultValue("");
 
                     b.Property<string>("FieldName")
                         .IsRequired()
@@ -150,6 +190,15 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.Property<string>("FieldType")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("HelpText")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsArchived")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -170,6 +219,12 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "AppliesTo", "DisplayOrder");
+
+                    b.HasIndex("TenantId", "AppliesTo", "FieldKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_custom_field_definitions_tenant_scope_key_unique");
 
                     b.ToTable("custom_field_definitions", (string)null);
                 });
@@ -752,8 +807,7 @@ namespace IronMonkey.Data.Migrations.Tenant
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId", "Order")
-                        .IsUnique();
+                    b.HasIndex("TenantId", "Order");
 
                     b.ToTable("pipeline_stages", (string)null);
                 });
@@ -1344,14 +1398,11 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.HasOne("IronMonkey.Data.Entities.User", "Actor")
                         .WithMany()
                         .HasForeignKey("ActorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("IronMonkey.Data.Entities.Lead", "Lead")
                         .WithMany()
-                        .HasForeignKey("LeadId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("LeadId");
 
                     b.Navigation("Actor");
 

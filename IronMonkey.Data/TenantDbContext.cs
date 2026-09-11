@@ -85,6 +85,23 @@ public class TenantDbContext : DbContext
             entity.HasIndex(a => new { a.TenantId, a.LeadId }).HasDatabaseName("IX_ActivityLogs_TenantId_LeadId");
             entity.HasIndex(a => new { a.TenantId, a.EventType }).HasDatabaseName("IX_ActivityLogs_TenantId_EventType");
             entity.HasIndex(a => a.CreatedAt).HasDatabaseName("IX_ActivityLogs_CreatedAt");
+
+            entity.Property(a => a.SubjectType).IsRequired().HasMaxLength(50).HasDefaultValue("Lead");
+
+            // Actor is optional: system and background-job events carry Guid.Empty, which
+            // matches no user. Convention made this a required FK, so EF built an INNER JOIN
+            // against a User set that also has a soft-delete query filter — the required
+            // navigation and the filtered principal are incompatible and every timeline read
+            // threw. Optional makes it a LEFT JOIN and ActorName simply comes back null.
+            entity.HasOne(a => a.Actor)
+                .WithMany()
+                .HasForeignKey(a => a.ActorId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // The timeline query is exactly (tenant, subject) ordered by time.
+            entity.HasIndex(a => new { a.TenantId, a.SubjectType, a.SubjectId, a.CreatedAt })
+                .HasDatabaseName("IX_ActivityLogs_TenantId_Subject_CreatedAt");
         });
 
         // Dashboard performance indexes for Lead entity (per D-08)

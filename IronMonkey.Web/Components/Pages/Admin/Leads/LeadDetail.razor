@@ -1,0 +1,174 @@
+@page "/admin/leads/{Id:guid}"
+@attribute [Authorize]
+@using IronMonkey.Web.Components.Shared
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>Lead — IronMonkey</PageTitle>
+
+<div class="space-y-6">
+
+    <a href="@BackHref" class="text-sm text-indigo-600 hover:text-indigo-700">
+        &larr; Back to Leads
+    </a>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">@_error</div>
+    }
+
+    @if (_isLoading)
+    {
+        <p class="text-sm text-slate-500">Loading...</p>
+    }
+    else if (_lead is not null)
+    {
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">
+                    @_lead.FirstName @_lead.LastName
+                    @if (_lead.IsConverted)
+                    {
+                        <span class="ml-2 align-middle inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">Converted</span>
+                    }
+                </h1>
+                <p class="mt-1 text-sm text-slate-500">@_lead.StageName · @_lead.Source</p>
+            </div>
+            <div class="flex gap-2">
+                <button @onclick='() => Nav.NavigateTo($"/admin/leads/{Id}/edit")'
+                        class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                    Edit
+                </button>
+                @if (!_lead.IsConverted)
+                {
+                    <button @onclick='() => Nav.NavigateTo($"/admin/leads/{Id}/convert")'
+                            class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500">
+                        Convert
+                    </button>
+                }
+            </div>
+        </div>
+
+        <div class="grid gap-6 lg:grid-cols-3">
+
+            <div class="space-y-6 lg:col-span-1">
+                <div class="rounded-xl border border-slate-200 bg-white p-5">
+                    <h2 class="mb-3 text-sm font-semibold text-slate-900">Details</h2>
+                    <dl class="space-y-2 text-sm">
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-slate-500">Email</dt>
+                            <dd class="truncate text-right text-slate-900" title="@_lead.Email">@_lead.Email</dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-slate-500">Phone</dt>
+                            <dd class="text-slate-900">@(string.IsNullOrWhiteSpace(_lead.Mobile) ? "—" : _lead.Mobile)</dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-slate-500">Stage</dt>
+                            <dd class="text-slate-900">@_lead.StageName</dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-slate-500">Source</dt>
+                            <dd class="text-slate-900">@_lead.Source</dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-slate-500">Created</dt>
+                            <dd class="text-slate-900">@_lead.CreatedAt.ToString("MMM d, yyyy")</dd>
+                        </div>
+                    </dl>
+                </div>
+
+                @if (_customFields.Count > 0)
+                {
+                    <div class="rounded-xl border border-slate-200 bg-white p-5">
+                        <h2 class="mb-3 text-sm font-semibold text-slate-900">Additional details</h2>
+                        <dl class="space-y-2 text-sm">
+                            @foreach (var def in _customFields)
+                            {
+                                <div class="flex justify-between gap-3">
+                                    <dt class="text-slate-500">@def.FieldName</dt>
+                                    <dd class="text-right text-slate-900">@DisplayValue(def)</dd>
+                                </div>
+                            }
+                        </dl>
+                    </div>
+                }
+            </div>
+
+            <div class="lg:col-span-2">
+                <ActivityTimeline SubjectType="Lead" SubjectId="@Id" />
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    // Carries the list's filter/sort/page state so returning restores the view the user
+    // left. Validated rather than used verbatim — it arrives from the query string.
+    [SupplyParameterFromQuery(Name = "returnUrl")] public string? ReturnUrl { get; set; }
+
+    private string BackHref => ListReturn.Resolve(ReturnUrl, "/admin/leads");
+
+    [Parameter] public Guid Id { get; set; }
+
+    private LeadViewModel? _lead;
+    private List<FieldDefinition> _customFields = [];
+    private bool _isLoading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _lead = await Api.GetFromJsonAsync<LeadViewModel>($"/api/leads/{Id}");
+            if (_lead is null) { _error = "Lead not found."; return; }
+
+            // Only definitions scoped to leads; values are keyed by definition id.
+            var defs = await Api.GetFromJsonAsync<List<FieldDefinition>>("/api/custom-fields?entityType=Lead");
+            _customFields = defs ?? [];
+        }
+        catch (Exception ex) { _error = $"Failed to load lead: {ex.Message}"; }
+        finally { _isLoading = false; }
+    }
+
+    private string DisplayValue(FieldDefinition def)
+    {
+        if (_lead?.CustomFields is null) return "—";
+        if (!_lead.CustomFields.TryGetValue(def.Id.ToString(), out var raw) || raw is null) return "—";
+
+        if (raw is System.Text.Json.JsonElement je)
+        {
+            return je.ValueKind switch
+            {
+                System.Text.Json.JsonValueKind.Null or System.Text.Json.JsonValueKind.Undefined => "—",
+                System.Text.Json.JsonValueKind.String => je.GetString() is { Length: > 0 } s ? s : "—",
+                System.Text.Json.JsonValueKind.True => "Yes",
+                System.Text.Json.JsonValueKind.False => "No",
+                System.Text.Json.JsonValueKind.Array => string.Join(", ", je.EnumerateArray().Select(x => x.ToString())),
+                _ => je.ToString()
+            };
+        }
+
+        return raw.ToString() is { Length: > 0 } v ? v : "—";
+    }
+
+    private class LeadViewModel
+    {
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Mobile { get; set; } = "";
+        public string Source { get; set; } = "";
+        public string StageName { get; set; } = "";
+        public bool IsConverted { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public Dictionary<string, object?>? CustomFields { get; set; }
+    }
+
+    private class FieldDefinition
+    {
+        public Guid Id { get; set; }
+        public string FieldName { get; set; } = "";
+        public string FieldType { get; set; } = "";
+    }
+}

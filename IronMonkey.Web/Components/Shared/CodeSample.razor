@@ -1,0 +1,44 @@
+@* A labelled, copyable JSON snippet. *@
+
+<div class="rounded-lg border border-slate-200 bg-white">
+    <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2">
+        <div class="min-w-0">
+            <p class="truncate text-sm font-medium text-slate-900">@Title</p>
+            @if (!string.IsNullOrWhiteSpace(Description))
+            {
+                <p class="mt-0.5 text-xs text-slate-500">@Description</p>
+            }
+        </div>
+        <button type="button" @onclick="CopyAsync"
+                class="shrink-0 rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+            @(_copied ? "Copied" : "Copy")
+        </button>
+    </div>
+    <pre class="overflow-x-auto px-3 py-2 text-xs leading-relaxed text-slate-800"><code>@Code</code></pre>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter, EditorRequired] public string Code { get; set; } = "";
+    [Parameter] public string? Description { get; set; }
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private bool _copied;
+
+    private async Task CopyAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", Code);
+            _copied = true;
+            StateHasChanged();
+            await Task.Delay(1500);
+            _copied = false;
+        }
+        catch (JSException)
+        {
+            // Clipboard access can be blocked; the snippet is still selectable by hand.
+        }
+    }
+}

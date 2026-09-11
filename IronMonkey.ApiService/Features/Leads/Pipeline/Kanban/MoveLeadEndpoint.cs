@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Features.Leads.Pipeline.States;
+using IronMonkey.ApiService.Features.Leads.Workflow.Rules;
 using IronMonkey.Data;
+using IronMonkey.Data.Entities;
 
 namespace IronMonkey.ApiService.Features.Leads.Pipeline.Kanban;
 
@@ -23,6 +25,7 @@ public class MoveLeadEndpoint : IEndpoint
         IStateValidationService stateValidation,
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
+        IWorkflowTriggerDispatcher workflowTriggers,
         CancellationToken cancellationToken)
     {
         var tenantId = tenantService.GetCurrentTenantId();
@@ -42,6 +45,8 @@ public class MoveLeadEndpoint : IEndpoint
 
         lead.MoveToPipelineStage(request.TargetStageId);
         await db.SaveChangesAsync(cancellationToken);
+
+        workflowTriggers.Dispatch(tenantId, lead.Id, WorkflowTrigger.StatusChange);
 
         return TypedResults.Ok(new Response(lead.Id, lead.PipelineStageId));
     }

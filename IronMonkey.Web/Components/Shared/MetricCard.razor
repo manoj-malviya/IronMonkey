@@ -1,0 +1,58 @@
+@*
+    One headline figure. A link when there is somewhere to go, a plain card when there is
+    not — so a card that looks clickable always is.
+*@
+@if (!string.IsNullOrEmpty(Href))
+{
+    <a href="@Href" class="@CardClasses hover:border-indigo-300 hover:shadow-sm" title="@($"View {Label}")">
+        @Content
+    </a>
+}
+else
+{
+    <div class="@CardClasses">
+        @Content
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Value { get; set; } = "—";
+    [Parameter] public string? Caption { get; set; }
+    [Parameter] public string? Href { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+
+    /// <summary>The figure predates a refresh that failed; shown but marked.</summary>
+    [Parameter] public bool IsStale { get; set; }
+
+    private const string CardClasses =
+        "block rounded-xl border border-slate-200 bg-white p-5 transition-colors";
+
+    private RenderFragment Content => @<text>
+        <div class="flex items-start justify-between gap-2">
+            <p class="text-sm font-medium text-slate-500">@Label</p>
+            @if (IsStale)
+            {
+                <span class="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800"
+                      title="The last refresh failed; this figure is from an earlier load.">
+                    stale
+                </span>
+            }
+        </div>
+
+        @if (IsLoading)
+        {
+            <div class="mt-2 h-7 w-20 animate-pulse rounded bg-slate-100" aria-hidden="true"></div>
+            <span class="sr-only">Loading @Label</span>
+        }
+        else
+        {
+            <p class="mt-1 text-2xl font-bold tabular-nums text-slate-900">@Value</p>
+        }
+
+        @if (!string.IsNullOrEmpty(Caption))
+        {
+            <p class="mt-1 text-xs text-slate-500">@Caption</p>
+        }
+    </text>;
+}

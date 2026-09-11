@@ -1,0 +1,119 @@
+@page "/admin/migrations"
+@attribute [Authorize(Policy = AuthorizationPolicies.PlatformAdmin)]
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+
+<PageTitle>Tenant Migrations — IronMonkey Admin</PageTitle>
+
+<div class="space-y-6">
+
+    <div>
+        <h1 class="text-2xl font-bold text-slate-900">Tenant Migrations</h1>
+        <p class="mt-2 text-slate-500">
+            Apply pending schema migrations to every provisioned tenant database.
+        </p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorBanner))
+    {
+        <div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            @_errorBanner
+        </div>
+    }
+
+    <div class="rounded-xl border border-slate-200 bg-white p-6">
+        <h2 class="text-sm font-semibold text-slate-900">Run migrations</h2>
+        <p class="mt-1 text-sm text-slate-500">
+            Each tenant is migrated independently — a failure on one is recorded and the
+            run continues, so a partial failure still migrates every healthy tenant.
+        </p>
+
+        <button type="button"
+                @onclick="RunMigrationsAsync"
+                disabled="@_isRunning"
+                class="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+            @(_isRunning ? "Running migrations..." : "Run migrations for all tenants")
+        </button>
+    </div>
+
+    @if (_result is not null)
+    {
+        <div class="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
+            <h2 class="text-sm font-semibold text-slate-900">Last run</h2>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div class="rounded-lg border border-slate-200 p-4">
+                    <p class="text-sm font-medium text-slate-500">Migrated</p>
+                    <p class="mt-1 text-2xl font-bold text-green-600">@_result.MigratedCount</p>
+                </div>
+                <div class="rounded-lg border border-slate-200 p-4">
+                    <p class="text-sm font-medium text-slate-500">Failed</p>
+                    <p class="mt-1 text-2xl font-bold @(_result.FailedCount > 0 ? "text-red-600" : "text-slate-900")">
+                        @_result.FailedCount
+                    </p>
+                </div>
+            </div>
+
+            @if (_result.Errors.Count > 0)
+            {
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-900 mb-2">Errors</h3>
+                    <ul class="space-y-2">
+                        @foreach (var error in _result.Errors)
+                        {
+                            <li class="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700 font-mono break-all">
+                                @error
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+            else
+            {
+                <p class="text-sm text-green-700">All provisioned tenants migrated successfully.</p>
+            }
+        </div>
+    }
+
+</div>
+
+@code {
+    private bool _isRunning = false;
+    private string? _errorBanner = null;
+    private MigrationResult? _result = null;
+
+    private async Task RunMigrationsAsync()
+    {
+        _isRunning = true;
+        _errorBanner = null;
+        _result = null;
+
+        try
+        {
+            var response = await Api.PostAsync("/admin/migrate-all");
+
+            if (response.IsSuccessStatusCode)
+            {
+                _result = await response.Content.ReadFromJsonAsync<MigrationResult>();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden
+                  || response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                _errorBanner = "You do not have permission to run tenant migrations.";
+            }
+            else
+            {
+                _errorBanner = $"Migration run failed ({(int)response.StatusCode}). Check the API logs.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Unable to reach the API: {ex.Message}";
+        }
+        finally
+        {
+            _isRunning = false;
+        }
+    }
+
+    private record MigrationResult(int MigratedCount, int FailedCount, IReadOnlyList<string> Errors);
+}

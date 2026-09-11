@@ -1,0 +1,432 @@
+@page "/admin/leads"
+@attribute [Authorize]
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>Leads — IronMonkey</PageTitle>
+
+<div class="space-y-6">
+
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <h1 class="text-2xl font-bold text-slate-900">Leads</h1>
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="/admin/leads/board"
+               class="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                Pipeline Board
+            </a>
+            <a href="/admin/leads/create"
+               class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                + New Lead
+            </a>
+        </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3">
+        <div>
+            <label for="lead-search" class="sr-only">Search leads</label>
+            <input id="lead-search" type="search" placeholder="Search name, email or phone..."
+                   value="@_search" @oninput="OnSearchInput"
+                   class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:w-72" />
+        </div>
+        <div>
+            <label for="lead-stage" class="sr-only">Filter by stage</label>
+            <select id="lead-stage" value="@_stageFilter" @onchange="OnStageChanged"
+                    class="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">All stages</option>
+                @foreach (var s in _stages)
+                {
+                    <option value="@s.Id">@s.Name</option>
+                }
+            </select>
+        </div>
+
+        @if (HasActiveFilter)
+        {
+            <button type="button" @onclick="ClearFiltersAsync"
+                    class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                Clear filters
+            </button>
+        }
+
+        @* Result count sits with the filters so it reads as their consequence. *@
+        <p class="text-sm text-slate-500" role="status">@ResultSummary</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div role="alert" class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+            <span class="text-sm text-red-700">@_error</span>
+            <button type="button" @onclick="() => LoadAsync()" disabled="@_isLoading"
+                    class="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60">
+                @(_isLoading ? "Retrying…" : "Try again")
+            </button>
+        </div>
+    }
+
+    @if (_isLoading && _page is null)
+    {
+        <div class="py-12 text-center text-sm text-slate-500" aria-busy="true">Loading leads…</div>
+    }
+    else if (_page is { Items.Count: 0 })
+    {
+        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
+            @if (HasActiveFilter)
+            {
+                @* An empty filtered list is not an empty pipeline: offer to widen the
+                   filter rather than pushing the user to create a duplicate lead. *@
+                <p class="text-slate-600">No leads match your search.</p>
+                <button type="button" @onclick="ClearFiltersAsync"
+                        class="mt-4 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                    Clear filters
+                </button>
+            }
+            else
+            {
+                <p class="text-slate-600">No leads yet.</p>
+                <a href="/admin/leads/create"
+                   class="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                    Create your first lead
+                </a>
+            }
+        </div>
+    }
+    else if (_page is { } pg)
+    {
+        <div class="overflow-x-auto rounded-lg border border-slate-200 @(_isLoading ? "opacity-60" : "")">
+            <table class="w-full">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                        <SortableHeader Label="Name" SortKey="name" Current="@_sort" OnSort="SortByAsync" />
+                        <SortableHeader Label="Email" SortKey="email" Current="@_sort" OnSort="SortByAsync" />
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Phone</th>
+                        <SortableHeader Label="Stage" SortKey="stage" Current="@_sort" OnSort="SortByAsync" />
+                        <SortableHeader Label="Created" SortKey="created" Current="@_sort" OnSort="SortByAsync" />
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-900">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var lead in pg.Items)
+                    {
+                        <tr class="border-b border-slate-100 hover:bg-slate-50">
+                            <td class="px-4 py-4 text-sm font-medium text-slate-900 whitespace-nowrap">
+                                <a href="@DetailHref(lead.Id)" class="text-indigo-600 hover:text-indigo-700 hover:underline">
+                                    @lead.FirstName @lead.LastName
+                                </a>
+                                @if (lead.IsConverted)
+                                {
+                                    <span class="ml-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">Converted</span>
+                                }
+                            </td>
+                            <td class="px-4 py-4 text-sm text-slate-600"><span class="block max-w-[220px] truncate" title="@lead.Email">@lead.Email</span></td>
+                            <td class="px-4 py-4 text-sm text-slate-600 whitespace-nowrap">@lead.Mobile</td>
+                            <td class="px-4 py-4 text-sm text-slate-600 whitespace-nowrap">@lead.StageName</td>
+                            <td class="px-4 py-4 text-sm text-slate-500 whitespace-nowrap">@lead.CreatedAt.ToLocalTime().ToString("MMM d, yyyy")</td>
+                            <td class="px-4 py-4 text-right whitespace-nowrap">
+                                @* One primary action inline; the rest behind a menu, so the
+                                   row is scannable instead of a wall of links. *@
+                                <a href="@EditHref(lead.Id)"
+                                   class="text-sm font-medium text-indigo-600 hover:text-indigo-700">Edit</a>
+                                @if (!lead.IsConverted)
+                                {
+                                    <a href="@ConvertHref(lead.Id)"
+                                       class="ml-3 text-sm font-medium text-emerald-700 hover:text-emerald-800">Convert</a>
+                                }
+                                <button type="button" @onclick="() => OpenDelete(lead)"
+                                        class="ml-3 text-sm font-medium text-red-600 hover:text-red-700">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (pg.TotalPages > 1)
+        {
+            <nav class="flex flex-wrap items-center justify-between gap-3" aria-label="Lead list pages">
+                <p class="text-sm text-slate-500">Page @pg.Page of @pg.TotalPages</p>
+                <div class="flex items-center gap-2">
+                    <button type="button" @onclick="() => GoToPageAsync(pg.Page - 1)"
+                            disabled="@(pg.Page <= 1 || _isLoading)"
+                            class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                        Previous
+                    </button>
+                    <button type="button" @onclick="() => GoToPageAsync(pg.Page + 1)"
+                            disabled="@(pg.Page >= pg.TotalPages || _isLoading)"
+                            class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                        Next
+                    </button>
+                </div>
+            </nav>
+        }
+    }
+</div>
+
+@if (_deleting is not null)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="delete-lead-title">
+        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h3 id="delete-lead-title" class="mb-2 text-lg font-semibold text-slate-900">Delete lead</h3>
+            <p class="mb-6 text-sm text-slate-600">
+                Delete @_deleting.FirstName @_deleting.LastName? This removes the lead from your pipeline.
+            </p>
+            @if (!string.IsNullOrEmpty(_deleteError))
+            {
+                <p role="alert" class="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">@_deleteError</p>
+            }
+            <div class="flex justify-end gap-3">
+                <button type="button" @onclick="CancelDelete" disabled="@_isDeleting"
+                        class="px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-60">Cancel</button>
+                <button type="button" @onclick="ConfirmDeleteAsync" disabled="@_isDeleting"
+                        class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60">
+                    @(_isDeleting ? "Deleting…" : "Delete")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // Filter state lives in the URL, so opening a lead and coming back — or sharing the
+    // link, or reloading — lands on the same filtered, sorted page rather than resetting
+    // to the top of an unfiltered list.
+    [SupplyParameterFromQuery(Name = "search")] public string? SearchParam { get; set; }
+    [SupplyParameterFromQuery(Name = "stageId")] public string? StageParam { get; set; }
+    [SupplyParameterFromQuery(Name = "sort")] public string? SortParam { get; set; }
+    [SupplyParameterFromQuery(Name = "page")] public int? PageParam { get; set; }
+
+    private LeadPage? _page;
+    private List<StageItem> _stages = [];
+    private bool _isLoading = true;
+    private string? _error;
+    private string? _deleteError;
+
+    private string _search = string.Empty;
+    private string _stageFilter = string.Empty;
+    private string _sort = "created_desc";
+    private int _currentPage = 1;
+
+    private LeadItem? _deleting;
+    private bool _isDeleting;
+    private CancellationTokenSource? _debounce;
+
+    private bool _stagesLoaded;
+
+    private bool HasActiveFilter =>
+        !string.IsNullOrWhiteSpace(_search) || !string.IsNullOrWhiteSpace(_stageFilter);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Driven by the query string so browser Back/Forward moves through filter states
+        // the same way it moves through pages.
+        _search = SearchParam ?? string.Empty;
+        _stageFilter = StageParam ?? string.Empty;
+        _sort = string.IsNullOrWhiteSpace(SortParam) ? "created_desc" : SortParam;
+        _currentPage = PageParam is > 0 ? PageParam.Value : 1;
+
+        if (!_stagesLoaded)
+        {
+            _stagesLoaded = true;
+            _stages = await Api.GetFromJsonAsync<List<StageItem>>("/api/pipeline-stages") ?? [];
+        }
+
+        await LoadAsync();
+    }
+
+    // Debounced so each keystroke does not fire its own request; the previous pending
+    // search is cancelled rather than racing the newer one to render.
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? string.Empty;
+        _debounce?.Cancel();
+        _debounce = new CancellationTokenSource();
+        var token = _debounce.Token;
+        try
+        {
+            await Task.Delay(300, token);
+
+            // A changed search invalidates the current page number: page 4 of the old
+            // result set is meaningless against the new one.
+            NavigateWithState(page: 1);
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private void OnStageChanged(ChangeEventArgs e)
+    {
+        _stageFilter = e.Value?.ToString() ?? string.Empty;
+        NavigateWithState(page: 1);
+    }
+
+    private Task ClearFiltersAsync()
+    {
+        _search = string.Empty;
+        _stageFilter = string.Empty;
+        NavigateWithState(page: 1);
+        return Task.CompletedTask;
+    }
+
+    private Task SortByAsync(string sortKey)
+    {
+        // Clicking the active column flips direction; a new column starts ascending.
+        _sort = _sort == sortKey ? $"{sortKey}_desc" : sortKey;
+        NavigateWithState(page: 1);
+        return Task.CompletedTask;
+    }
+
+    private Task GoToPageAsync(int page)
+    {
+        NavigateWithState(page: page);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Pushes the current filter/sort/page into the URL. OnParametersSetAsync then reloads,
+    /// so the URL is the single source of truth rather than a copy kept alongside fields.
+    /// </summary>
+    private void NavigateWithState(int page)
+    {
+        Nav.NavigateTo(BuildUrl(page), replace: false);
+    }
+
+    private string BuildUrl(int page)
+    {
+        var query = new List<string>();
+        if (!string.IsNullOrWhiteSpace(_search)) query.Add($"search={Uri.EscapeDataString(_search)}");
+        if (!string.IsNullOrWhiteSpace(_stageFilter)) query.Add($"stageId={_stageFilter}");
+        if (_sort != "created_desc") query.Add($"sort={_sort}");
+        if (page > 1) query.Add($"page={page}");
+        return "/admin/leads" + (query.Count > 0 ? "?" + string.Join("&", query) : "");
+    }
+
+    // Detail links carry the list's state, so the detail page's "back" returns here
+    // exactly as it was left.
+    private string ReturnQuery => Uri.EscapeDataString(BuildUrl(_currentPage));
+    private string DetailHref(Guid id) => $"/admin/leads/{id}?returnUrl={ReturnQuery}";
+    private string EditHref(Guid id) => $"/admin/leads/{id}/edit?returnUrl={ReturnQuery}";
+    private string ConvertHref(Guid id) => $"/admin/leads/{id}/convert?returnUrl={ReturnQuery}";
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _error = null;
+        StateHasChanged();
+
+        try
+        {
+            var query = new List<string> { $"page={_currentPage}", $"sort={_sort}" };
+            if (!string.IsNullOrWhiteSpace(_search)) query.Add($"search={Uri.EscapeDataString(_search)}");
+            if (!string.IsNullOrWhiteSpace(_stageFilter)) query.Add($"stageId={_stageFilter}");
+
+            var result = await Api.GetFromJsonAsync<LeadPage>("/api/leads?" + string.Join("&", query));
+
+            if (result is null)
+                _error = "Failed to load leads.";
+            else
+                _page = result;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load leads: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private string ResultSummary
+    {
+        get
+        {
+            if (_page is not { } page)
+                return string.Empty;
+
+            if (page.TotalCount == 0)
+                return "No leads";
+
+            var first = ((page.Page - 1) * page.PageSize) + 1;
+            var last = Math.Min(first + page.Items.Count - 1, page.TotalCount);
+
+            return page.TotalCount <= page.PageSize
+                ? $"{page.TotalCount} lead{(page.TotalCount == 1 ? "" : "s")}"
+                : $"{first}–{last} of {page.TotalCount} leads";
+        }
+    }
+
+    private void OpenDelete(LeadItem lead)
+    {
+        _deleting = lead;
+        _deleteError = null;
+    }
+
+    private void CancelDelete()
+    {
+        _deleting = null;
+        _deleteError = null;
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (_deleting is null) return;
+
+        _isDeleting = true;
+        _deleteError = null;
+        try
+        {
+            var response = await Api.DeleteAsync($"/api/leads/{_deleting.Id}");
+            if (response.IsSuccessStatusCode)
+            {
+                _deleting = null;
+
+                // Reloaded rather than removed locally: the deletion changes the total and
+                // pulls a row up from the next page, so the visible page must come from
+                // the server to stay correct.
+                await LoadAsync();
+            }
+            else
+            {
+                // Kept open with the reason shown, so the failure is not mistaken for success.
+                _deleteError = $"Could not delete this lead ({(int)response.StatusCode}).";
+            }
+        }
+        catch (Exception ex)
+        {
+            _deleteError = $"Could not delete this lead: {ex.Message}";
+        }
+        finally
+        {
+            _isDeleting = false;
+            StateHasChanged();
+        }
+    }
+
+    private class LeadPage
+    {
+        public List<LeadItem> Items { get; set; } = [];
+        public int TotalCount { get; set; }
+        public int Page { get; set; } = 1;
+        public int PageSize { get; set; } = 25;
+        public int TotalPages { get; set; }
+    }
+
+    private class LeadItem
+    {
+        public Guid Id { get; set; }
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Mobile { get; set; } = "";
+        public string Source { get; set; } = "";
+        public Guid PipelineStageId { get; set; }
+        public string StageName { get; set; } = "";
+        public bool IsConverted { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    private class StageItem
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = "";
+    }
+}

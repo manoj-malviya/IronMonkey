@@ -19,11 +19,15 @@ using IronMonkey.ApiService.Features.Leads.Workflow.Rules;
 using IronMonkey.ApiService.Features.Reports.Pipeline;
 using IronMonkey.ApiService.Features.Reports.Conversion;
 using IronMonkey.ApiService.Features.Reports.Performance;
+using IronMonkey.ApiService.Features.Reports.Dashboard;
 using IronMonkey.ApiService.Features.Recipes;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
 using IronMonkey.Data.Entities;
 using IronMonkey.ApiService.Features.UserManagement;
+using IronMonkey.ApiService.Features.RoleManagement;
+using IronMonkey.ApiService.Features.Contacts;
+using IronMonkey.ApiService.Features.Opportunities;
 
 namespace IronMonkey.ApiService;
 
@@ -43,6 +47,7 @@ public static class Endpoints
         endpoints.MapHealthCheckEndpoints();
         endpoints.MapTenantEndpoints();
         endpoints.MapUserManagementEndpoints();
+        endpoints.MapRoleManagementEndpoints();
         endpoints.MapPlatformAdminEndpoints();
         endpoints.MapLeadsEndpoints();
         endpoints.MapIngestionEndpoints();
@@ -50,6 +55,8 @@ public static class Endpoints
         endpoints.MapReportEndpoints();
         endpoints.MapActivityEndpoints();
         endpoints.MapRecipeEndpoints();
+        endpoints.MapContactEndpoints();
+        endpoints.MapOpportunityEndpoints();
     }
 
     extension(IEndpointRouteBuilder app)
@@ -89,6 +96,8 @@ public static class Endpoints
             endpoints.MapEndpoint<ProvisionTenantEndpoint>();
             endpoints.MapEndpoint<MigrateAllTenantsEndpoint>();
             endpoints.MapEndpoint<ListTenantsEndpoint>();
+            endpoints.MapEndpoint<PlatformStatsEndpoint>();
+            endpoints.MapEndpoint<ImpersonateTenantEndpoint>();
         }
 
         private void MapUserEndpoints()
@@ -115,24 +124,48 @@ public static class Endpoints
             var endpoints = app.MapGroup(string.Empty)
                 .WithTags("User Management");
 
-            // Existing public endpoints (role/permission management)
-            endpoints.MapPublicGroup()
-                .MapEndpoint<CreateRole>()
-                .MapEndpoint<ListRoles>()
-                .MapEndpoint<CreatePermission>()
-                .MapEndpoint<ListRolePermissions>()
-                .MapEndpoint<AttachPermissionsToRole>();
+            // Existing public endpoints (role/permission management).
+            //
+            // ListRoles (GET /roles) and ListRolePermissions are deliberately NOT registered:
+            // both query the obsolete AppDbContext, which points at the central database where
+            // the tenant-scoped Roles/Permissions tables do not exist, so both return 500.
+            // Tenant roles are served by ListTenantRolesEndpoint (GET /users/roles) below.
+            // Left registered-but-unused code out rather than deleting the types, matching
+            // how CreateUser was handled in MapUserEndpoints.
+            // CreateRole, CreatePermission and AttachPermissionsToRole are deliberately NOT
+            // registered: all three target the obsolete AppDbContext, which points at the
+            // central database where the tenant-scoped Roles/Permissions tables do not exist,
+            // so every call returned 500. They are superseded by the tenant-scoped endpoints
+            // in MapRoleManagementEndpoints below. Left registered-but-unused code out rather
+            // than deleting the types, matching how CreateUser and ListRoles were handled.
 
             // Tenant-scoped user management endpoints (require auth)
             var userEndpoints = endpoints.MapGroup(string.Empty)
                 .RequireAuthorization();
             userEndpoints
                 .MapEndpoint<ListUsersEndpoint>()
+                // Replaces the legacy ListRoles (GET /roles), which targets the obsolete
+                // AppDbContext against the central DB and returns 500. Registered before
+                // GetUserEndpoint for clarity; the {id:guid} constraint keeps them distinct.
+                .MapEndpoint<ListTenantRolesEndpoint>()
                 .MapEndpoint<GetUserEndpoint>()
                 .MapEndpoint<CreateTenantUserEndpoint>()
                 .MapEndpoint<UpdateUserEndpoint>()
                 .MapEndpoint<DeactivateUserEndpoint>()
                 .MapEndpoint<ResetPasswordEndpoint>();
+        }
+
+        private void MapRoleManagementEndpoints()
+        {
+            var endpoints = app.MapGroup(string.Empty)
+                .WithTags("Role Management")
+                .RequireAuthorization();
+
+            endpoints
+                .MapEndpoint<ListPermissionsEndpoint>()
+                .MapEndpoint<CreateRoleEndpoint>()
+                .MapEndpoint<UpdateRoleEndpoint>()
+                .MapEndpoint<DeleteRoleEndpoint>();
         }
 
         private void MapLeadsEndpoints()
@@ -141,10 +174,14 @@ public static class Endpoints
             ListCustomFieldsEndpoint.Map(app);
             UpdateCustomFieldEndpoint.Map(app);
             DeleteCustomFieldEndpoint.Map(app);
+            GetCustomFieldImpactEndpoint.Map(app);
+            RestoreCustomFieldEndpoint.Map(app);
             CreatePipelineStageEndpoint.Map(app);
             ListPipelineStagesEndpoint.Map(app);
             UpdatePipelineStageEndpoint.Map(app);
             DeletePipelineStageEndpoint.Map(app);
+            ReorderPipelineStagesEndpoint.Map(app);
+            GetPipelineStageImpactEndpoint.Map(app);
             CreateLeadEndpoint.Map(app);
             CheckDuplicatesEndpoint.Map(app);
             MergeLeadsEndpoint.Map(app);
@@ -157,6 +194,32 @@ public static class Endpoints
             ListTransitionsEndpoint.Map(app);
             GetKanbanBoardEndpoint.Map(app);
             MoveLeadEndpoint.Map(app);
+
+            // Lead CRUD. CreateLeadEndpoint already existed; without these the leads the
+            // API could create were unreachable — nothing could list, open or edit them.
+            ListLeadsEndpoint.Map(app);
+            GetLeadEndpoint.Map(app);
+            UpdateLeadEndpoint.Map(app);
+            DeleteLeadEndpoint.Map(app);
+            ConvertLeadEndpoint.Map(app);
+        }
+
+        private void MapContactEndpoints()
+        {
+            ListContactsEndpoint.Map(app);
+            GetContactEndpoint.Map(app);
+            CreateContactEndpoint.Map(app);
+            UpdateContactEndpoint.Map(app);
+            DeleteContactEndpoint.Map(app);
+        }
+
+        private void MapOpportunityEndpoints()
+        {
+            ListOpportunitiesEndpoint.Map(app);
+            GetOpportunityEndpoint.Map(app);
+            CreateOpportunityEndpoint.Map(app);
+            UpdateOpportunityEndpoint.Map(app);
+            DeleteOpportunityEndpoint.Map(app);
         }
 
         private void MapIngestionEndpoints()
@@ -196,6 +259,14 @@ public static class Endpoints
             GetPipelineDashboardEndpoint.Map(app);         // REPT-01: pipeline overview
             GetConversionDashboardEndpoint.Map(app);       // REPT-02: conversion rates
             GetAgentPerformanceDashboardEndpoint.Map(app); // REPT-03: agent performance
+
+            // Tenant CRM dashboard. One endpoint per widget rather than one combined
+            // payload, so a widget that fails degrades on its own instead of blanking
+            // the whole page.
+            GetDashboardSummaryEndpoint.Map(app);
+            GetDashboardOpportunitiesEndpoint.Map(app);
+            GetDashboardAttentionEndpoint.Map(app);
+            GetDashboardActivityEndpoint.Map(app);
         }
 
         private void MapActivityEndpoints()
@@ -203,6 +274,10 @@ public static class Endpoints
             // Activity timeline (ACTV-01)
             GetLeadActivityTimelineEndpoint.Map(app);
             AddLeadNoteEndpoint.Map(app);
+
+            // Generic subject timelines (lead / contact / opportunity)
+            GetActivityTimelineEndpoint.Map(app);
+            AddActivityNoteEndpoint.Map(app);
         }
 
         private void MapRecipeEndpoints()

@@ -1,0 +1,77 @@
+@using IronMonkey.Web.Components.Pages.Admin.Dashboard
+
+<DashboardWidget Title="Opportunities"
+                 Subtitle="@Subtitle"
+                 IsLoading="State.IsLoading"
+                 HasData="State.HasData"
+                 HasError="State.HasError"
+                 ErrorMessage="@State.ErrorMessage"
+                 IsStale="State.IsStale"
+                 OnRetry="OnRetry">
+    @if (State.Data is { } data)
+    {
+        @if (data.TotalCount == 0)
+        {
+            <div class="py-6 text-center">
+                <p class="text-sm text-slate-600">No opportunities in this date range.</p>
+                <p class="mt-1 text-xs text-slate-500">Opportunities are created when you convert a qualified lead.</p>
+                <div class="mt-4 flex flex-wrap justify-center gap-2">
+                    <a href="/admin/opportunities/create"
+                       class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                        New opportunity
+                    </a>
+                    <a href="/admin/leads"
+                       class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                        Convert a lead
+                    </a>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <p class="text-xs font-medium text-slate-500">Open value</p>
+                    <p class="mt-0.5 text-xl font-bold tabular-nums text-slate-900">@Money(data.OpenValue)</p>
+                    <p class="text-xs text-slate-500">@Plural(data.OpenCount, "deal") in play</p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-slate-500">Won value</p>
+                    <p class="mt-0.5 text-xl font-bold tabular-nums text-emerald-700">@Money(data.WonValue)</p>
+                    <p class="text-xs text-slate-500">@Plural(data.WonCount, "deal") won</p>
+                </div>
+            </div>
+
+            <ul class="mt-4 space-y-2 border-t border-slate-100 pt-3">
+                @foreach (var stage in data.ByStage)
+                {
+                    <li>
+                        <a href="@($"/admin/opportunities?stage={Uri.EscapeDataString(stage.Stage)}")"
+                           class="flex items-baseline justify-between gap-3 rounded-lg px-1 py-1 text-sm hover:bg-slate-50"
+                           title="@($"View {stage.Count} {stage.Stage} opportunity/opportunities")">
+                            <span class="truncate text-slate-700">
+                                @stage.Stage
+                                <span class="ml-1 text-xs text-slate-400">@stage.Count</span>
+                            </span>
+                            <span class="shrink-0 tabular-nums font-medium @(stage.Stage == "Won" ? "text-emerald-700" : "text-slate-900")">
+                                @Money(stage.TotalValue)
+                            </span>
+                        </a>
+                    </li>
+                }
+            </ul>
+        }
+    }
+</DashboardWidget>
+
+@code {
+    [Parameter, EditorRequired] public WidgetState<DashboardOpportunities> State { get; set; } = new();
+    [Parameter] public EventCallback OnRetry { get; set; }
+    [Parameter] public string? Subtitle { get; set; }
+
+    // Whole units only: cents add width without adding a decision anyone makes from a
+    // dashboard glance. See MoneyFormat for why "C0" is not used.
+    private static string Money(decimal amount) => MoneyFormat.Amount(amount);
+
+    private static string Plural(int count, string noun) => $"{count} {noun}{(count == 1 ? "" : "s")}";
+}

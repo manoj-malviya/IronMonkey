@@ -37,10 +37,16 @@ public class CreateTenantUserEndpoint : IEndpoint
         Request request,
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
+        CentralDbContext centralDb,
         CancellationToken cancellationToken)
     {
         var tenantId = tenantService.GetCurrentTenantId();
         var connectionString = await tenantService.GetConnectionStringAsync(cancellationToken);
+
+        // Emails are the login identifier, so they are compared case-insensitively and
+        // stored normalised — otherwise "A@b.com" and "a@b.com" become two users that
+        // both try to claim the same central index row.
+        var email = request.Email.Trim().ToLowerInvariant();
 
         await using var db = dbContextFactory.CreateForTenant(connectionString, tenantId);
 
@@ -48,17 +54,43 @@ public class CreateTenantUserEndpoint : IEndpoint
         if (role is null)
             return TypedResults.NotFound();
 
+        // The email must be unique across the whole platform, not just this tenant:
+        // UserTenantIndex maps one email to exactly one tenant, and LoginEndpoint reads it
+        // with SingleOrDefault, so a second row for the same email breaks login for both.
+        var emailTaken = await centralDb.UserTenantIndex
+            .AsNoTracking()
+            .AnyAsync(x => x.Email == email, cancellationToken);
+
+        if (emailTaken)
+            return new ValidationError("A user with this email address already exists.");
+
+        // Deactivated users keep their row (soft delete), so ignore the filter here —
+        // reusing their email would collide on the central index.
+        var existsInTenant = await db.Users
+            .IgnoreQueryFilters()
+            .AnyAsync(u => u.TenantId == tenantId && u.Email == email, cancellationToken);
+
+        if (existsInTenant)
+            return new ValidationError("A user with this email address already exists.");
+
         var bytes = new byte[16];
         RandomNumberGenerator.Fill(bytes);
         var plaintext = Convert.ToBase64String(bytes);
         var hashed = BC.HashPassword(plaintext);
 
-        var user = User.Create(tenantId, request.Name, request.Email, hashed, role);
+        var user = User.Create(tenantId, request.Name, email, hashed, role);
         db.Users.Add(user);
         await db.SaveChangesAsync(cancellationToken);
 
+        // Without this row LoginEndpoint's email -> tenant lookup finds nothing and the
+        // brand-new user gets "Invalid email address or password". The two writes span two
+        // databases and cannot share a transaction; the tenant row is written first so a
+        // failure here leaves an unusable user rather than an index pointing at nothing.
+        centralDb.UserTenantIndex.Add(UserTenantIndex.Create(email, tenantId));
+        await centralDb.SaveChangesAsync(cancellationToken);
+
         return TypedResults.Created(
-            $"/api/user-management/users/{user.Id}",
+            $"/users/{user.Id}",
             new Response(user.Id, plaintext, "User created successfully."));
     }
 }

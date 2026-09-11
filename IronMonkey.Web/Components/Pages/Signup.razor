@@ -171,7 +171,9 @@
                         </button>
 
                         <p class="text-center text-xs text-on-surface-variant font-label uppercase tracking-widest">
-                            By signing up, you agree to our <a class="underline font-bold hover:text-primary" href="#">Terms of Service</a> &amp; <a class="underline font-bold hover:text-primary" href="#">Privacy Policy</a>.
+                            @* Terms and Privacy have no route yet; left as text so the
+                               statement still stands without underlined links to "#". *@
+                            By signing up, you agree to our Terms of Service &amp; Privacy Policy.
                         </p>
                     </div>
                 </EditForm>
@@ -228,11 +230,8 @@
         <div class="text-lg font-black text-on-surface-variant font-headline uppercase tracking-tighter">
             IRONMONKEY
         </div>
-        <div class="flex flex-wrap justify-center gap-8">
-            <a class="text-xs font-label uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors font-semibold" href="#">Resources</a>
-            <a class="text-xs font-label uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors font-semibold" href="#">Company</a>
-            <a class="text-xs font-label uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors font-semibold" href="#">Legal</a>
-        </div>
+        @* Resources / Company / Legal were inert "#" links. Removed until those pages
+           exist rather than shipping navigation that goes nowhere. *@
         <div class="text-[10px] text-outline font-label uppercase tracking-[0.2em]">
             &copy; 2026 IRONMONKEY CRM. KINETIC INDUSTRIALISM.
         </div>

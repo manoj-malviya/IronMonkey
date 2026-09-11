@@ -19,6 +19,7 @@ public sealed class Contact : BaseTenantEntity
     public string Name { get; private set; } = string.Empty;
     public string Mobile { get; private set; } = string.Empty;
     public string Email { get; private set; } = string.Empty;
+    public CustomFieldValues CustomFields { get; private set; } = new();
 
     public static Contact Create(Guid tenantId, string name, string mobile, string email)
     {

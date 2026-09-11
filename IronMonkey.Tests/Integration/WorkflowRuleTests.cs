@@ -67,7 +67,7 @@ public class WorkflowRuleTests(PostgreSqlFixture fixture) : IClassFixture<Postgr
         await db.SaveChangesAsync();
 
         var notifyMock = new Mock<INotificationService>();
-        var engine = new WorkflowRuleEngine(notifyMock.Object, NullLogger<WorkflowRuleEngine>.Instance);
+        var engine = new WorkflowRuleEngine(notifyMock.Object, new Mock<IHttpClientFactory>().Object, NullLogger<WorkflowRuleEngine>.Instance);
 
         var lead = await db.Leads.FirstAsync(l => l.Id == leadId);
         await engine.EvaluateAsync(tenantId, lead, WorkflowTrigger.StatusChange, db, CancellationToken.None);
@@ -92,7 +92,7 @@ public class WorkflowRuleTests(PostgreSqlFixture fixture) : IClassFixture<Postgr
         await db.SaveChangesAsync();
 
         var notifyMock = new Mock<INotificationService>();
-        var engine = new WorkflowRuleEngine(notifyMock.Object, NullLogger<WorkflowRuleEngine>.Instance);
+        var engine = new WorkflowRuleEngine(notifyMock.Object, new Mock<IHttpClientFactory>().Object, NullLogger<WorkflowRuleEngine>.Instance);
 
         var lead = await db.Leads.FirstAsync(l => l.Id == leadId);
         await engine.EvaluateAsync(tenantId, lead, WorkflowTrigger.StatusChange, db, CancellationToken.None);

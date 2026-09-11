@@ -1,0 +1,176 @@
+@page "/admin/leads/board"
+@attribute [Authorize]
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>Pipeline Board — IronMonkey</PageTitle>
+
+<div class="space-y-6">
+
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-slate-900">Pipeline Board</h1>
+        <div class="flex items-center gap-2">
+            <button @onclick='() => Nav.NavigateTo("/admin/leads")'
+                    class="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                List View
+            </button>
+            <button @onclick='() => Nav.NavigateTo("/admin/leads/create")'
+                    class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                + New Lead
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">@_error</div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="py-12 text-center text-sm text-slate-500">Loading board...</div>
+    }
+    else if (_columns.Count == 0)
+    {
+        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
+            <p class="text-slate-600">No pipeline stages are configured yet.</p>
+        </div>
+    }
+    else
+    {
+        <p class="text-sm text-slate-500">Drag a card onto another column to move the lead through the pipeline.</p>
+
+        <div class="flex gap-4 overflow-x-auto pb-4">
+            @foreach (var col in _columns)
+            {
+                <div class="w-72 shrink-0 rounded-xl bg-slate-100 p-3 @(_dragOverStageId == col.StageId ? "ring-2 ring-indigo-400" : "")"
+                     @ondragover:preventDefault="true"
+                     @ondragenter="() => _dragOverStageId = col.StageId"
+                     @ondragleave="() => _dragOverStageId = null"
+                     @ondrop="() => OnDropAsync(col.StageId)">
+
+                    <div class="mb-3 flex items-center justify-between px-1">
+                        <h2 class="text-sm font-semibold text-slate-900">@col.StageName</h2>
+                        <span class="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-600">@col.TotalCount</span>
+                    </div>
+
+                    <div class="space-y-2">
+                        @foreach (var lead in col.Leads)
+                        {
+                            <div draggable="true"
+                                 @ondragstart="() => _draggingLeadId = lead.Id"
+                                 @ondragend="() => _draggingLeadId = null"
+                                 @onclick='() => Nav.NavigateTo($"/admin/leads/{lead.Id}/edit")'
+                                 class="cursor-pointer rounded-lg border border-slate-200 bg-white p-3 shadow-sm hover:border-indigo-300">
+                                <p class="text-sm font-medium text-slate-900">@lead.FirstName @lead.LastName</p>
+                                <p class="mt-0.5 truncate text-xs text-slate-500">@lead.Email</p>
+                                <div class="mt-2 flex items-center justify-between">
+                                    <span class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600">@lead.Source</span>
+                                    <span class="text-[10px] text-slate-400">@lead.DaysInStage d</span>
+                                </div>
+                            </div>
+                        }
+
+                        @if (col.Leads.Count == 0)
+                        {
+                            <div class="rounded-lg border border-dashed border-slate-300 py-8 text-center text-xs text-slate-400">
+                                Drop a lead here
+                            </div>
+                        }
+
+                        @if (col.HasMore)
+                        {
+                            <p class="pt-1 text-center text-xs text-slate-500">
+                                +@(col.TotalCount - col.Leads.Count) more
+                            </p>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<KanbanColumn> _columns = [];
+    private bool _isLoading = true;
+    private string? _error;
+    private Guid? _draggingLeadId;
+    private Guid? _dragOverStageId;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _error = null;
+        try
+        {
+            var board = await Api.GetFromJsonAsync<BoardResponse>("/api/kanban");
+            _columns = board?.Columns ?? [];
+        }
+        catch (Exception ex) { _error = $"Failed to load board: {ex.Message}"; }
+        finally { _isLoading = false; }
+    }
+
+    private async Task OnDropAsync(Guid targetStageId)
+    {
+        _dragOverStageId = null;
+        var leadId = _draggingLeadId;
+        _draggingLeadId = null;
+        if (leadId is null) return;
+
+        var source = _columns.FirstOrDefault(c => c.Leads.Any(l => l.Id == leadId));
+        if (source is null || source.StageId == targetStageId) return;
+
+        var card = source.Leads.First(l => l.Id == leadId);
+        var target = _columns.First(c => c.StageId == targetStageId);
+
+        // Move locally first so the card follows the cursor immediately; the reload below
+        // reconciles with whatever the server actually accepted.
+        source.Leads.Remove(card);
+        source.TotalCount--;
+        target.Leads.Add(card);
+        target.TotalCount++;
+
+        try
+        {
+            var res = await Api.PostAsJsonAsync($"/api/leads/{leadId}/move", new { TargetStageId = targetStageId });
+            if (!res.IsSuccessStatusCode)
+            {
+                // A stage transition can be rejected by the configured state machine.
+                var body = await res.Content.ReadAsStringAsync();
+                _error = string.IsNullOrWhiteSpace(body) ? "That move is not allowed." : body;
+            }
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to move lead: {ex.Message}";
+            await LoadAsync();
+        }
+    }
+
+    private class BoardResponse { public List<KanbanColumn> Columns { get; set; } = []; }
+
+    private class KanbanColumn
+    {
+        public Guid StageId { get; set; }
+        public string StageName { get; set; } = "";
+        public int Order { get; set; }
+        public string StageType { get; set; } = "";
+        public List<LeadCard> Leads { get; set; } = [];
+        public bool HasMore { get; set; }
+        public int TotalCount { get; set; }
+    }
+
+    private class LeadCard
+    {
+        public Guid Id { get; set; }
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Source { get; set; } = "";
+        public int DaysInStage { get; set; }
+    }
+}

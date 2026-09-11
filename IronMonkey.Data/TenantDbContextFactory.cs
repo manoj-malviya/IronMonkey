@@ -14,16 +14,20 @@ public interface ITenantDbContextFactory
     TenantDbContext CreateForTenant(string connectionString, Guid tenantId, IEnumerable<IInterceptor> interceptors);
 }
 
-public class TenantDbContextFactory : ITenantDbContextFactory
+/// <param name="ambientInterceptors">
+/// Interceptors attached to every context this factory creates — activity tracking, in
+/// practice. They are resolved from DI rather than passed per call because all 67 call
+/// sites used the interceptor-less overload, so nothing was ever tracked despite the
+/// interceptor being registered. Optional so tests and design-time tooling can construct
+/// the factory directly.
+/// </param>
+public class TenantDbContextFactory(
+    IEnumerable<IInterceptor>? ambientInterceptors = null) : ITenantDbContextFactory
 {
-    public TenantDbContext CreateForTenant(string connectionString, Guid tenantId)
-    {
-        var options = new DbContextOptionsBuilder<TenantDbContext>()
-            .UseNpgsql(connectionString)
-            .Options;
+    private readonly IInterceptor[] _ambient = ambientInterceptors?.ToArray() ?? [];
 
-        return new TenantDbContext(options, tenantId);
-    }
+    public TenantDbContext CreateForTenant(string connectionString, Guid tenantId)
+        => CreateForTenant(connectionString, tenantId, _ambient);
 
     public TenantDbContext CreateForTenant(string connectionString, Guid tenantId, IEnumerable<IInterceptor> interceptors)
     {

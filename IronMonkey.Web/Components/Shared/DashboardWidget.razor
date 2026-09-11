@@ -1,0 +1,109 @@
+@*
+    Shell for one dashboard panel. Owns the loading / failed / stale presentation so every
+    widget reports its state the same way, and so a widget that fails renders its own error
+    with its own retry button instead of the page swapping to a single global error screen.
+
+    The distinction that matters: a widget that has never loaded shows a skeleton, while one
+    that failed *after* a successful load keeps showing the data it has and marks it stale.
+    Blanking good-but-old numbers on a transient refresh failure is worse than labelling them.
+*@
+<section class="rounded-xl border border-slate-200 bg-white" aria-labelledby="@_headingId">
+    <header class="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <div class="min-w-0">
+            <h2 id="@_headingId" class="text-sm font-semibold text-slate-900">@Title</h2>
+            @if (!string.IsNullOrEmpty(Subtitle))
+            {
+                <p class="mt-0.5 text-xs text-slate-500">@Subtitle</p>
+            }
+        </div>
+
+        <div class="flex shrink-0 items-center gap-2">
+            @if (IsStale)
+            {
+                <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
+                      title="The last refresh failed. These figures are from an earlier load.">
+                    Stale
+                </span>
+            }
+            @HeaderActions
+            @if (OnRetry.HasDelegate)
+            {
+                <button type="button" @onclick="OnRetry" disabled="@IsLoading"
+                        title="@($"Refresh {Title}")"
+                        aria-label="@($"Refresh {Title}")"
+                        class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-40">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                         stroke="currentColor" class="h-4 w-4 @(IsLoading ? "animate-spin" : "")" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356M2.985 19.644v-4.992h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                    </svg>
+                </button>
+            }
+        </div>
+    </header>
+
+    <div class="px-5 py-4">
+        @* aria-busy lets a screen reader announce that this panel is updating without the
+           visual skeleton being the only signal. *@
+        <div aria-busy="@(IsLoading && !HasData ? "true" : "false")">
+            @if (HasError && !HasData)
+            {
+                <div role="alert" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                    <p class="text-sm text-red-800">@(ErrorMessage ?? "Could not load this panel.")</p>
+                    @if (OnRetry.HasDelegate)
+                    {
+                        <button type="button" @onclick="OnRetry" disabled="@IsLoading"
+                                class="mt-2 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60">
+                            @(IsLoading ? "Retrying…" : "Try again")
+                        </button>
+                    }
+                </div>
+            }
+            else if (IsLoading && !HasData)
+            {
+                <div class="space-y-2" aria-hidden="true">
+                    <div class="h-4 w-2/3 animate-pulse rounded bg-slate-100"></div>
+                    <div class="h-4 w-1/2 animate-pulse rounded bg-slate-100"></div>
+                    <div class="h-4 w-3/5 animate-pulse rounded bg-slate-100"></div>
+                </div>
+                <span class="sr-only">Loading @Title</span>
+            }
+            else
+            {
+                @* A failed refresh over existing data: the figures stay, with the reason
+                   stated inline so nobody reads them as current. *@
+                @if (HasError && HasData)
+                {
+                    <div role="status" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                        @(ErrorMessage ?? "Refresh failed.") Showing the last figures that loaded.
+                    </div>
+                }
+                @ChildContent
+            }
+        </div>
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>A request is in flight. Shows a skeleton only when there is nothing to show yet.</summary>
+    [Parameter] public bool IsLoading { get; set; }
+
+    /// <summary>The widget holds renderable data — from this load or a previous one.</summary>
+    [Parameter] public bool HasData { get; set; }
+
+    [Parameter] public bool HasError { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+
+    /// <summary>Data on screen predates the most recent (failed) refresh.</summary>
+    [Parameter] public bool IsStale { get; set; }
+
+    [Parameter] public EventCallback OnRetry { get; set; }
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    // Generated per instance so the aria-labelledby link is unique even with several
+    // widgets of the same title on a page.
+    private readonly string _headingId = $"widget-{Guid.NewGuid():N}";
+}

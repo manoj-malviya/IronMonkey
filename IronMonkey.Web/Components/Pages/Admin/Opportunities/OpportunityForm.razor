@@ -1,0 +1,203 @@
+@page "/admin/opportunities/create"
+@page "/admin/opportunities/{Id:guid}/edit"
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>@(IsEdit ? "Edit Opportunity" : "New Opportunity") — IronMonkey</PageTitle>
+
+<div class="max-w-3xl">
+
+    <button type="button" @onclick='() => Nav.NavigateTo("/admin/opportunities")'
+            class="mb-4 text-sm text-indigo-600 hover:text-indigo-700">
+        &larr; Back to Opportunities
+    </button>
+
+    <h1 class="mb-6 text-2xl font-bold text-slate-900">@(IsEdit ? "Edit Opportunity" : "New Opportunity")</h1>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">@_error</div>
+    }
+
+    @if (_isLoading)
+    {
+        <p class="text-sm text-slate-500">Loading...</p>
+    }
+    else if (_contacts.Count == 0)
+    {
+        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-12 text-center">
+            <p class="text-slate-600">You need a contact before you can create an opportunity.</p>
+            <button @onclick='() => Nav.NavigateTo("/admin/contacts/create")'
+                    class="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                Create a contact
+            </button>
+        </div>
+    }
+    else
+    {
+        <EditForm Model="_model" OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
+
+            <div class="mb-4">
+                <label class="mb-1 block text-sm font-medium text-slate-700">Title</label>
+                <InputText @bind-Value="_model.Title"
+                           class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <ValidationMessage For="() => _model.Title" class="mt-1 text-xs text-red-600" />
+            </div>
+
+            <div class="mb-4">
+                <label class="mb-1 block text-sm font-medium text-slate-700">Contact</label>
+                <select @bind="_model.ContactId"
+                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    @foreach (var c in _contacts)
+                    {
+                        <option value="@c.Id">@c.Name (@c.Email)</option>
+                    }
+                </select>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-3">
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700">Amount</label>
+                    <InputNumber @bind-Value="_model.Amount"
+                                 class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700">Expected close</label>
+                    <InputDate @bind-Value="_model.ExpectedCloseDate"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700">Stage</label>
+                    <select @bind="_model.Stage"
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        @foreach (var s in IronMonkey.Common.OpportunityStages.All)
+                        {
+                            <option value="@s">@s</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            @if (_model.Stage == IronMonkey.Common.OpportunityStages.Lost)
+            {
+                <div class="mt-4">
+                    <label class="mb-1 block text-sm font-medium text-slate-700">Loss reason</label>
+                    <InputText @bind-Value="_model.LossReason" placeholder="e.g. Price, chose competitor, no budget"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <p class="mt-1 text-xs text-slate-500">Required when marking a deal as Lost.</p>
+                </div>
+            }
+
+            <div class="mt-6 flex justify-end">
+                <button type="submit" disabled="@_isSaving"
+                        class="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60">
+                    @(_isSaving ? "Saving..." : IsEdit ? "Save Changes" : "Create Opportunity")
+                </button>
+            </div>
+        </EditForm>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private bool IsEdit => Id.HasValue;
+
+    private OpportunityModel _model = new();
+    private List<ContactItem> _contacts = [];
+    private bool _isLoading = true;
+    private bool _isSaving;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _contacts = await Api.GetFromJsonAsync<List<ContactItem>>("/api/contacts") ?? [];
+
+        if (IsEdit)
+        {
+            var o = await Api.GetFromJsonAsync<OpportunityDetail>($"/api/opportunities/{Id}");
+            if (o is not null)
+            {
+                _model = new OpportunityModel
+                {
+                    Title = o.Title,
+                    ContactId = o.ContactId,
+                    Stage = o.Stage,
+                    Amount = o.Amount,
+                    ExpectedCloseDate = o.ExpectedCloseDate,
+                    LossReason = o.LossReason ?? ""
+                };
+            }
+            else _error = "Opportunity not found.";
+        }
+        else if (_contacts.Count > 0)
+        {
+            _model.ContactId = _contacts[0].Id;
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _isSaving = true;
+        _error = null;
+        try
+        {
+            var payload = new
+            {
+                _model.Title,
+                _model.ContactId,
+                _model.Stage,
+                _model.Amount,
+                ExpectedCloseDate = DateTime.SpecifyKind(_model.ExpectedCloseDate, DateTimeKind.Utc),
+                _model.LossReason
+            };
+
+            var res = IsEdit
+                ? await Api.PutAsJsonAsync($"/api/opportunities/{Id}", payload)
+                : await Api.PostAsJsonAsync("/api/opportunities", payload);
+
+            if (res.IsSuccessStatusCode) { Nav.NavigateTo("/admin/opportunities"); return; }
+            if (res.StatusCode == System.Net.HttpStatusCode.Unauthorized) { Nav.NavigateTo("/login"); return; }
+            _error = await res.Content.ReadAsStringAsync();
+        }
+        catch (Exception ex) { _error = $"Unable to save: {ex.Message}"; }
+        finally { _isSaving = false; }
+    }
+
+    private class OpportunityModel
+    {
+        [Required(ErrorMessage = "Title is required.")]
+        public string Title { get; set; } = "";
+
+        public Guid ContactId { get; set; }
+        public string Stage { get; set; } = IronMonkey.Common.OpportunityStages.Qualification;
+
+        [Range(0, double.MaxValue, ErrorMessage = "Amount cannot be negative.")]
+        public decimal Amount { get; set; }
+
+        public DateTime ExpectedCloseDate { get; set; } = DateTime.UtcNow.AddDays(30);
+        public string LossReason { get; set; } = "";
+    }
+
+    private class ContactItem
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = "";
+        public string Email { get; set; } = "";
+    }
+
+    private class OpportunityDetail
+    {
+        public string Title { get; set; } = "";
+        public Guid ContactId { get; set; }
+        public string Stage { get; set; } = "";
+        public decimal Amount { get; set; }
+        public DateTime ExpectedCloseDate { get; set; }
+        public string? LossReason { get; set; }
+    }
+}

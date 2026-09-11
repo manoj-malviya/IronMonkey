@@ -101,9 +101,11 @@ public class GetAgentPerformanceDashboardEndpoint : IEndpoint
             if (assignedLeads.Any())
             {
                 var leadIds = assignedLeads.Select(l => l.Id).ToList();
+                // LeadId is nullable now that contacts and opportunities also log activity,
+                // so filter to lead-scoped rows before grouping.
                 var firstActivities = await db.ActivityLogs
-                    .Where(a => leadIds.Contains(a.LeadId) && a.ActorId == user.Id)
-                    .GroupBy(a => a.LeadId)
+                    .Where(a => a.LeadId != null && leadIds.Contains(a.LeadId.Value) && a.ActorId == user.Id)
+                    .GroupBy(a => a.LeadId!.Value)
                     .Select(g => new { LeadId = g.Key, FirstActivity = g.Min(a => a.CreatedAt) })
                     .ToListAsync(cancellationToken);
 

@@ -18,6 +18,7 @@ using IronMonkey.ApiService.Features.Leads.Merge;
 using IronMonkey.ApiService.Features.Leads.Ingestion.WebForm;
 using IronMonkey.ApiService.Features.Activity;
 using IronMonkey.ApiService.Features.Leads.Pipeline.Routing;
+using IronMonkey.ApiService.Features.Configuration;
 using IronMonkey.ApiService.Features.Leads.Pipeline.States;
 using IronMonkey.ApiService.Features.Leads.Workflow.Rules;
 using IronMonkey.ApiService.Interceptors;
@@ -62,14 +63,24 @@ public static class ConfigureServices
             builder.Services.AddScoped<IWebFormService, WebFormService>();
             builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
             builder.Services.AddScoped<ILeadRoutingService, LeadRoutingService>();
+            builder.Services.AddScoped<IConfigurationUsageService, ConfigurationUsageService>();
             builder.Services.AddScoped<IStateValidationService, StateValidationService>();
             // Phase 5: Activity tracking
-            builder.Services.AddScoped<ActivityChangeInterceptor>();
+            // Singleton + exposed as IInterceptor so TenantDbContextFactory (itself a
+            // singleton) picks it up for every tenant context it creates.
+            builder.Services.AddSingleton<ActivityChangeInterceptor>();
+            builder.Services.AddSingleton<Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor>(
+                sp => sp.GetRequiredService<ActivityChangeInterceptor>());
             builder.Services.AddScoped<IActivityTrackingService, ActivityTrackingService>();
 
             // Phase 4: Workflow engine and notifications
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<IWorkflowRuleEngine, WorkflowRuleEngine>();
+            builder.Services.AddScoped<IWorkflowTriggerDispatcher, WorkflowTriggerDispatcher>();
+            // Webhook actions call third-party URLs, so they get a short timeout of their
+            // own — a slow endpoint must not hold a Hangfire worker open indefinitely.
+            builder.Services.AddHttpClient(WorkflowRuleEngine.WebhookClientName,
+                client => client.Timeout = TimeSpan.FromSeconds(10));
             builder.Services.AddScoped<WorkflowRuleEvaluationJob>();
             builder.Services.AddScoped<TimeElapsedRuleScanJob>();
             builder.Services.AddScoped<CsvImportService>();
@@ -146,6 +157,10 @@ public static class ConfigureServices
 
             builder.Services.AddScoped<IUserContext, UserContext>();
             builder.Services.AddScoped<ITenantService, TenantService>();
+
+            // Rebases stored tenant connection strings onto the live central server, so
+            // Aspire's changing container port does not strand every provisioned tenant.
+            builder.Services.AddSingleton<ITenantConnectionStringResolver, TenantConnectionStringResolver>();
         }
 
         private void AddAuthorization()

@@ -20,15 +20,23 @@ internal sealed class AuthorizationService
     private readonly CentralDbContext _centralDb;
     private readonly ITenantDbContextFactory _tenantContextFactory;
     private readonly ICacheService _cacheService;
+    private readonly ITenantConnectionStringResolver? _connectionStringResolver;
 
+    /// <param name="connectionStringResolver">
+    /// Rebases the stored tenant connection string onto the live central server. Optional so
+    /// tests can construct this directly; when absent the stored string is used as-is, which
+    /// is correct there because the test fixture's string is already current.
+    /// </param>
     public AuthorizationService(
         CentralDbContext centralDb,
         ITenantDbContextFactory tenantContextFactory,
-        ICacheService cacheService)
+        ICacheService cacheService,
+        ITenantConnectionStringResolver? connectionStringResolver = null)
     {
         _centralDb = centralDb;
         _tenantContextFactory = tenantContextFactory;
         _cacheService = cacheService;
+        _connectionStringResolver = connectionStringResolver;
     }
 
     public async Task<HashSet<string>> GetPermissionsForUserAsync(string identityId, Guid tenantId)
@@ -78,8 +86,11 @@ internal sealed class AuthorizationService
         if (tenant is null || !tenant.IsProvisioned || tenant.DatabaseConnectionString is null)
             return [];
 
-        await using var tenantDb = _tenantContextFactory.CreateForTenant(
-            tenant.DatabaseConnectionString, tenantId);
+        var connectionString = _connectionStringResolver is null
+            ? tenant.DatabaseConnectionString
+            : _connectionStringResolver.Resolve(tenant.DatabaseConnectionString);
+
+        await using var tenantDb = _tenantContextFactory.CreateForTenant(connectionString, tenantId);
 
         // Union across every role the user holds. Selecting the first role's
         // permissions would silently drop grants from any additional role.

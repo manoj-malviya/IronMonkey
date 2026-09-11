@@ -15,6 +15,16 @@ DASHBOARD_URL := https://localhost:17019
 WEB_PORT      := 5299
 WEB_URL       := http://localhost:$(WEB_PORT)
 
+# Platform SuperAdmin seeded at API startup. PlatformAdminSeeder skips seeding unless
+# a password is set, and appsettings.json deliberately ships none, so `make up` would
+# otherwise leave no account able to reach /admin/* (e.g. signup approval).
+# Local-dev credential only: override for anything shared, e.g.
+#   PLATFORM_ADMIN_PASSWORD='...' make up
+# Seeding is idempotent — it never overwrites an existing row, so changing this after
+# the first run has no effect until that PlatformUsers row is deleted.
+PLATFORM_ADMIN_EMAIL    ?= admin@ironmonkey.local
+PLATFORM_ADMIN_PASSWORD ?= DevAdmin123!
+
 RUN_DIR       := .run
 APPHOST_LOG   := $(RUN_DIR)/apphost.log
 WEB_LOG       := $(RUN_DIR)/web.log
@@ -26,7 +36,7 @@ API_TIMEOUT   := 180
 WEB_TIMEOUT   := 90
 
 .PHONY: help up down restart start-api start-web stop-api stop-web status logs \
-        logs-api logs-web build test clean doctor migrate psql urls
+        logs-api logs-web build test clean doctor migrate psql urls login reset-admin reset-db
 
 help: ## Show available targets
 	@echo "IronMonkey — application control"
@@ -38,7 +48,7 @@ help: ## Show available targets
 
 up: start-api start-web urls ## Start everything (PostgreSQL + API + Blazor web)
 
-down: stop-web stop-api ## Stop everything and remove the PostgreSQL container
+down: stop-web stop-api ## Stop the app (PostgreSQL keeps running, so tenant data survives)
 
 restart: down up ## Full restart
 
@@ -47,6 +57,8 @@ urls: ## Print service URLs
 	@echo "  Web app    $(WEB_URL)"
 	@echo "  API        $(API_URL)"
 	@echo "  Dashboard  $(DASHBOARD_URL)  (token is in $(APPHOST_LOG))"
+	@echo
+	@echo "  SuperAdmin $(PLATFORM_ADMIN_EMAIL) / $(PLATFORM_ADMIN_PASSWORD)"
 
 $(RUN_DIR):
 	@mkdir -p $(RUN_DIR)
@@ -62,6 +74,8 @@ start-api: | $(RUN_DIR) ## Start Aspire (PostgreSQL + API) and wait until health
 	  docker info >/dev/null 2>&1 || { echo "ERROR: docker daemon is not reachable (required for PostgreSQL)"; exit 1; }; \
 	  echo "Starting Aspire (PostgreSQL + API)..."; \
 	  ASPIRE_ALLOW_UNSECURED_TRANSPORT=true DOTNET_ENVIRONMENT=Development \
+	  PlatformAdmin__Email='$(PLATFORM_ADMIN_EMAIL)' \
+	  PlatformAdmin__Password='$(PLATFORM_ADMIN_PASSWORD)' \
 	    setsid nohup dotnet run --project $(APPHOST) > $(APPHOST_LOG) 2>&1 < /dev/null & \
 	  echo $$! > $(APPHOST_PID); \
 	  printf "Waiting for API health"; \
@@ -108,13 +122,16 @@ stop-web: ## Stop the Blazor frontend
 	@pkill -f '$(WEB)/bin/.*/$(WEB)$$' 2>/dev/null || true
 	@echo "Web stopped."
 
-stop-api: ## Stop Aspire and remove its PostgreSQL container
+stop-api: ## Stop Aspire and the API (PostgreSQL keeps running, with its data)
+	@# The PostgreSQL container is deliberately left alone. It is declared Persistent with a
+	@# data volume in AppHost.cs, because tenant databases are created on it at provisioning
+	@# time — removing it here destroyed every provisioned tenant on each `make down`.
+	@# Use `make reset-db` to wipe it on purpose.
 	@if [ -f $(APPHOST_PID) ]; then kill -- -$$(cat $(APPHOST_PID)) 2>/dev/null || kill $$(cat $(APPHOST_PID)) 2>/dev/null || true; rm -f $(APPHOST_PID); fi
 	@pkill -f '$(APPHOST)/bin/.*/$(APPHOST)$$' 2>/dev/null || true
 	@pkill -f '$(APISERVICE)/bin/.*/$(APISERVICE)$$' 2>/dev/null || true
 	@sleep 2
-	@for c in $$(docker ps -aq --filter 'name=postgres-' 2>/dev/null); do docker rm -f $$c >/dev/null 2>&1 || true; done
-	@echo "API and PostgreSQL stopped."
+	@echo "API stopped (PostgreSQL left running)." 
 
 status: ## Show what is running
 	@printf '  %-12s ' "Aspire:"; \
@@ -147,6 +164,36 @@ psql: ## Open psql against the running central database
 	  pw=$$(docker inspect $$name --format '{{range .Config.Env}}{{println .}}{{end}}' | grep POSTGRES_PASSWORD | cut -d= -f2); \
 	  docker exec -it -e PGPASSWORD="$$pw" $$name psql -U postgres -d CentralDb
 
+login: ## Verify the SuperAdmin credential and print a JWT
+	@resp=$$(curl -sk -m 10 -X POST $(API_URL)/auth/login \
+	    -H 'Content-Type: application/json' \
+	    -d '{"email":"$(PLATFORM_ADMIN_EMAIL)","password":"$(PLATFORM_ADMIN_PASSWORD)"}' \
+	    -w '\n%{http_code}'); \
+	  code=$$(echo "$$resp" | tail -1); body=$$(echo "$$resp" | sed '$$d'); \
+	  if [ "$$code" != "200" ]; then \
+	    echo "Login FAILED (http $$code) for $(PLATFORM_ADMIN_EMAIL)"; \
+	    echo "  If the API is healthy, the SuperAdmin was probably seeded with a different"; \
+	    echo "  password — seeding never overwrites an existing row. Use 'make reset-admin'."; \
+	    exit 1; fi; \
+	  echo "Login OK — $(PLATFORM_ADMIN_EMAIL)"; \
+	  echo "$$body"
+
+reset-admin: ## Delete the seeded SuperAdmin so the next start re-seeds it
+	@name=$$(docker ps --format '{{.Names}}' | grep '^postgres-' | head -1); \
+	  [ -n "$$name" ] || { echo "ERROR: no PostgreSQL container running"; exit 1; }; \
+	  pw=$$(docker inspect $$name --format '{{range .Config.Env}}{{println .}}{{end}}' | grep POSTGRES_PASSWORD | cut -d= -f2); \
+	  docker exec -e PGPASSWORD="$$pw" $$name psql -U postgres -d CentralDb -q \
+	    -c "delete from \"PlatformUsers\" where \"Email\" = '$(PLATFORM_ADMIN_EMAIL)';" \
+	    && echo "Removed $(PLATFORM_ADMIN_EMAIL). Run 'make restart' to re-seed."
+
+reset-db: ## DESTRUCTIVE: remove PostgreSQL and its volume, wiping all tenant data
+	@echo "This deletes the central database AND every provisioned tenant database."
+	@read -p "Type 'yes' to continue: " ans; [ "$$ans" = "yes" ] || { echo "Aborted."; exit 1; }
+	@$(MAKE) --no-print-directory down
+	@for c in $$(docker ps -aq --filter 'name=postgres-' 2>/dev/null); do docker rm -f $$c >/dev/null 2>&1 || true; done
+	@docker volume rm ironmonkey-postgres-data >/dev/null 2>&1 || true
+	@echo "PostgreSQL and its data volume removed. Next 'make up' starts fresh."
+
 migrate: ## Apply central-DB migrations manually (the API also does this at startup)
 	@name=$$(docker ps --format '{{.Names}}' | grep '^postgres-' | head -1); \
 	  [ -n "$$name" ] || { echo "ERROR: no PostgreSQL container running — run 'make start-api'"; exit 1; }; \
@@ -171,7 +218,8 @@ doctor: ## Check prerequisites and report known issues
 	@echo "  - GET /roles returns 500: ListRoles uses the obsolete AppDbContext against the"
 	@echo "    central DB, where the tenant-scoped Roles table does not exist."
 
-clean: ## Stop everything, then remove build output and logs
+clean: ## Stop the app, then remove build output and logs (tenant data is kept)
+	@# Deliberately does not touch the PostgreSQL volume — use `make reset-db` for that.
 	@$(MAKE) --no-print-directory down
 	@dotnet clean $(SOLUTION) --nologo -v q 2>/dev/null || true
 	@rm -rf $(RUN_DIR)

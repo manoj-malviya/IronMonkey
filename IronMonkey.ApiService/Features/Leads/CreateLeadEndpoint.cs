@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
+using IronMonkey.ApiService.Features.CustomFields;
 using IronMonkey.ApiService.Features.Leads.Duplicates;
+using IronMonkey.ApiService.Features.Leads.Workflow.Rules;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
 
@@ -23,7 +25,9 @@ public class CreateLeadEndpoint : IEndpoint
         string Email,
         string Source,
         Guid PipelineStageId,
-        bool ForceCreate = false);  // If true, create despite duplicates
+        bool ForceCreate = false,
+        // Keyed by custom field definition Id, so a renamed field keeps its values.
+        Dictionary<string, object?>? CustomFields = null);
 
     public record DuplicateMatch(Guid LeadId, string FullName, string Email, int ConfidenceScore);
 
@@ -44,6 +48,7 @@ public class CreateLeadEndpoint : IEndpoint
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
         IDuplicateDetectionService duplicateDetection,
+        IWorkflowTriggerDispatcher workflowTriggers,
         CancellationToken cancellationToken)
     {
         if (!Enum.TryParse<LeadSource>(request.Source, ignoreCase: true, out var source))
@@ -59,6 +64,17 @@ public class CreateLeadEndpoint : IEndpoint
 
         if (!stageExists)
             return TypedResults.BadRequest("Invalid pipeline stage");
+
+        // Validated against this tenant's definitions before anything is saved: the jsonb
+        // bag is untyped, so this is the only thing keeping a Number field numeric and a
+        // Dropdown limited to its offered options.
+        var definitions = await db.CustomFieldDefinitions
+            .Where(f => f.AppliesTo == CustomFieldEntity.Lead)
+            .ToListAsync(cancellationToken);
+
+        var bound = CustomFieldValueBinder.Bind(definitions, request.CustomFields);
+        if (!bound.IsValid)
+            return TypedResults.BadRequest(string.Join(" ", bound.Errors));
 
         // Check duplicates per D-13: warn before save on manual entry
         var duplicates = await duplicateDetection.FindCandidatesAsync(
@@ -82,8 +98,14 @@ public class CreateLeadEndpoint : IEndpoint
         }
 
         var lead = Lead.Create(tenantId, request.FirstName, request.LastName, request.Mobile, request.Email, source, request.PipelineStageId);
+        foreach (var (key, value) in bound.Values)
+            lead.CustomFields.Set(key, value);
+
         db.Leads.Add(lead);
         await db.SaveChangesAsync(cancellationToken);
+
+        // FieldChange covers "a lead was created or its fields changed".
+        workflowTriggers.Dispatch(tenantId, lead.Id, WorkflowTrigger.FieldChange);
 
         var response = new Response(
             lead.Id,

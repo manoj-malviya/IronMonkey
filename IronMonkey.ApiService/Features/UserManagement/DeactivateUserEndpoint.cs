@@ -19,6 +19,7 @@ public class DeactivateUserEndpoint : IEndpoint
         Guid id,
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
+        CentralDbContext centralDb,
         CancellationToken cancellationToken)
     {
         var tenantId = tenantService.GetCurrentTenantId();
@@ -36,6 +37,18 @@ public class DeactivateUserEndpoint : IEndpoint
 
         user.Deactivate();
         await db.SaveChangesAsync(cancellationToken);
+
+        // Drop the central index row: a deactivated user must stop resolving at login, and
+        // leaving the row behind would also block anyone from reusing that email later.
+        var indexRows = await centralDb.UserTenantIndex
+            .Where(x => x.Email == user.Email && x.TenantId == tenantId)
+            .ToListAsync(cancellationToken);
+
+        if (indexRows.Count > 0)
+        {
+            centralDb.UserTenantIndex.RemoveRange(indexRows);
+            await centralDb.SaveChangesAsync(cancellationToken);
+        }
 
         return TypedResults.Ok(new Response("User deactivated successfully."));
     }

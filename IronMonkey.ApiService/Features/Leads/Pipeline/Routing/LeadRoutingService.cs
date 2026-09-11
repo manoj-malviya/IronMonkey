@@ -37,10 +37,14 @@ public class LeadRoutingService : ILeadRoutingService
         {
             if (string.IsNullOrEmpty(config.TerritoryMapJson)) return null;
 
-            // TerritoryMapJson: {"Api": "agent-guid", "Manual": "agent-guid", ...}
-            // or for CustomField: {"field-value": "agent-guid", ...}
-            var map = JsonSerializer.Deserialize<Dictionary<string, string>>(config.TerritoryMapJson);
-            if (map == null) return null;
+            // Stored either as the structured rule set the configuration UI writes, or as the
+            // original flat {"value": "agent-guid"} map. Parse handles both and flattens to
+            // the lookup this method has always used.
+            var ruleSet = TerritoryRuleSet.Parse(config.TerritoryMapJson);
+            if (ruleSet == null) return null;
+
+            var map = ruleSet.ToLookup();
+            if (map.Count == 0) return null;
 
             string? dimensionValue = null;
 

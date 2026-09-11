@@ -31,12 +31,24 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LoginPath = "/login";
         options.AccessDeniedPath = "/login";
     });
-builder.Services.AddAuthorization();
+// Platform-operator pages (tenants, signups, migrations) are gated on the SuperAdmin
+// role claim. The API already rejects a tenant user's calls to /admin/* because they
+// lack admin:access, but without this policy those pages still render their chrome and
+// then fail every request — so gate the UI on the same distinction the API enforces.
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(AuthorizationPolicies.PlatformAdmin, policy =>
+        policy.RequireRole(IronMonkey.Common.Auth.RoleConstants.SuperAdmin));
+});
 builder.Services.AddScoped<AdminAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
     sp.GetRequiredService<AdminAuthenticationStateProvider>());
 
-// HttpClient: named "AdminApi" with Bearer token injection
+// HttpClient: named "AdminApi" with Bearer token injection.
+// BearerTokenHandler is kept as a backstop, but pages should call AdminApiClient: the
+// handler runs in the HttpClientFactory's own DI scope and cannot see the circuit's
+// auth provider, so it alone cannot attach the token. See AdminApiClient for detail.
+builder.Services.AddScoped<AdminApiClient>();
 builder.Services.AddScoped<BearerTokenHandler>();
 var adminApi = builder.Services.AddHttpClient("AdminApi", client =>
     {

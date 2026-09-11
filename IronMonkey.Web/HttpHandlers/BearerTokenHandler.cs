@@ -32,6 +32,10 @@ public class BearerTokenHandler : DelegatingHandler
         }
         else
         {
+            // Expected for callers that go through AdminApiClient: it attaches the header
+            // itself, because this handler runs in the HttpClientFactory's DI scope and
+            // cannot reach the circuit's auth provider. Debug, not warning — it fires on
+            // every successful admin request and would otherwise be pure noise.
             _logger.LogDebug("No auth token available for request to {Uri}", request.RequestUri);
         }
 
