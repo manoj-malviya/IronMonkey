@@ -1,5 +1,5 @@
 @page "/admin/recipes"
-@attribute [Authorize]
+@attribute [Authorize(Policy = AuthorizationPolicies.PlatformAdmin)]
 @inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
 @inject NavigationManager Nav
 

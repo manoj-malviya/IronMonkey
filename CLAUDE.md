@@ -121,6 +121,26 @@ dotnet ef migrations add <Name> --project IronMonkey.Data --startup-project Iron
   the first interactive render too — the JWT is in `ProtectedSessionStorage`, unreadable
   during prerender.
 
+### Industry Recipes (`/admin/recipes`)
+- **Recipes are platform catalog data, not tenant data.** `IndustryRecipe` is a
+  `CentralDbContext` entity — a JSONB snapshot of stages, fields, rules, roles and sample
+  leads for a vertical (Blank, Automobile, Education). Provisioning **copies** the chosen
+  recipe's content into the new tenant's database as ordinary mutable rows, so a tenant
+  freely edits what it was seeded with but never edits the template itself.
+- **The write endpoints are gated on `admin:access`, not bare `.RequireAuthorization()`.**
+  With only the latter, any authenticated tenant user could `POST`/`PUT`/`DELETE`
+  `/api/recipes` and rewrite the catalog every *other* tenant's signup provisions from.
+  The `GET`s stay `AllowAnonymous` on purpose — the signup form needs the catalog before
+  anyone is authenticated.
+- **The four `/admin/recipes` pages and the sidebar link carry
+  `AuthorizationPolicies.PlatformAdmin`**, like `/admin/tenants` and `/admin/migrations`;
+  the nav link lives inside the existing Platform `AuthorizeView` rather than in a group of
+  its own. A bare `[Authorize]` showed the whole recipe surface to every tenant user.
+- **That gate is only as strong as the seed data.** It works because no tenant role is
+  granted `admin:access` — only `Role.SuperAdmin` (role 1, platform-only) is, in
+  `RolePermissionConfiguration`. `RecipeAdminPermissionTests` pins that invariant, since a
+  future seed change could reopen the hole with nothing else failing.
+
 ### Configuration Workspace (`/admin/configuration`)
 - **Tabs are query-string addressed** (`?tab=stages|fields|routing|workflows`) via
   `[SupplyParameterFromQuery]`, so refresh and deep links keep the area. Each tab is its own
@@ -163,6 +183,45 @@ dotnet ef migrations add <Name> --project IronMonkey.Data --startup-project Iron
   UI edits rules as rows; the JSON view is an escape hatch that must be applied before saving.
   (The old page posted `Dimension = "Agent"`, which is not a valid enum value — routing saves
   had been failing.)
+
+### Workflow Execution History (`/admin/workflow-runs`)
+- **Tenant-visible run history lives in the tenant database**, not in `ILogger` or Hangfire.
+  `WorkflowExecutionLog` + `WorkflowExecutionStep` are `TenantDbContext` entities, so they
+  inherit database-per-tenant isolation and the global `TenantId` filter. Structured logs are
+  still written alongside for operators — the two layers answer different questions.
+- **`Skipped` is a success, not a failure.** A condition that did not match is an intentional
+  non-event; reporting it as an error would make every narrow rule look broken.
+  `CompleteFromSteps` derives the run status from the **action** steps only — counting the
+  condition step (always `Succeeded` on that path) made a single failed action read as
+  `PartiallySucceeded`.
+- **The uniqueness key is `(TenantId, CorrelationId, WorkflowRuleId, Attempt)`.** One trigger
+  evaluates every matching rule and each gets its own row, so without `WorkflowRuleId` the
+  second rule's insert collides and only the first rule's history is ever written.
+  `CorrelationId` identifies the *trigger*; a Hangfire retry reuses it with a higher `Attempt`,
+  which is what makes a retry readable as a retry rather than as an unrelated run.
+- **Everything persisted passes through `WorkflowDiagnosticRedactor`.** Exception text routinely
+  quotes the input that caused it — a webhook URL with a signed token in the query string, an
+  `X-Api-Key` header value — and this table is readable and exportable by a tenant Admin. URLs
+  keep scheme/host/path and lose the query; emails are masked to `j***@example.com` (domain kept
+  because a misrouted rule is the failure worth seeing); webhook response bodies and rendered
+  email bodies are never stored at all.
+- **The row is written before the action runs.** A worker killed mid-action leaves a `Running`
+  row as evidence the trigger was received; `WorkflowExecutionMaintenanceJob` (hourly) marks
+  rows stale past the threshold as `Abandoned` — not `Failed`, because whether the action ran is
+  genuinely unknown — and applies the retention window. A row it *just* reconciled is held back
+  from deletion for one cycle, or the `Abandoned` state it was given would never be observable.
+- **Recording never changes what the workflow does.** Every write in `WorkflowExecutionRun`
+  swallows its own exceptions after logging: an audit write that throws would roll back the
+  business effect the audit exists to describe. `IWorkflowExecutionRecorder` is an optional
+  constructor dependency on the engine, so tests can construct it directly.
+- **`workflow:logs:read` gates the endpoints**, granted to `Admin` and `SuperAdmin` by seed.
+  It is separate from `settings:read` so the grant can be withheld from a role that may
+  configure automation but should not see the leads it ran against. A platform SuperAdmin still
+  reaches tenant history only through impersonation — `tenant_id = Guid.Empty` is rejected by
+  `TenantService`, as on every tenant endpoint.
+- **`PerformContext` is a job parameter, not an injected service.** `WorkflowRuleEvaluationJob`
+  takes it so the run can record Hangfire's job id and retry count; the dispatcher passes `null`
+  at enqueue time and Hangfire substitutes the live context at invocation.
 
 ### Tenant CRM Dashboard (`/admin`)
 - **One endpoint per widget, not one payload.** `/api/dashboard/{summary,opportunities,attention,activity}`

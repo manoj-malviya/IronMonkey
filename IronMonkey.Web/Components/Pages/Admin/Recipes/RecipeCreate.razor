@@ -1,5 +1,5 @@
 @page "/admin/recipes/create"
-@attribute [Authorize]
+@attribute [Authorize(Policy = AuthorizationPolicies.PlatformAdmin)]
 @using IronMonkey.Data.RecipeContent
 @using IronMonkey.Web.Components.Pages.Admin.Recipes.Shared
 @using System.ComponentModel.DataAnnotations

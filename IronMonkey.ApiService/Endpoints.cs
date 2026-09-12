@@ -15,6 +15,7 @@ using IronMonkey.ApiService.Features.Leads.Pipeline.Routing;
 using IronMonkey.ApiService.Features.Leads.Pipeline.States;
 using IronMonkey.ApiService.Features.Leads.Pipeline.Kanban;
 using IronMonkey.ApiService.Features.Activity.Timeline;
+using IronMonkey.ApiService.Features.Leads.Workflow.Execution;
 using IronMonkey.ApiService.Features.Leads.Workflow.Rules;
 using IronMonkey.ApiService.Features.Reports.Pipeline;
 using IronMonkey.ApiService.Features.Reports.Conversion;
@@ -251,6 +252,16 @@ public static class Endpoints
             ListWorkflowRulesEndpoint.Map(app);
             UpdateWorkflowRuleEndpoint.Map(app);
             DeleteWorkflowRuleEndpoint.Map(app);
+
+            // Workflow execution history. Each declares RequireAuthorization(workflow:logs:read)
+            // itself rather than inheriting a group, matching how the rest of the tenant
+            // surface is registered here.
+            //
+            // The run-summary route is registered before the {id:guid} detail route for
+            // clarity; the route constraint already keeps "run-summary" from matching it.
+            GetWorkflowRuleRunSummaryEndpoint.Map(app);
+            ListWorkflowExecutionsEndpoint.Map(app);
+            GetWorkflowExecutionEndpoint.Map(app);
         }
 
         private void MapReportEndpoints()
@@ -289,10 +300,14 @@ public static class Endpoints
             publicRecipes.MapEndpoint<RecipeListEndpoint>();
             publicRecipes.MapEndpoint<RecipePreviewEndpoint>();
 
-            // Admin write endpoints (require authorization, D-11)
+            // Platform-admin write endpoints (D-11). Recipes are central-DB catalog data
+            // shared by every tenant, so a bare .RequireAuthorization() is not enough: it
+            // would let any authenticated tenant user rewrite the templates every other
+            // tenant's signup reads from. admin:access is platform-only by construction —
+            // a tenant Admin is deliberately denied it.
             var adminRecipes = app.MapGroup(string.Empty)
                 .WithTags("Platform Admin")
-                .RequireAuthorization();
+                .RequireAuthorization(PermissionConstants.AdminAccess);
             adminRecipes.MapEndpoint<CreateRecipeEndpoint>();
             adminRecipes.MapEndpoint<UpdateRecipeEndpoint>();
             adminRecipes.MapEndpoint<DeactivateRecipeEndpoint>();

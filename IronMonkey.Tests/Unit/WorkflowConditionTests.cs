@@ -89,4 +89,34 @@ public class WorkflowConditionTests
             "Hi Sam Rivera (sam@acme.com) from Manual",
             WorkflowRuleEngine.Interpolate("Hi {{FullName}} ({{Email}}) from {{Source}}", lead));
     }
+
+    /// <summary>
+    /// Malformed condition JSON must be distinguishable from a condition that simply did not
+    /// match — the engine's safe fallback for both is "do not fire", so without this split the
+    /// execution log would report a broken rule as an intentional skip.
+    /// </summary>
+    [Theory]
+    [InlineData("{not json")]
+    [InlineData("{\"field\":")]
+    [InlineData("")]
+    public void Malformed_condition_json_is_reported_as_unparsed(string conditionJson)
+    {
+        var result = WorkflowRuleEngine.EvaluateConditionDetailed(conditionJson, MakeLead());
+
+        Assert.False(result.Parsed);
+        Assert.False(result.Matched);
+        Assert.NotNull(result.Error);
+    }
+
+    [Fact]
+    public void Valid_condition_that_does_not_match_is_parsed_but_unmatched()
+    {
+        // The other half of the split: parsed true, matched false is an intentional skip.
+        var result = WorkflowRuleEngine.EvaluateConditionDetailed(
+            """{"field":"Source","equals":"Api"}""", MakeLead(source: "Manual"));
+
+        Assert.True(result.Parsed);
+        Assert.False(result.Matched);
+        Assert.Null(result.Error);
+    }
 }

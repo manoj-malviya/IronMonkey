@@ -29,7 +29,8 @@ internal sealed class PermissionConfiguration : IEntityTypeConfiguration<Permiss
             Permission.ReportsWrite,
             Permission.SettingsRead,
             Permission.SettingsWrite,
-            Permission.AdminAccess
+            Permission.AdminAccess,
+            Permission.WorkflowLogsRead
         ]);
     }
 }

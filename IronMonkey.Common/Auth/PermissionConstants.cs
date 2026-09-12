@@ -23,6 +23,17 @@ public static class PermissionConstants
     public const string SettingsRead = "settings:read";
     public const string SettingsWrite = "settings:write";
 
+    /// <summary>
+    /// Read a tenant's workflow execution history.
+    ///
+    /// Separate from settings:read because the two answer different questions: settings:read
+    /// is "may this user see how automation is configured", while this is "may they see the
+    /// leads it ran against" — the history carries lead names, assignees and recipient
+    /// domains. Granted to Admin by default (see RolePermissions seeding), which keeps the
+    /// current Admin experience unchanged while leaving the narrower grant available.
+    /// </summary>
+    public const string WorkflowLogsRead = "workflow:logs:read";
+
     /// <summary>Platform administration: approve/reject signups, provision tenants.</summary>
     public const string AdminAccess = "admin:access";
 
@@ -44,6 +55,7 @@ public static class PermissionConstants
         OpportunitiesRead, OpportunitiesWrite, OpportunitiesDelete,
         ReportsRead, ReportsWrite,
         SettingsRead, SettingsWrite,
+        WorkflowLogsRead,
         AdminAccess
     };
 }

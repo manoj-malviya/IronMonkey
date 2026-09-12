@@ -1,0 +1,378 @@
+@page "/admin/workflow-runs/{Id:guid}"
+@attribute [Authorize]
+@using IronMonkey.Web.HttpHandlers
+@using IronMonkey.Web.Components.Shared
+@using IronMonkey.Web.Components.Pages.Admin.Workflow
+@inject AdminApiClient Api
+
+@* One run, read top to bottom: what triggered it, whether the condition matched, what each
+   action did, and how it ended.
+
+   Everything shown here was redacted before it was stored — there is no action payload, no
+   header, no webhook query string and no email body to display, because none of it was
+   persisted. *@
+
+<PageTitle>Workflow Run — IronMonkey</PageTitle>
+
+<div class="space-y-6">
+
+    <div>
+        <a href="@BackHref" class="text-sm font-medium text-indigo-600 hover:text-indigo-700">← Back to workflow runs</a>
+    </div>
+
+    @if (_unauthorized)
+    {
+        <div role="alert" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <p class="text-sm font-semibold text-amber-900">You do not have access to workflow run history.</p>
+            <p class="mt-1 text-sm text-amber-800">
+                Viewing execution history needs the
+                <span class="rounded bg-amber-100 px-1 font-mono text-xs">workflow:logs:read</span> permission.
+            </p>
+        </div>
+    }
+    else if (_notFound)
+    {
+        @* Retention makes "gone" an ordinary outcome here, so the empty state names it rather
+           than implying the link was wrong. *@
+        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
+            <p class="text-slate-600">This workflow run is no longer available.</p>
+            <p class="mt-1 text-sm text-slate-500">
+                It may have been removed by the retention policy, or the link may be incorrect.
+            </p>
+            <a href="@BackHref" class="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                Back to workflow runs
+            </a>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(_error))
+    {
+        <div role="alert" class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+            <span class="text-sm text-red-700">@_error</span>
+            @* Reloads this page's data. It does not re-run the rule: re-firing an automation
+               from a UI button would resend webhooks and notifications. *@
+            <button type="button" @onclick="LoadAsync" disabled="@_isLoading"
+                    class="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60">
+                @(_isLoading ? "Retrying…" : "Try again")
+            </button>
+        </div>
+    }
+    else if (_isLoading && _run is null)
+    {
+        <div class="py-12 text-center text-sm text-slate-500" aria-busy="true">Loading run…</div>
+    }
+    else if (_run is { } run)
+    {
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <h1 class="text-2xl font-bold text-slate-900">@run.WorkflowRuleName</h1>
+                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold @WorkflowRunStatusDisplay.Badge(run.Status)">
+                        @WorkflowRunStatusDisplay.Label(run.Status)
+                    </span>
+                </div>
+                <p class="mt-1 text-sm text-slate-600">@WorkflowRunStatusDisplay.Explain(run.Status)</p>
+            </div>
+            <a href="@($"/admin/workflow-runs?ruleId={run.WorkflowRuleId}")"
+               class="shrink-0 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                All runs of this rule
+            </a>
+        </div>
+
+        <dl class="grid grid-cols-2 gap-4 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-4">
+            <div>
+                <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Lead</dt>
+                <dd class="mt-1 text-sm">
+                    <a href="@($"/admin/leads/{run.LeadId}")" class="text-indigo-600 hover:text-indigo-700 hover:underline">@run.LeadName</a>
+                </dd>
+            </div>
+            <div>
+                <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Trigger</dt>
+                <dd class="mt-1 text-sm text-slate-900">@FriendlyTrigger(run.Trigger)</dd>
+            </div>
+            <div>
+                <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Started</dt>
+                <dd class="mt-1 text-sm text-slate-900">@run.StartedAt.ToString("dd MMM yyyy HH:mm:ss") UTC</dd>
+            </div>
+            <div>
+                <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Duration</dt>
+                <dd class="mt-1 text-sm text-slate-900">@WorkflowRunStatusDisplay.Duration(run.DurationMs)</dd>
+            </div>
+        </dl>
+
+        @if (!string.IsNullOrEmpty(run.ErrorMessage))
+        {
+            <div role="alert" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                <p class="text-sm font-semibold text-red-900">@WorkflowRunStatusDisplay.ExplainCategory(run.ErrorCategory)</p>
+                <p class="mt-1 text-sm text-red-800">@run.ErrorMessage</p>
+                @* Stated explicitly because it is the question an Admin has on seeing a
+                   failure, and the answer is reassuring. *@
+                <p class="mt-2 text-xs text-red-700">
+                    The lead change that triggered this rule was saved successfully, and other rules
+                    were still evaluated.
+                </p>
+            </div>
+        }
+
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900">Timeline</h2>
+            <ol class="mt-3 space-y-0 border-l-2 border-slate-200 pl-6">
+
+                @* The trigger itself is not a stored step — it is the reason the run exists —
+                   so it is rendered as the first entry from the run's own fields. *@
+                <li class="relative pb-6">
+                    <span class="absolute -left-[31px] top-1 h-3 w-3 rounded-full bg-slate-400 ring-4 ring-white"></span>
+                    <p class="text-sm font-medium text-slate-900">Trigger received</p>
+                    <p class="text-xs text-slate-500">
+                        @FriendlyTrigger(run.Trigger) on @run.LeadName — @run.StartedAt.ToString("HH:mm:ss")
+                    </p>
+                </li>
+
+                @foreach (var step in run.Steps.OrderBy(s => s.Sequence))
+                {
+                    <li @key="step.Id" class="relative pb-6">
+                        <span class="absolute -left-[31px] top-1 h-3 w-3 rounded-full ring-4 ring-white @DotColor(step.Status)"></span>
+
+                        <div class="flex flex-wrap items-center gap-2">
+                            <p class="text-sm font-medium text-slate-900">@StepTitle(step)</p>
+                            <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold @StepBadge(step.Status)">
+                                @step.Status
+                            </span>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(step.Message))
+                        {
+                            <p class="mt-1 text-sm text-slate-700">@step.Message</p>
+                        }
+
+                        @if (step.ErrorCategory != "None")
+                        {
+                            <p class="mt-1 text-xs text-slate-500">@WorkflowRunStatusDisplay.ExplainCategory(step.ErrorCategory)</p>
+                        }
+
+                        <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                            <span>@step.StartedAt.ToString("HH:mm:ss")</span>
+                            @if (step.DurationMs is not null)
+                            {
+                                <span>@WorkflowRunStatusDisplay.Duration(step.DurationMs)</span>
+                            }
+                            @if (step.HttpStatusCode is { } httpStatus)
+                            {
+                                <span>HTTP @httpStatus</span>
+                            }
+                            @if (!string.IsNullOrEmpty(step.TargetHost))
+                            {
+                                @* Host only — the path and query were never stored. *@
+                                <span>@step.TargetHost</span>
+                            }
+                            @if (!string.IsNullOrEmpty(step.RecipientRedacted))
+                            {
+                                <span>to @step.RecipientRedacted</span>
+                            }
+                        </div>
+                    </li>
+                }
+
+                <li class="relative">
+                    <span class="absolute -left-[31px] top-1 h-3 w-3 rounded-full ring-4 ring-white @DotColor(run.Status)"></span>
+                    <p class="text-sm font-medium text-slate-900">
+                        Run @WorkflowRunStatusDisplay.Label(run.Status).ToLowerInvariant()
+                    </p>
+                    @if (run.CompletedAt is { } finished)
+                    {
+                        <p class="text-xs text-slate-500">@finished.ToString("HH:mm:ss")</p>
+                    }
+                    else
+                    {
+                        <p class="text-xs text-slate-500">Not yet finished.</p>
+                    }
+                </li>
+            </ol>
+        </div>
+
+        @if (run.RelatedAttempts.Count > 0)
+        {
+            <div>
+                <h2 class="text-lg font-semibold text-slate-900">Retry attempts</h2>
+                <p class="mt-1 text-sm text-slate-600">
+                    This trigger was attempted @(run.RelatedAttempts.Count + 1) times. All attempts share one
+                    correlation id, so they are one logical run rather than several.
+                </p>
+                <div class="mt-3 overflow-x-auto rounded-lg border border-slate-200">
+                    <table class="w-full">
+                        <thead class="bg-slate-50 border-b border-slate-200">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Attempt</th>
+                                <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Started</th>
+                                <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Result</th>
+                                <th class="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-slate-900">Took</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var attempt in run.RelatedAttempts.OrderBy(a => a.Attempt))
+                            {
+                                <tr @key="attempt.Id" class="border-b border-slate-100 hover:bg-slate-50">
+                                    <td class="px-4 py-2 text-sm">
+                                        <a href="@($"/admin/workflow-runs/{attempt.Id}")" class="text-indigo-600 hover:underline">#@attempt.Attempt</a>
+                                    </td>
+                                    <td class="px-4 py-2 text-sm text-slate-600">@attempt.StartedAt.ToString("dd MMM HH:mm:ss")</td>
+                                    <td class="px-4 py-2 text-sm">
+                                        <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold @WorkflowRunStatusDisplay.Badge(attempt.Status)">
+                                            @WorkflowRunStatusDisplay.Label(attempt.Status)
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-2 text-right text-sm text-slate-600">@WorkflowRunStatusDisplay.Duration(attempt.DurationMs)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        @* Support identifiers, kept at the bottom and in monospace: an Admin never needs them
+           until they are on a support call, at which point they need them exactly. *@
+        <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">For support</p>
+            <dl class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div>
+                    <dt class="text-xs text-slate-500">Correlation id</dt>
+                    <dd class="font-mono text-xs text-slate-700 break-all">@run.CorrelationId</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-slate-500">Execution id</dt>
+                    <dd class="font-mono text-xs text-slate-700 break-all">@run.Id</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-slate-500">Job id</dt>
+                    <dd class="font-mono text-xs text-slate-700 break-all">@(string.IsNullOrEmpty(run.JobId) ? "—" : run.JobId)</dd>
+                </div>
+            </dl>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    private string? ReturnUrl { get; set; }
+
+    private WorkflowRunDetailDto? _run;
+    private bool _isLoading;
+    private bool _notFound;
+    private bool _unauthorized;
+    private string? _error;
+
+    /// <summary>
+    /// Validated before use: the value comes from the query string, so navigating to it
+    /// unchecked would let a crafted link bounce a signed-in user off-site.
+    /// </summary>
+    private string BackHref => ListReturn.Resolve(ReturnUrl, "/admin/workflow-runs");
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    /// <summary>
+    /// Re-fetches once interactive: the JWT is in ProtectedSessionStorage, which is
+    /// unreadable during prerender, so the first attempt goes out unauthenticated.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _run is null && !_unauthorized && !_notFound)
+        {
+            await LoadAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            var response = await Api.GetAsync($"/api/workflow-executions/{Id}");
+
+            switch (response.StatusCode)
+            {
+                case System.Net.HttpStatusCode.Forbidden:
+                    _unauthorized = true;
+                    return;
+
+                case System.Net.HttpStatusCode.NotFound:
+                    // Also what another tenant's id returns, deliberately indistinguishable
+                    // from an id that never existed.
+                    _notFound = true;
+                    return;
+
+                case System.Net.HttpStatusCode.Unauthorized:
+                    // Expected during prerender; retried on the interactive render.
+                    return;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _error = "This workflow run could not be loaded.";
+                return;
+            }
+
+            _run = await response.Content.ReadFromJsonAsync<WorkflowRunDetailDto>();
+        }
+        catch (Exception ex)
+        {
+            _error = $"This workflow run could not be loaded: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private static string FriendlyTrigger(string trigger) => trigger switch
+    {
+        "FieldChange" => "Field change",
+        "StatusChange" => "Status change",
+        "TimeElapsed" => "Time elapsed",
+        _ => trigger
+    };
+
+    private static string StepTitle(WorkflowRunStep step) => step.Kind switch
+    {
+        "Condition" => "Condition evaluated",
+        "Action" => string.IsNullOrEmpty(step.ActionType)
+            ? "Action"
+            : $"Action: {FriendlyAction(step.ActionType)}",
+        _ => step.Kind
+    };
+
+    private static string FriendlyAction(string actionType) => actionType switch
+    {
+        "notify" => "notify a user",
+        "assign" => "assign the lead",
+        "schedule_task" => "schedule a task",
+        "webhook" => "call a webhook",
+        "email" => "send an email",
+        // An unrecognised type is shown verbatim — that is the diagnostic.
+        _ => actionType
+    };
+
+    private static string StepBadge(string status) => status switch
+    {
+        "Succeeded" => "bg-emerald-100 text-emerald-800",
+        "Failed" => "bg-red-100 text-red-800",
+        "Skipped" => "bg-slate-100 text-slate-700",
+        "Running" => "bg-blue-100 text-blue-800",
+        _ => "bg-slate-100 text-slate-600"
+    };
+
+    private static string DotColor(string status) => status switch
+    {
+        "Succeeded" => "bg-emerald-500",
+        "Failed" => "bg-red-500",
+        "PartiallySucceeded" => "bg-amber-500",
+        "Abandoned" => "bg-orange-500",
+        "Skipped" => "bg-slate-400",
+        "Running" => "bg-blue-500",
+        _ => "bg-slate-300"
+    };
+}

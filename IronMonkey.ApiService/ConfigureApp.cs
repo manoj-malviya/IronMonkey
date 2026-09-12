@@ -52,6 +52,14 @@ public static class ConfigureApp
                 job => job.ExecuteAsync(CancellationToken.None),
                 Cron.Hourly);
 
+            // Reconciles workflow execution rows left Running by a killed worker, and applies
+            // the retention window. Hourly rather than daily because a row stuck in Running is
+            // a visibly wrong state in the Admin UI, not just stale capacity.
+            RecurringJob.AddOrUpdate<WorkflowExecutionMaintenanceJob>(
+                "workflow-execution-maintenance",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Hourly);
+
             app.Services.GetRequiredService<DatabaseReadinessState>().MarkReady();
             app.Logger.LogInformation("Central database ready.");
         }

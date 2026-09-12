@@ -22,6 +22,10 @@ public sealed class Permission
     public static readonly Permission SettingsWrite = new(16, PermissionConstants.SettingsWrite);
     public static readonly Permission AdminAccess = new(17, PermissionConstants.AdminAccess);
 
+    // Ids are stable identities referenced by seeded role_permissions rows, so a new
+    // permission appends rather than renumbering.
+    public static readonly Permission WorkflowLogsRead = new(18, PermissionConstants.WorkflowLogsRead);
+
     private Permission(int id, string name)
     {
         Id = id;

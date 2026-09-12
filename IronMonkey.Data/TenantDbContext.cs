@@ -43,6 +43,8 @@ public class TenantDbContext : DbContext
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<RoutingConfig> RoutingConfigs => Set<RoutingConfig>();
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
+    public DbSet<WorkflowExecutionLog> WorkflowExecutionLogs => Set<WorkflowExecutionLog>();
+    public DbSet<WorkflowExecutionStep> WorkflowExecutionSteps => Set<WorkflowExecutionStep>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -65,6 +67,13 @@ public class TenantDbContext : DbContext
         modelBuilder.Entity<Notification>().HasQueryFilter(n => n.TenantId == _tenantId && !n.IsDeleted);
         modelBuilder.Entity<RoutingConfig>().HasQueryFilter(r => r.TenantId == _tenantId);
         modelBuilder.Entity<ActivityLog>().HasQueryFilter(a => a.TenantId == _tenantId);
+
+        // Execution history is never soft-deleted — retention removes it outright — so the
+        // filter is TenantId only. Steps carry their own filter rather than relying on the
+        // parent's: a step loaded through Include inherits nothing, and the table is also
+        // queried directly by the action-type filter.
+        modelBuilder.Entity<WorkflowExecutionLog>().HasQueryFilter(l => l.TenantId == _tenantId);
+        modelBuilder.Entity<WorkflowExecutionStep>().HasQueryFilter(s => s.TenantId == _tenantId);
 
         // ActivityLog JSONB columns and dashboard indexes
         modelBuilder.Entity<ActivityLog>(entity =>

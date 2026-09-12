@@ -1,5 +1,5 @@
 @page "/admin/recipes/{Id:guid}/edit"
-@attribute [Authorize]
+@attribute [Authorize(Policy = AuthorizationPolicies.PlatformAdmin)]
 @using IronMonkey.Data.RecipeContent
 @using IronMonkey.Web.Components.Pages.Admin.Recipes.Shared
 @inject IronMonkey.Web.HttpHandlers.AdminApiClient Api

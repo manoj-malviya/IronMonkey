@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using IronMonkey.ApiService.Features.Leads.Workflow.Execution;
 using IronMonkey.ApiService.Notifications;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
@@ -10,14 +11,16 @@ namespace IronMonkey.ApiService.Features.Leads.Workflow.Rules;
 public class WorkflowRuleEngine(
     INotificationService notificationService,
     IHttpClientFactory httpClientFactory,
-    ILogger<WorkflowRuleEngine> logger)
+    ILogger<WorkflowRuleEngine> logger,
+    IWorkflowExecutionRecorder? executionRecorder = null)
     : IWorkflowRuleEngine
 {
     /// <summary>Named client so the webhook action gets its own timeout and no ambient auth.</summary>
     public const string WebhookClientName = "WorkflowWebhook";
 
     public async Task EvaluateAsync(Guid tenantId, Lead lead, WorkflowTrigger trigger,
-        TenantDbContext db, CancellationToken cancellationToken)
+        TenantDbContext db, CancellationToken cancellationToken,
+        WorkflowExecutionContext? context = null)
     {
         var rules = await db.WorkflowRules
             .Where(r => r.Trigger == trigger && r.IsActive)
@@ -25,20 +28,97 @@ public class WorkflowRuleEngine(
 
         foreach (var rule in rules)
         {
+            // Each rule is recorded and failed independently. One rule's webhook being down
+            // must not stop the next rule from being evaluated, and must not roll back the
+            // lead change that triggered any of them.
+            var run = await StartRecordingAsync(db, context, tenantId, rule, lead, trigger, cancellationToken);
+
             try
             {
-                if (!EvaluateCondition(rule.ConditionJson, lead))
-                    continue;
+                await EvaluateRuleAsync(rule, tenantId, lead, trigger, db, run, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // The worker is shutting down. Close the row as cancelled so it does not sit
+                // Running forever waiting on reconciliation, then let the cancellation
+                // propagate — Hangfire needs to see it to schedule the retry.
+                if (run is not null)
+                {
+                    await run.FailAsync(WorkflowErrorCategory.Cancelled,
+                        "Evaluation was cancelled before it completed.", CancellationToken.None);
+                }
 
-                await ExecuteActionAsync(rule.ActionJson, tenantId, lead, db, cancellationToken);
+                logger.LogWarning(
+                    "Workflow evaluation cancelled: tenant {TenantId}, rule {RuleId}, lead {LeadId}, trigger {Trigger}, execution {ExecutionId}",
+                    tenantId, rule.Id, lead.Id, trigger, run?.ExecutionId);
+                throw;
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Failed to evaluate workflow rule {RuleId} for lead {LeadId}",
-                    rule.Id, lead.Id);
-                // Don't rethrow — continue processing other rules
+                logger.LogError(ex,
+                    "Failed to evaluate workflow rule {RuleId} for lead {LeadId} in tenant {TenantId} " +
+                    "(trigger {Trigger}, execution {ExecutionId})",
+                    rule.Id, lead.Id, tenantId, trigger, run?.ExecutionId);
+
+                if (run is not null)
+                    await run.FailAsync(WorkflowErrorCategory.UnexpectedError, ex.Message, cancellationToken);
+
+                // Don't rethrow — continue processing other rules.
             }
         }
+    }
+
+    /// <summary>
+    /// Opens the history row for one rule, tolerating a recorder that is absent (tests
+    /// constructing the engine directly) or that failed to write. Evaluation proceeds either
+    /// way: losing the audit trail is bad, but not acting on a configured rule is worse.
+    /// </summary>
+    private async Task<WorkflowExecutionRun?> StartRecordingAsync(
+        TenantDbContext db, WorkflowExecutionContext? context, Guid tenantId,
+        WorkflowRule rule, Lead lead, WorkflowTrigger trigger, CancellationToken cancellationToken)
+    {
+        if (executionRecorder is null || context is null) return null;
+
+        return await executionRecorder.StartAsync(db, context, rule, lead, trigger, cancellationToken);
+    }
+
+    private async Task EvaluateRuleAsync(
+        WorkflowRule rule, Guid tenantId, Lead lead, WorkflowTrigger trigger,
+        TenantDbContext db, WorkflowExecutionRun? run, CancellationToken cancellationToken)
+    {
+        var condition = EvaluateConditionDetailed(rule.ConditionJson, lead);
+
+        if (!condition.Parsed)
+        {
+            // Malformed condition JSON is a broken rule, not an inapplicable one — and it is
+            // invisible without this, because the engine's fallback is "do not fire".
+            logger.LogWarning(
+                "Workflow rule {RuleId} ({RuleName}) has invalid condition JSON; rule did not fire. Tenant {TenantId}, lead {LeadId}",
+                rule.Id, rule.Name, tenantId, lead.Id);
+
+            if (run is not null)
+                await run.ConditionFailedAsync(condition.Error ?? "Condition JSON could not be parsed.", cancellationToken);
+            return;
+        }
+
+        if (!condition.Matched)
+        {
+            logger.LogDebug(
+                "Workflow rule {RuleId} skipped for lead {LeadId}: condition did not match",
+                rule.Id, lead.Id);
+
+            if (run is not null)
+                await run.ConditionNotMatchedAsync("Condition did not match.", cancellationToken);
+            return;
+        }
+
+        if (run is not null)
+            await run.ConditionMatchedAsync("Condition matched.", cancellationToken);
+
+        await ExecuteActionAsync(rule.ActionJson, tenantId, lead, db, run, trigger, cancellationToken);
+
+        if (run is not null)
+            await run.CompleteAsync(cancellationToken);
     }
 
     /// <summary>
@@ -52,16 +132,30 @@ public class WorkflowRuleEngine(
     ///   {"all": [ ...conditions ]}  — every nested condition must pass
     /// </summary>
     internal static bool EvaluateCondition(string conditionJson, Lead lead)
+        => EvaluateConditionDetailed(conditionJson, lead).Matched;
+
+    /// <summary>
+    /// Whether the condition parsed, and whether it matched.
+    ///
+    /// The two are separate because the engine's safe fallback for malformed JSON is "do not
+    /// fire", which is indistinguishable from "did not match" to a caller that only sees a
+    /// bool — and the whole point of the execution log is to tell an Admin which of the two
+    /// happened.
+    /// </summary>
+    internal readonly record struct ConditionResult(bool Parsed, bool Matched, string? Error);
+
+    internal static ConditionResult EvaluateConditionDetailed(string conditionJson, Lead lead)
     {
         try
         {
             using var doc = JsonDocument.Parse(conditionJson);
-            return Matches(doc.RootElement, lead);
+            return new ConditionResult(Parsed: true, Matched: Matches(doc.RootElement, lead), Error: null);
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
             // Malformed JSON must not silently fire the action.
-            return false;
+            return new ConditionResult(Parsed: false, Matched: false,
+                Error: $"Condition JSON is not valid: {ex.Message}");
         }
     }
 
@@ -141,64 +235,205 @@ public class WorkflowRuleEngine(
     }
 
     private async Task ExecuteActionAsync(string actionJson, Guid tenantId, Lead lead,
-        TenantDbContext db, CancellationToken cancellationToken)
+        TenantDbContext db, WorkflowExecutionRun? run, WorkflowTrigger trigger,
+        CancellationToken cancellationToken)
     {
-        using var doc = JsonDocument.Parse(actionJson);
-        var root = doc.RootElement;
-        var actionType = root.GetProperty("type").GetString();
+        JsonDocument doc;
+        try
+        {
+            doc = JsonDocument.Parse(actionJson);
+        }
+        catch (JsonException ex)
+        {
+            logger.LogWarning(
+                "Workflow action JSON is invalid for lead {LeadId} in tenant {TenantId}: {Reason}",
+                lead.Id, tenantId, ex.Message);
 
+            if (run is not null)
+            {
+                // Opened as a step with no action type, because there is no parseable type to
+                // name — the row still belongs in the timeline.
+                await run.BeginActionAsync(actionType: null, cancellationToken);
+                await run.ActionFailedAsync(WorkflowErrorCategory.InvalidActionJson,
+                    $"Action JSON is not valid: {ex.Message}", cancellationToken);
+            }
+            return;
+        }
+
+        using (doc)
+        {
+            var root = doc.RootElement;
+
+            var actionType = root.ValueKind == JsonValueKind.Object
+                             && root.TryGetProperty("type", out var typeProp)
+                ? typeProp.GetString()
+                : null;
+
+            if (run is not null)
+                await run.BeginActionAsync(actionType, cancellationToken);
+
+            LogActionStart(tenantId, lead, trigger, actionType, run);
+
+            await DispatchActionAsync(root, actionType, tenantId, lead, db, run, cancellationToken);
+        }
+    }
+
+    private async Task DispatchActionAsync(
+        JsonElement root, string? actionType, Guid tenantId, Lead lead,
+        TenantDbContext db, WorkflowExecutionRun? run, CancellationToken cancellationToken)
+    {
         switch (actionType)
         {
             case "notify":
-                var userId = Guid.Parse(root.GetProperty("userId").GetString()!);
-                var message = Interpolate(root.GetProperty("message").GetString()!, lead);
-                await notificationService.CreateAsync(db, tenantId, userId, message, lead.Id, cancellationToken);
+                await RunNotifyAsync(root, tenantId, lead, db, run, cancellationToken);
                 break;
 
             case "assign":
-                var assignUserId = Guid.Parse(root.GetProperty("userId").GetString()!);
-                lead.AssignTo(assignUserId);
-                await db.SaveChangesAsync(cancellationToken);
+                await RunAssignAsync(root, lead, db, run, cancellationToken);
                 break;
 
             case "schedule_task":
-                var title = Interpolate(root.GetProperty("title").GetString()!, lead);
-                var dueDays = root.GetProperty("dueDays").GetInt32();
-                var task = LeadTask.Create(tenantId, lead.Id, title,
-                    DateTime.UtcNow.AddDays(dueDays), TaskPriority.Medium, lead.AssignedToUserId);
-                db.LeadTasks.Add(task);
-                await db.SaveChangesAsync(cancellationToken);
+                await RunScheduleTaskAsync(root, tenantId, lead, db, run, cancellationToken);
                 break;
 
             case "webhook":
-                await SendWebhookAsync(root, tenantId, lead, cancellationToken);
+                await SendWebhookAsync(root, tenantId, lead, run, cancellationToken);
                 break;
 
             case "email":
-                await SendEmailAsync(root, lead, cancellationToken);
+                await SendEmailAsync(root, lead, run, cancellationToken);
                 break;
 
             default:
                 logger.LogWarning("Unknown workflow action type: {ActionType}", actionType);
+                if (run is not null)
+                {
+                    await run.ActionFailedAsync(WorkflowErrorCategory.UnknownActionType,
+                        actionType is null
+                            ? "Action JSON has no \"type\" property."
+                            : $"\"{actionType}\" is not a supported action type.",
+                        cancellationToken);
+                }
                 break;
         }
     }
 
+    private async Task RunNotifyAsync(JsonElement root, Guid tenantId, Lead lead,
+        TenantDbContext db, WorkflowExecutionRun? run, CancellationToken cancellationToken)
+    {
+        if (!TryGetGuid(root, "userId", out var userId))
+        {
+            await FailActionAsync(run, WorkflowErrorCategory.InvalidActionConfiguration,
+                "Action is missing a valid \"userId\".", cancellationToken);
+            return;
+        }
+
+        var message = Interpolate(
+            root.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "", lead);
+
+        try
+        {
+            await notificationService.CreateAsync(db, tenantId, userId, message, lead.Id, cancellationToken);
+            await SucceedActionAsync(run, "Notification created.", cancellationToken);
+        }
+        catch (Exception ex) when (ex is DbUpdateException or InvalidOperationException)
+        {
+            await FailActionAsync(run, WorkflowErrorCategory.PersistenceFailure,
+                $"Notification could not be saved: {ex.Message}", cancellationToken);
+        }
+    }
+
+    private async Task RunAssignAsync(JsonElement root, Lead lead,
+        TenantDbContext db, WorkflowExecutionRun? run, CancellationToken cancellationToken)
+    {
+        if (!TryGetGuid(root, "userId", out var assignUserId))
+        {
+            await FailActionAsync(run, WorkflowErrorCategory.InvalidActionConfiguration,
+                "Action is missing a valid \"userId\".", cancellationToken);
+            return;
+        }
+
+        // Checked before assigning: the column has no FK to Users, so a typo'd id would
+        // otherwise persist as an assignment to nobody and read as a success.
+        var userExists = await db.Users.AnyAsync(u => u.Id == assignUserId, cancellationToken);
+        if (!userExists)
+        {
+            await FailActionAsync(run, WorkflowErrorCategory.ReferencedRecordNotFound,
+                "The user named by the rule does not exist in this organisation.", cancellationToken);
+            return;
+        }
+
+        try
+        {
+            lead.AssignTo(assignUserId);
+            await db.SaveChangesAsync(cancellationToken);
+            await SucceedActionAsync(run, "Lead assigned.", cancellationToken);
+        }
+        catch (Exception ex) when (ex is DbUpdateException or InvalidOperationException)
+        {
+            await FailActionAsync(run, WorkflowErrorCategory.PersistenceFailure,
+                $"Assignment could not be saved: {ex.Message}", cancellationToken);
+        }
+    }
+
+    private async Task RunScheduleTaskAsync(JsonElement root, Guid tenantId, Lead lead,
+        TenantDbContext db, WorkflowExecutionRun? run, CancellationToken cancellationToken)
+    {
+        var title = Interpolate(
+            root.TryGetProperty("title", out var t) ? t.GetString() ?? "" : "", lead);
+
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            await FailActionAsync(run, WorkflowErrorCategory.InvalidActionConfiguration,
+                "Action is missing a \"title\".", cancellationToken);
+            return;
+        }
+
+        if (!root.TryGetProperty("dueDays", out var dueProp) || !dueProp.TryGetInt32(out var dueDays))
+        {
+            await FailActionAsync(run, WorkflowErrorCategory.InvalidActionConfiguration,
+                "Action is missing a valid integer \"dueDays\".", cancellationToken);
+            return;
+        }
+
+        try
+        {
+            var task = LeadTask.Create(tenantId, lead.Id, title,
+                DateTime.UtcNow.AddDays(dueDays), TaskPriority.Medium, lead.AssignedToUserId);
+            db.LeadTasks.Add(task);
+            await db.SaveChangesAsync(cancellationToken);
+            await SucceedActionAsync(run, $"Task scheduled, due in {dueDays} day(s).", cancellationToken);
+        }
+        catch (Exception ex) when (ex is DbUpdateException or InvalidOperationException)
+        {
+            await FailActionAsync(run, WorkflowErrorCategory.PersistenceFailure,
+                $"Task could not be saved: {ex.Message}", cancellationToken);
+        }
+    }
+
     /// <summary>
-    /// POSTs the lead to an external URL. Failures are logged, not rethrown: a third party
+    /// POSTs the lead to an external URL. Failures are recorded, not rethrown: a third party
     /// being down must not roll back the lead change that triggered the rule.
     /// </summary>
     private async Task SendWebhookAsync(JsonElement action, Guid tenantId, Lead lead,
-        CancellationToken cancellationToken)
+        WorkflowExecutionRun? run, CancellationToken cancellationToken)
     {
-        var url = action.GetProperty("url").GetString();
+        var url = action.TryGetProperty("url", out var urlProp) ? urlProp.GetString() : null;
+
         if (string.IsNullOrWhiteSpace(url) ||
             !Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
             (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
             logger.LogWarning("Workflow webhook skipped: {Url} is not a valid http(s) URL", url);
+
+            // The invalid URL is deliberately not echoed into the stored message: a
+            // "malformed" URL is frequently a well-formed one with a secret in it.
+            await FailActionAsync(run, WorkflowErrorCategory.InvalidWebhookUrl,
+                "The webhook URL is not a valid absolute http(s) URL.", cancellationToken);
             return;
         }
+
+        run?.RecordTargetHost(uri);
 
         var client = httpClientFactory.CreateClient(WebhookClientName);
 
@@ -230,19 +465,40 @@ public class WorkflowRuleEngine(
         try
         {
             var response = await client.SendAsync(request, cancellationToken);
+            run?.RecordHttpResult((int)response.StatusCode, uri);
+
             if (!response.IsSuccessStatusCode)
             {
                 logger.LogWarning("Workflow webhook to {Url} returned {StatusCode} for lead {LeadId}",
                     uri, (int)response.StatusCode, lead.Id);
+
+                // Status and reason phrase only. The response body is not stored: it is
+                // third-party content of unknown size that may echo the request's own headers.
+                await FailActionAsync(run, WorkflowErrorCategory.WebhookNonSuccessResponse,
+                    $"Webhook returned HTTP {(int)response.StatusCode} {response.ReasonPhrase}.".Trim(),
+                    cancellationToken);
             }
             else
             {
                 logger.LogInformation("Workflow webhook to {Url} succeeded for lead {LeadId}", uri, lead.Id);
+                await SucceedActionAsync(run,
+                    $"Webhook returned HTTP {(int)response.StatusCode}.", cancellationToken);
             }
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            // The request's own timeout, not the worker shutting down — the named client's
+            // timeout elapsed. Distinguished from a cancellation so the Admin sees "the
+            // endpoint did not answer in time", which is actionable.
+            logger.LogWarning(ex, "Workflow webhook to {Url} timed out for lead {LeadId}", uri, lead.Id);
+            await FailActionAsync(run, WorkflowErrorCategory.WebhookTimeout,
+                "Webhook did not respond before the request timed out.", cancellationToken);
+        }
+        catch (HttpRequestException ex)
         {
             logger.LogWarning(ex, "Workflow webhook to {Url} failed for lead {LeadId}", uri, lead.Id);
+            await FailActionAsync(run, WorkflowErrorCategory.WebhookNetworkFailure,
+                $"Webhook could not be reached: {ex.Message}", cancellationToken);
         }
     }
 
@@ -250,8 +506,14 @@ public class WorkflowRuleEngine(
     /// Records the email that would be sent. Delivery is deliberately not wired up yet —
     /// there is no tenant-level SMTP configuration, so sending would depend on a single
     /// shared mailbox. The rendered subject and body are logged so the rule can be verified.
+    ///
+    /// The execution row records that delivery is not configured as its own diagnostic
+    /// category, so an Admin can tell "the rule is fine, email is not set up" from "the rule
+    /// is broken" — and the subject/body are logged for operators but never persisted, since a
+    /// rendered body carries lead PII.
     /// </summary>
-    private Task SendEmailAsync(JsonElement action, Lead lead, CancellationToken cancellationToken)
+    private async Task SendEmailAsync(JsonElement action, Lead lead,
+        WorkflowExecutionRun? run, CancellationToken cancellationToken)
     {
         var to = action.TryGetProperty("to", out var toProp) ? toProp.GetString() : null;
 
@@ -266,14 +528,59 @@ public class WorkflowRuleEngine(
         if (string.IsNullOrWhiteSpace(recipient))
         {
             logger.LogWarning("Workflow email skipped for lead {LeadId}: no recipient", lead.Id);
-            return Task.CompletedTask;
+
+            await FailActionAsync(run, WorkflowErrorCategory.MissingEmailRecipient,
+                string.Equals(to, "lead", StringComparison.OrdinalIgnoreCase)
+                    ? "No recipient: the rule addresses the lead, and this lead has no email address."
+                    : "No recipient: the rule has no \"to\" address.",
+                cancellationToken);
+            return;
         }
+
+        run?.RecordRecipient(recipient);
 
         logger.LogInformation(
             "Workflow email (not delivered — SMTP not configured) to {Recipient} for lead {LeadId}: {Subject} | {Body}",
             recipient, lead.Id, subject, body);
 
-        return Task.CompletedTask;
+        // Recorded as a failure, not a success: nothing was delivered, and showing it as
+        // succeeded would make a silently undelivered email look like a sent one.
+        await FailActionAsync(run, WorkflowErrorCategory.EmailDeliveryNotConfigured,
+            "Email was rendered but not delivered: email sending is not configured for this organisation.",
+            cancellationToken);
+    }
+
+    private static Task SucceedActionAsync(WorkflowExecutionRun? run, string message, CancellationToken cancellationToken)
+        => run?.ActionSucceededAsync(message, cancellationToken) ?? Task.CompletedTask;
+
+    private static Task FailActionAsync(WorkflowExecutionRun? run, WorkflowErrorCategory category,
+        string message, CancellationToken cancellationToken)
+        => run?.ActionFailedAsync(category, message, cancellationToken) ?? Task.CompletedTask;
+
+    /// <summary>
+    /// Reads a Guid property without throwing on a missing or malformed value. The previous
+    /// <c>Guid.Parse(root.GetProperty(...))</c> threw two different exception types for a
+    /// typo'd rule, both of which surfaced only as "failed to evaluate rule".
+    /// </summary>
+    private static bool TryGetGuid(JsonElement root, string property, out Guid value)
+    {
+        value = Guid.Empty;
+        return root.TryGetProperty(property, out var prop)
+               && prop.ValueKind == JsonValueKind.String
+               && Guid.TryParse(prop.GetString(), out value);
+    }
+
+    /// <summary>
+    /// The structured operator event for an action starting. Carries the execution id so an
+    /// operator reading logs and an Admin reading the UI can be talking about the same run.
+    /// </summary>
+    private void LogActionStart(Guid tenantId, Lead lead, WorkflowTrigger trigger,
+        string? actionType, WorkflowExecutionRun? run)
+    {
+        logger.LogInformation(
+            "Workflow action starting: tenant {TenantId}, execution {ExecutionId}, rule {RuleId}, " +
+            "lead {LeadId}, trigger {Trigger}, action {ActionType}, correlation {CorrelationId}",
+            tenantId, run?.ExecutionId, run?.RuleId, lead.Id, trigger, actionType, run?.CorrelationId);
     }
 
     /// <summary>Replaces {{FirstName}}-style placeholders with the lead's values.</summary>

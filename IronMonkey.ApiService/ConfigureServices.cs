@@ -20,6 +20,7 @@ using IronMonkey.ApiService.Features.Activity;
 using IronMonkey.ApiService.Features.Leads.Pipeline.Routing;
 using IronMonkey.ApiService.Features.Configuration;
 using IronMonkey.ApiService.Features.Leads.Pipeline.States;
+using IronMonkey.ApiService.Features.Leads.Workflow.Execution;
 using IronMonkey.ApiService.Features.Leads.Workflow.Rules;
 using IronMonkey.ApiService.Interceptors;
 using IronMonkey.ApiService.Notifications;
@@ -30,6 +31,8 @@ using IronMonkey.Data.Extensions;
 using Microsoft.OpenApi;
 using Serilog;
 using Swashbuckle.AspNetCore.Filters;
+
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace IronMonkey.ApiService;
 
@@ -83,6 +86,15 @@ public static class ConfigureServices
                 client => client.Timeout = TimeSpan.FromSeconds(10));
             builder.Services.AddScoped<WorkflowRuleEvaluationJob>();
             builder.Services.AddScoped<TimeElapsedRuleScanJob>();
+
+            // Durable, tenant-visible execution history for workflow runs. TimeProvider is
+            // registered rather than calling DateTime.UtcNow so the recorder's timestamps and
+            // the maintenance job's staleness window are controllable in tests.
+            builder.Services.TryAddSingleton(TimeProvider.System);
+            builder.Services.Configure<WorkflowExecutionLogOptions>(
+                builder.Configuration.GetSection(WorkflowExecutionLogOptions.SectionName));
+            builder.Services.AddScoped<IWorkflowExecutionRecorder, WorkflowExecutionRecorder>();
+            builder.Services.AddScoped<WorkflowExecutionMaintenanceJob>();
             builder.Services.AddScoped<CsvImportService>();
             builder.Services.AddScoped<CsvImportJob>();
             builder.AddHangfire();

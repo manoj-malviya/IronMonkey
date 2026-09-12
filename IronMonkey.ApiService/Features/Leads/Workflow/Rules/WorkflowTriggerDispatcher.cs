@@ -25,8 +25,12 @@ public class WorkflowTriggerDispatcher(
     {
         try
         {
+            // null PerformContext and CancellationToken.None are placeholders: Hangfire
+            // recognises both parameter types and substitutes the live context and the
+            // worker's shutdown token when it actually invokes the method. The context is
+            // what gives the execution log its job id and retry attempt.
             backgroundJobs.Enqueue<WorkflowRuleEvaluationJob>(
-                job => job.ExecuteAsync(tenantId, leadId, trigger.ToString(), CancellationToken.None));
+                job => job.ExecuteAsync(tenantId, leadId, trigger.ToString(), null, CancellationToken.None));
         }
         catch (Exception ex)
         {
