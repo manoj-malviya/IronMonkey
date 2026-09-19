@@ -1,3 +1,5 @@
+using IronMonkey.Data.Presentation;
+
 namespace IronMonkey.Data.RecipeContent;
 
 public sealed class RecipeContentModel
@@ -7,6 +9,27 @@ public sealed class RecipeContentModel
     public List<WorkflowRuleDefinition> WorkflowRules { get; set; } = [];
     public List<RoleDefinition> Roles { get; set; } = [];
     public List<SampleLeadDefinition> SampleLeads { get; set; } = [];
+
+    /// <summary>
+    /// The vertical's own vocabulary and formatting defaults, copied into the tenant at
+    /// provisioning like every other recipe artifact — so an Automobile tenant arrives saying
+    /// "Enquiry" with no manual setup, and is then free to change it.
+    ///
+    /// Null on every recipe stored before this existed, which is why it is optional: those
+    /// documents must keep deserializing and provisioning unchanged.
+    /// </summary>
+    public RecipePresentationDefinition? Presentation { get; set; }
+}
+
+/// <summary>
+/// Presentation defaults a recipe seeds into a new tenant. Deliberately a mirror of
+/// <see cref="TenantPresentationSettings"/> minus branding: a logo and colours belong to the
+/// tenant, not to the vertical template.
+/// </summary>
+public sealed class RecipePresentationDefinition
+{
+    public TenantTerminology? Terminology { get; set; }
+    public TenantLocale? Locale { get; set; }
 }
 
 public sealed class PipelineStageDefinition

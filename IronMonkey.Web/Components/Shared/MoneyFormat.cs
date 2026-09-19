@@ -11,8 +11,12 @@ namespace IronMonkey.Web.Components.Shared;
 /// would be worse than wrong: it would assert a currency the tenant may not use.
 ///
 /// So the amount is formatted with explicit grouping and no symbol, and callers label the
-/// column or caption instead. When per-tenant currency becomes a real setting, this is the
-/// single place that has to learn about it.
+/// column or caption instead.
+///
+/// Per-tenant currency now exists: prefer <c>TenantPresentationService.Money</c>, which adds
+/// the tenant's configured symbol and falls back to exactly this behaviour when a tenant has
+/// configured none. This type remains for contexts with no tenant in scope — platform-admin
+/// screens and anything rendered before the tenant's settings have loaded.
 /// </summary>
 public static class MoneyFormat
 {

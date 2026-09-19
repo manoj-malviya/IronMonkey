@@ -3,6 +3,7 @@ using IronMonkey.Web.Authentication;
 using IronMonkey.Web.CircuitHandlers;
 using IronMonkey.Web.Components;
 using IronMonkey.Web.HttpHandlers;
+using IronMonkey.Web.Presentation;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.Circuits;
@@ -50,6 +51,11 @@ builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
 // auth provider, so it alone cannot attach the token. See AdminApiClient for detail.
 builder.Services.AddScoped<AdminApiClient>();
 builder.Services.AddScoped<BearerTokenHandler>();
+
+// Terminology, currency and timezone for the signed-in tenant. Scoped so it resolves once
+// per circuit rather than per render, and so every component reads the same instance — a
+// component that looked settings up itself would be the first place a stale label appears.
+builder.Services.AddScoped<TenantPresentationService>();
 var adminApi = builder.Services.AddHttpClient("AdminApi", client =>
     {
         client.BaseAddress = new Uri("https+http://apiservice");

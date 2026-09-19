@@ -2,13 +2,15 @@
 @attribute [Authorize]
 @inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
 @inject NavigationManager Nav
+@inject TenantPresentationService Presentation
+@implements IDisposable
 
-<PageTitle>Leads — IronMonkey</PageTitle>
+<PageTitle>@Presentation.Terms(TerminologyTerm.Lead) — IronMonkey</PageTitle>
 
 <div class="space-y-6">
 
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <h1 class="text-2xl font-bold text-slate-900">Leads</h1>
+        <h1 class="text-2xl font-bold text-slate-900">@Presentation.Terms(TerminologyTerm.Lead)</h1>
         <div class="flex flex-wrap items-center gap-2">
             <a href="/admin/leads/board"
                class="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
@@ -16,7 +18,7 @@
             </a>
             <a href="/admin/leads/create"
                class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
-                + New Lead
+                + New @Presentation.Term(TerminologyTerm.Lead)
             </a>
         </div>
     </div>
@@ -142,7 +144,7 @@
 
         @if (pg.TotalPages > 1)
         {
-            <nav class="flex flex-wrap items-center justify-between gap-3" aria-label="Lead list pages">
+            <nav class="flex flex-wrap items-center justify-between gap-3" aria-label="@Presentation.Term(TerminologyTerm.Lead) list pages">
                 <p class="text-sm text-slate-500">Page @pg.Page of @pg.TotalPages</p>
                 <div class="flex items-center gap-2">
                     <button type="button" @onclick="() => GoToPageAsync(pg.Page - 1)"
@@ -186,6 +188,16 @@
 }
 
 @code {
+    protected override void OnInitialized() => Presentation.Changed += OnPresentationChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // After the first interactive render: the JWT is in ProtectedSessionStorage and
+        // unreadable during prerender, so an earlier fetch would go out unauthenticated.
+        if (firstRender)
+            await Presentation.EnsureLoadedAsync();
+    }
+
     // Filter state lives in the URL, so opening a lead and coming back — or sharing the
     // link, or reloading — lands on the same filtered, sorted page rather than resetting
     // to the top of an unfiltered list.
@@ -429,4 +441,11 @@
         public Guid Id { get; set; }
         public string Name { get; set; } = "";
     }
+
+    // Terminology is resolved once per circuit by the shared scoped service. Subscribing
+    // re-renders this page if the settings arrive after it first painted — otherwise a page
+    // that loaded before the fetch completed would keep the built-in labels until navigation.
+    private void OnPresentationChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Presentation.Changed -= OnPresentationChanged;
 }

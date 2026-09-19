@@ -29,6 +29,7 @@ using IronMonkey.ApiService.Features.UserManagement;
 using IronMonkey.ApiService.Features.RoleManagement;
 using IronMonkey.ApiService.Features.Contacts;
 using IronMonkey.ApiService.Features.Opportunities;
+using IronMonkey.ApiService.Features.Presentation;
 
 namespace IronMonkey.ApiService;
 
@@ -58,6 +59,7 @@ public static class Endpoints
         endpoints.MapRecipeEndpoints();
         endpoints.MapContactEndpoints();
         endpoints.MapOpportunityEndpoints();
+        endpoints.MapPresentationEndpoints();
     }
 
     extension(IEndpointRouteBuilder app)
@@ -203,6 +205,15 @@ public static class Endpoints
             UpdateLeadEndpoint.Map(app);
             DeleteLeadEndpoint.Map(app);
             ConvertLeadEndpoint.Map(app);
+        }
+
+        private void MapPresentationEndpoints()
+        {
+            // Tenant terminology, locale and branding. Read is available to any authenticated
+            // tenant user because every page needs the labels; the write is gated on
+            // settings:write, since it changes what the whole tenant sees.
+            GetTenantPresentationEndpoint.Map(app);
+            UpdateTenantPresentationEndpoint.Map(app);
         }
 
         private void MapContactEndpoints()

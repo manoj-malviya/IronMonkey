@@ -1,0 +1,311 @@
+@using IronMonkey.Web.HttpHandlers
+@inject AdminApiClient Api
+@inject TenantPresentationService Presentation
+
+@* Terminology, locale and branding.
+
+   Terminology is presentation only: renaming "Lead" to "Enquiry" changes labels, never
+   routes, permissions or the API contract. That is why this tab edits words and formats,
+   and nothing here alters stored data. *@
+
+@if (_loading)
+{
+    <p class="text-sm text-slate-500">Loading appearance settings…</p>
+}
+else
+{
+    <div class="space-y-8">
+
+        <section>
+            <h2 class="text-lg font-semibold text-slate-900">What you call things</h2>
+            <p class="mt-1 text-sm text-slate-600">
+                Rename the records to match how your organisation talks. Leave a box empty to
+                keep the default. Plurals are set separately — they are never guessed by adding
+                an “s”.
+            </p>
+
+            <div class="mt-4 overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead>
+                        <tr>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Default</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Your term</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Your plural</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach (var row in _terms)
+                        {
+                            <tr>
+                                <td class="px-3 py-2 text-sm text-slate-500">
+                                    @TerminologyDefaults.Singular(row.Term) / @TerminologyDefaults.Plural(row.Term)
+                                </td>
+                                <td class="px-3 py-2">
+                                    <input @bind="row.Singular" @bind:event="oninput"
+                                           placeholder="@TerminologyDefaults.Singular(row.Term)"
+                                           maxlength="40"
+                                           class="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm" />
+                                </td>
+                                <td class="px-3 py-2">
+                                    <input @bind="row.Plural" @bind:event="oninput"
+                                           placeholder="@TerminologyDefaults.Plural(row.Term)"
+                                           maxlength="40"
+                                           class="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="text-lg font-semibold text-slate-900">Money, dates and language</h2>
+            <p class="mt-1 text-sm text-slate-600">
+                Amounts are shown with your currency symbol, and times are shown in your zone.
+                Records are always stored in UTC — this only changes how they are displayed.
+            </p>
+
+            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                <label class="block">
+                    <span class="text-sm font-medium text-slate-700">Currency code</span>
+                    <input @bind="_currencyCode" placeholder="GBP" maxlength="3"
+                           class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                </label>
+                <label class="block">
+                    <span class="text-sm font-medium text-slate-700">Currency symbol</span>
+                    <input @bind="_currencySymbol" placeholder="£" maxlength="5"
+                           class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                    <span class="mt-1 block text-xs text-slate-500">
+                        Without a symbol, amounts show as plain numbers rather than guessing a currency.
+                    </span>
+                </label>
+                <label class="block">
+                    <span class="text-sm font-medium text-slate-700">Language / region</span>
+                    <input @bind="_culture" placeholder="en-GB"
+                           class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                </label>
+                <label class="block">
+                    <span class="text-sm font-medium text-slate-700">Time zone</span>
+                    <input @bind="_timeZoneId" placeholder="Europe/London"
+                           class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                    <span class="mt-1 block text-xs text-slate-500">
+                        IANA name, such as Europe/London or Asia/Kolkata. Currently: @Presentation.Formatting.TimeZoneLabel.
+                    </span>
+                </label>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="text-lg font-semibold text-slate-900">Branding</h2>
+            <p class="mt-1 text-sm text-slate-600">
+                Shown in the sidebar for everyone in your organisation.
+            </p>
+
+            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                <label class="block">
+                    <span class="text-sm font-medium text-slate-700">Display name</span>
+                    <input @bind="_displayName" maxlength="100"
+                           class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                </label>
+                <label class="block">
+                    <span class="text-sm font-medium text-slate-700">Logo URL</span>
+                    <input @bind="_logoUrl" placeholder="/img/logo.png"
+                           class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                    <span class="mt-1 block text-xs text-slate-500">
+                        A path on this site, or an https URL.
+                    </span>
+                </label>
+                <label class="block">
+                    <span class="text-sm font-medium text-slate-700">Primary colour</span>
+                    <input @bind="_primaryColor" placeholder="#1d4ed8"
+                           class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                </label>
+                <label class="block">
+                    <span class="text-sm font-medium text-slate-700">Accent colour</span>
+                    <input @bind="_accentColor" placeholder="#4f46e5"
+                           class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                </label>
+            </div>
+        </section>
+
+        <div class="flex items-center gap-3">
+            <button type="button" @onclick="SaveAsync" disabled="@_saving"
+                    class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50">
+                @(_saving ? "Saving…" : "Save appearance")
+            </button>
+            <span class="text-sm text-slate-500">
+                Preview: @Presentation.Terms(TerminologyTerm.Lead) · @Presentation.Money(308000)
+            </span>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public EventCallback<string> OnSuccess { get; set; }
+    [Parameter] public EventCallback<string> OnError { get; set; }
+
+    private bool _loading = true;
+    private bool _saving;
+
+    private readonly List<TermRow> _terms =
+        TerminologyDefaults.All.Select(t => new TermRow { Term = t }).ToList();
+
+    private string? _currencyCode;
+    private string? _currencySymbol;
+    private string? _culture;
+    private string? _timeZoneId;
+    private string? _displayName;
+    private string? _logoUrl;
+    private string? _primaryColor;
+    private string? _accentColor;
+
+    // Loaded after the first interactive render: the JWT lives in ProtectedSessionStorage,
+    // which is unreadable while prerendering, so an earlier fetch returns 401.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        await LoadAsync();
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadAsync()
+    {
+        var response = await Api.GetFromJsonAsync<TenantPresentationResponse>("/api/tenant/presentation");
+
+        if (response is null)
+        {
+            await OnError.InvokeAsync("Could not load appearance settings.");
+            return;
+        }
+
+        // The editor shows what the tenant actually set, not the resolved values — otherwise
+        // every default would look like an explicit override and saving would freeze them in.
+        var overrides = response.Overrides ?? new TenantTerminology();
+        foreach (var row in _terms)
+        {
+            var over = Lookup(overrides, row.Term);
+            row.Singular = over?.Singular;
+            row.Plural = over?.Plural;
+        }
+
+        _currencyCode = response.Locale?.CurrencyCode;
+        _currencySymbol = response.Locale?.CurrencySymbol;
+        _culture = response.Locale?.Culture;
+        _timeZoneId = response.Locale?.TimeZoneId;
+
+        _displayName = response.Branding?.DisplayName;
+        _logoUrl = response.Branding?.LogoUrl;
+        _primaryColor = response.Branding?.PrimaryColor;
+        _accentColor = response.Branding?.AccentColor;
+
+        Presentation.Apply(response);
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        try
+        {
+            var terminology = new TenantTerminology();
+            foreach (var row in _terms)
+                Assign(terminology, row);
+
+            var request = new UpdateTenantPresentationRequest(
+                terminology,
+                new TenantLocale
+                {
+                    CurrencyCode = Blank(_currencyCode),
+                    CurrencySymbol = Blank(_currencySymbol),
+                    Culture = Blank(_culture),
+                    TimeZoneId = Blank(_timeZoneId)
+                },
+                new TenantBranding
+                {
+                    DisplayName = Blank(_displayName),
+                    LogoUrl = Blank(_logoUrl),
+                    PrimaryColor = Blank(_primaryColor),
+                    AccentColor = Blank(_accentColor)
+                });
+
+            var response = await Api.PutAsJsonAsync("/api/tenant/presentation", request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                // The API validates branding, locale and terms; surface its message rather
+                // than a generic failure, since the reason is actionable.
+                var problem = await response.Content.ReadFromJsonAsync<ProblemResponse>();
+                await OnError.InvokeAsync(problem?.Detail ?? "Could not save appearance settings.");
+                return;
+            }
+
+            var updated = await response.Content.ReadFromJsonAsync<TenantPresentationResponse>();
+            if (updated is not null)
+                Presentation.Apply(updated); // refreshes the shell immediately, not on next login
+
+            await OnSuccess.InvokeAsync("Appearance settings saved.");
+        }
+        catch (Exception ex)
+        {
+            await OnError.InvokeAsync($"Could not save appearance settings: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private static string? Blank(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static TermOverride? Lookup(TenantTerminology t, TerminologyTerm term) => term switch
+    {
+        TerminologyTerm.Lead => t.Lead,
+        TerminologyTerm.Contact => t.Contact,
+        TerminologyTerm.Opportunity => t.Opportunity,
+        TerminologyTerm.Task => t.Task,
+        TerminologyTerm.Pipeline => t.Pipeline,
+        TerminologyTerm.Stage => t.Stage,
+        TerminologyTerm.Activity => t.Activity,
+        _ => null
+    };
+
+    private static void Assign(TenantTerminology target, TermRow row)
+    {
+        // An entirely blank row is stored as no override at all, so clearing the boxes
+        // genuinely restores the default rather than persisting two empty strings.
+        var singular = Blank(row.Singular);
+        var plural = Blank(row.Plural);
+
+        if (singular is null && plural is null)
+            return;
+
+        var over = new TermOverride { Singular = singular, Plural = plural };
+
+        switch (row.Term)
+        {
+            case TerminologyTerm.Lead: target.Lead = over; break;
+            case TerminologyTerm.Contact: target.Contact = over; break;
+            case TerminologyTerm.Opportunity: target.Opportunity = over; break;
+            case TerminologyTerm.Task: target.Task = over; break;
+            case TerminologyTerm.Pipeline: target.Pipeline = over; break;
+            case TerminologyTerm.Stage: target.Stage = over; break;
+            case TerminologyTerm.Activity: target.Activity = over; break;
+        }
+    }
+
+    private sealed class TermRow
+    {
+        public TerminologyTerm Term { get; init; }
+        public string? Singular { get; set; }
+        public string? Plural { get; set; }
+    }
+
+    private sealed class ProblemResponse
+    {
+        public string? Detail { get; set; }
+    }
+}

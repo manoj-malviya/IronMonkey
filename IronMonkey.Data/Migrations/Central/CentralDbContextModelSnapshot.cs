@@ -303,6 +303,9 @@ namespace IronMonkey.Data.Migrations.Central
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("Presentation")
+                        .HasColumnType("jsonb");
+
                     b.Property<DateTime?>("ProvisionedAt")
                         .HasColumnType("timestamp with time zone");
 

@@ -2,6 +2,7 @@ using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
+using IronMonkey.Data.Presentation;
 using IronMonkey.Data.RecipeContent;
 using BC = BCrypt.Net.BCrypt;
 
@@ -143,6 +144,20 @@ public class TenantProvisioningService : ITenantProvisioningService
 
             content = System.Text.Json.JsonSerializer.Deserialize<RecipeContentModel>(recipe.ContentJson)
                 ?? new RecipeContentModel();
+        }
+
+        // Copy the vertical's vocabulary and formatting onto the tenant row. Like every other
+        // recipe artifact this is a copy, not a link: the tenant may rename any of it
+        // afterwards without touching the platform catalog. Recipes stored before recipe
+        // presentation existed carry null here and leave the tenant on built-in defaults.
+        if (content?.Presentation is { } presentation &&
+            (presentation.Terminology is not null || presentation.Locale is not null))
+        {
+            tenant.UpdatePresentation(new TenantPresentationSettings
+            {
+                Terminology = presentation.Terminology,
+                Locale = presentation.Locale
+            });
         }
 
         // Apply pipeline stages (D-07: stages before fields and rules)

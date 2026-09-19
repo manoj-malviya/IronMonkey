@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "9eZPEylBgZw=",
+  "dgSpecHash": "yGzbMMCkDiQ=",
   "success": true,
   "projectFilePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Tests/IronMonkey.Tests.csproj",
   "expectedPackageFiles": [
@@ -199,6 +199,18 @@
       "warningLevel": 1,
       "filePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Tests/IronMonkey.Tests.csproj",
       "libraryId": "OpenTelemetry.Exporter.OpenTelemetryProtocol",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'SSH.NET' 2024.2.0 has a known high severity vulnerability, https://github.com/advisories/GHSA-mggc-4xg6-vcxf",
+      "projectPath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Tests/IronMonkey.Tests.csproj",
+      "warningLevel": 1,
+      "filePath": "/home/manoj/projects/sandbox/IronMonkey/IronMonkey.Tests/IronMonkey.Tests.csproj",
+      "libraryId": "SSH.NET",
       "targetGraphs": [
         "net10.0"
       ]

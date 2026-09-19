@@ -2,16 +2,18 @@
 @attribute [Authorize]
 @inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
 @inject NavigationManager Nav
+@inject TenantPresentationService Presentation
+@implements IDisposable
 
-<PageTitle>Opportunities — IronMonkey</PageTitle>
+<PageTitle>@Presentation.Terms(TerminologyTerm.Opportunity) — IronMonkey</PageTitle>
 
 <div class="space-y-6">
 
     <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-slate-900">Opportunities</h1>
+        <h1 class="text-2xl font-bold text-slate-900">@Presentation.Terms(TerminologyTerm.Opportunity)</h1>
         <button @onclick='() => Nav.NavigateTo("/admin/opportunities/create")'
                 class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
-            + New Opportunity
+            + New @Presentation.Term(TerminologyTerm.Opportunity)
         </button>
     </div>
 
@@ -70,7 +72,7 @@
                 <thead class="bg-slate-50 border-b border-slate-200">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Title</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Contact</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">@Presentation.Term(TerminologyTerm.Contact)</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Stage</th>
                         <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-900">Amount</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Expected close</th>
@@ -113,7 +115,7 @@
 {
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
         <div class="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <h3 class="mb-2 text-lg font-semibold text-slate-900">Delete Opportunity</h3>
+            <h3 class="mb-2 text-lg font-semibold text-slate-900">Delete @Presentation.Term(TerminologyTerm.Opportunity)</h3>
             <p class="mb-6 text-sm text-slate-600">Delete @_deleting.Title?</p>
             <div class="flex justify-end gap-3">
                 <button @onclick="() => _deleting = null" class="px-4 py-2 text-sm font-medium text-slate-700">Cancel</button>
@@ -145,7 +147,19 @@
     private int OpenCount => _opportunities
         .Count(o => !IronMonkey.Common.OpportunityStages.IsTerminal(o.Stage));
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        Presentation.Changed += OnPresentationChanged;
+        await LoadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // After the first interactive render: the JWT is in ProtectedSessionStorage and
+        // unreadable during prerender, so an earlier fetch would go out unauthenticated.
+        if (firstRender)
+            await Presentation.EnsureLoadedAsync();
+    }
 
     private async Task OnSearchInput(ChangeEventArgs e)
     {
@@ -207,4 +221,11 @@
         public DateTime ExpectedCloseDate { get; set; }
         public string? LossReason { get; set; }
     }
+
+    // Terminology is resolved once per circuit by the shared scoped service. Subscribing
+    // re-renders this page if the settings arrive after it first painted — otherwise a page
+    // that loaded before the fetch completed would keep the built-in labels until navigation.
+    private void OnPresentationChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Presentation.Changed -= OnPresentationChanged;
 }

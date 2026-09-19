@@ -4,6 +4,7 @@
 @inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Nav
+@inject TenantPresentationService Presentation
 
 <PageTitle>Dashboard — IronMonkey</PageTitle>
 
@@ -357,5 +358,7 @@
 
     private static string Metric(int? value) => value?.ToString("N0") ?? "—";
 
-    private static string MoneyMetric(decimal? value) => MoneyFormat.Nullable(value);
+    // Formatted with the tenant's own currency symbol; falls back to a bare grouped
+    // number when the tenant has not configured one, rather than asserting a currency.
+    private string MoneyMetric(decimal? value) => Presentation.Money(value);
 }

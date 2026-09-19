@@ -1,4 +1,5 @@
 @using IronMonkey.Web.Components.Pages.Admin.Dashboard
+@inject TenantPresentationService Presentation
 
 <DashboardWidget Title="Opportunities"
                  Subtitle="@Subtitle"
@@ -70,8 +71,9 @@
     [Parameter] public string? Subtitle { get; set; }
 
     // Whole units only: cents add width without adding a decision anyone makes from a
-    // dashboard glance. See MoneyFormat for why "C0" is not used.
-    private static string Money(decimal amount) => MoneyFormat.Amount(amount);
+    // dashboard glance. Uses the tenant's configured currency; see TenantFormatting for
+    // why "C0" is still never used.
+    private string Money(decimal amount) => Presentation.Money(amount);
 
     private static string Plural(int count, string noun) => $"{count} {noun}{(count == 1 ? "" : "s")}";
 }
