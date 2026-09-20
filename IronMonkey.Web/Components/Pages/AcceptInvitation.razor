@@ -1,0 +1,214 @@
+@page "/invitations/accept"
+@layout IronMonkey.Web.Components.Layout.PublicLayout
+@using System.ComponentModel.DataAnnotations
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+
+<PageTitle>Accept Invitation — IronMonkey</PageTitle>
+
+@* Anonymous by necessity: the invitee has no account yet, so there is no token to attach
+   and AdminApiClient would have nothing to add. This is the same pattern as /signup. *@
+
+<header class="w-full px-8 py-8 flex justify-between items-center max-w-7xl mx-auto">
+    <a href="/" class="text-2xl font-bold tracking-tighter text-primary uppercase font-headline">IronMonkey</a>
+</header>
+
+<main class="flex-grow flex flex-col items-center justify-center px-4 py-12">
+    <div class="w-full max-w-md">
+
+        @if (_isLoading)
+        {
+            <p class="text-center text-sm text-on-surface-variant">Checking your invitation…</p>
+        }
+        else if (_accepted)
+        {
+            <div class="rounded-xl border border-green-200 bg-green-50 p-6 text-center">
+                <h1 class="mb-2 text-xl font-bold text-green-900">You're all set</h1>
+                <p class="mb-4 text-sm text-green-800">Your account is ready. You can now sign in.</p>
+                <a href="/login" class="inline-block rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500">
+                    Go to sign in
+                </a>
+            </div>
+        }
+        else if (_preview is null)
+        {
+            @* One undifferentiated refusal for every invalid token. Naming the reason —
+               expired vs revoked vs never existed — would tell an anonymous caller which of
+               their guesses were real invitations. *@
+            <div class="rounded-xl border border-red-200 bg-red-50 p-6">
+                <h1 class="mb-2 text-xl font-bold text-red-900">This invitation isn't valid</h1>
+                <p class="text-sm text-red-800">@(_errorBanner ?? "Ask your administrator to send you a new invitation.")</p>
+                <a href="/login" class="mt-4 inline-block text-sm font-medium text-indigo-600 hover:text-indigo-700">Go to sign in</a>
+            </div>
+        }
+        else
+        {
+            <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h1 class="mb-1 text-xl font-bold text-slate-900">Join @_preview.TenantName</h1>
+                <p class="mb-4 text-sm text-slate-600">
+                    You've been invited as <strong>@_preview.RoleName</strong>. Choose a password to finish setting up
+                    <strong>@_preview.Email</strong>.
+                </p>
+
+                @if (!string.IsNullOrEmpty(_preview.Message))
+                {
+                    <blockquote class="mb-4 border-l-4 border-slate-200 pl-3 text-sm italic text-slate-600">
+                        @_preview.Message
+                    </blockquote>
+                }
+
+                @if (!string.IsNullOrEmpty(_errorBanner))
+                {
+                    <div class="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                        @_errorBanner
+                    </div>
+                }
+
+                <EditForm Model="_model" OnValidSubmit="HandleAcceptAsync">
+                    <DataAnnotationsValidator />
+
+                    <div class="mb-4">
+                        <label class="mb-1 block text-sm font-medium text-slate-700">Password</label>
+                        <InputText type="password" @bind-Value="_model.Password"
+                                   class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        <ValidationMessage For="() => _model.Password" class="mt-1 text-xs text-red-600" />
+                        <p class="mt-1 text-xs text-slate-500">At least 12 characters.</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="mb-1 block text-sm font-medium text-slate-700">Confirm password</label>
+                        <InputText type="password" @bind-Value="_model.ConfirmPassword"
+                                   class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        <ValidationMessage For="() => _model.ConfirmPassword" class="mt-1 text-xs text-red-600" />
+                    </div>
+
+                    <button type="submit" disabled="@_isSubmitting"
+                            class="w-full rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60">
+                        @(_isSubmitting ? "Creating your account..." : "Accept invitation")
+                    </button>
+                </EditForm>
+            </div>
+        }
+
+    </div>
+</main>
+
+@code {
+    [SupplyParameterFromQuery(Name = "tenant")]
+    private Guid Tenant { get; set; }
+
+    [SupplyParameterFromQuery(Name = "token")]
+    private string? Token { get; set; }
+
+    private readonly AcceptModel _model = new();
+    private PreviewResult? _preview;
+    private bool _isLoading = true;
+    private bool _isSubmitting;
+    private bool _accepted;
+    private string? _errorBanner;
+    private bool _loaded;
+
+    // After the first interactive render, not OnInitializedAsync: during prerender the
+    // circuit cannot do JS interop, and rendering the form before the preview resolves would
+    // briefly show an acceptance form for a token that turns out to be invalid.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _loaded) return;
+        _loaded = true;
+
+        await LoadPreviewAsync();
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadPreviewAsync()
+    {
+        if (Tenant == Guid.Empty || string.IsNullOrWhiteSpace(Token))
+            return;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var url = $"/invitations/preview?tenant={Tenant}&token={Uri.EscapeDataString(Token)}";
+            var response = await client.GetAsync(url);
+
+            if (response.IsSuccessStatusCode)
+                _preview = await response.Content.ReadFromJsonAsync<PreviewResult>();
+        }
+        catch (Exception)
+        {
+            _errorBanner = "Could not reach the server. Please try again shortly.";
+        }
+    }
+
+    private async Task HandleAcceptAsync()
+    {
+        _isSubmitting = true;
+        _errorBanner = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+
+            var response = await client.PostAsJsonAsync("/invitations/accept", new
+            {
+                TenantId = Tenant,
+                Token = Token,
+                // Sent from the preview rather than typed: the token is bound to this
+                // address, and letting the invitee edit it would only ever produce the
+                // mismatch refusal.
+                Email = _preview!.Email,
+                _model.Password
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                _accepted = true;
+                _preview = null;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            {
+                var problem = await response.Content.ReadFromJsonAsync<ProblemBody>();
+                _errorBanner = problem?.Detail ?? "This invitation could not be accepted.";
+            }
+            else
+            {
+                _errorBanner = "Something went wrong. Please try again.";
+            }
+        }
+        catch (Exception)
+        {
+            _errorBanner = "Could not reach the server. Please try again shortly.";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private sealed class AcceptModel
+    {
+        [Required(ErrorMessage = "Choose a password.")]
+        [MinLength(12, ErrorMessage = "Use at least 12 characters.")]
+        public string Password { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Confirm your password.")]
+        [Compare(nameof(Password), ErrorMessage = "The passwords do not match.")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+
+    private sealed class PreviewResult
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string RoleName { get; set; } = string.Empty;
+        public string TenantName { get; set; } = string.Empty;
+        public string? Message { get; set; }
+        public DateTime ExpiresAt { get; set; }
+    }
+
+    private sealed class ProblemBody
+    {
+        public string? Detail { get; set; }
+    }
+}

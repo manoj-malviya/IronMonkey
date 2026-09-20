@@ -253,6 +253,11 @@ public static class ConfigureServices
             builder.Services.AddScoped<IMergeFieldResolver, MergeFieldResolver>();
             builder.Services.AddScoped<IMessagingPolicyService, MessagingPolicyService>();
             builder.Services.AddScoped<IMessageDispatcher, MessageDispatcher>();
+
+            // Invitation delivery. Goes through IMessageDispatcher like every other outbound
+            // message, so an invitation cannot bypass consent or channel rules.
+            builder.Services.AddScoped<IronMonkey.ApiService.Features.UserManagement.Invitations.IInvitationService,
+                IronMonkey.ApiService.Features.UserManagement.Invitations.InvitationService>();
             builder.Services.AddScoped<IMessageSendScheduler, HangfireMessageSendScheduler>();
             builder.Services.AddScoped<IInboundMessageService, InboundMessageService>();
             builder.Services.AddScoped<IWebhookTenantResolver, WebhookTenantResolver>();

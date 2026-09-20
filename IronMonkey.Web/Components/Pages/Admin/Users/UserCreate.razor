@@ -85,7 +85,19 @@
     private bool _submitted = false;
     private string? _errorBanner = null;
 
-    protected override async Task OnInitializedAsync() => await LoadRolesAsync();
+    private bool _loaded;
+
+    // After the FIRST INTERACTIVE RENDER, not OnInitializedAsync: the JWT is in
+    // ProtectedSessionStorage, unreadable during prerender, so a fetch there is sent
+    // unauthenticated and 401s — leaving the role dropdown permanently empty.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _loaded) return;
+        _loaded = true;
+
+        await LoadRolesAsync();
+        StateHasChanged();
+    }
 
     private async Task LoadRolesAsync()
     {

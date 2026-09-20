@@ -105,9 +105,19 @@
     private bool _submitted = false;
     private string? _errorBanner = null;
 
-    protected override async Task OnInitializedAsync()
+    private bool _loaded;
+
+    // Fetched after the FIRST INTERACTIVE RENDER, not in OnInitializedAsync: the JWT lives in
+    // ProtectedSessionStorage, which needs JS interop and is unreadable during prerender, so
+    // a fetch there goes out with no Authorization header and comes back 401 — leaving the
+    // form silently blank.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender || _loaded) return;
+        _loaded = true;
+
         await Task.WhenAll(LoadUserAsync(), LoadRolesAsync());
+        StateHasChanged();
     }
 
     private async Task LoadUserAsync()
@@ -154,11 +164,17 @@
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 Nav.NavigateTo("/login");
-            else
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                _errorBanner = "You do not have permission to change this user.";
+            else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
             {
-                var body = await response.Content.ReadAsStringAsync();
-                _errorBanner = $"Failed to save user: {body}";
+                // Carries the server-side last-Admin refusal, among others. Read the problem
+                // detail rather than dumping the raw JSON body into the banner.
+                var problem = await response.Content.ReadFromJsonAsync<ProblemBody>();
+                _errorBanner = problem?.Detail ?? "That change was refused.";
             }
+            else
+                _errorBanner = "Failed to save user. Please try again.";
         }
         catch (Exception ex) { _errorBanner = $"Unable to save user: {ex.Message}"; }
         finally { _isSaving = false; }
@@ -178,11 +194,10 @@
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 Nav.NavigateTo("/login");
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                _errorBanner = "You do not have permission to reset this password.";
             else
-            {
-                var body = await response.Content.ReadAsStringAsync();
-                _errorBanner = $"Failed to reset password: {body}";
-            }
+                _errorBanner = "Failed to reset password. Please try again.";
         }
         catch (Exception ex) { _errorBanner = $"Unable to reset password: {ex.Message}"; }
         finally { _isResettingPassword = false; }
@@ -191,6 +206,7 @@
     private record UserDetail(Guid Id, string Name, string Email, int RoleId, string RoleName, bool IsActive, DateTime CreatedAt);
     private record RoleItem(int RoleId, string RoleName);
     private record ResetPasswordResponse(string GeneratedPassword, string Message);
+    private sealed class ProblemBody { public string? Detail { get; set; } }
 
     private class UserFormModel
     {

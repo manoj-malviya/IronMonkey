@@ -6,6 +6,7 @@ using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Common.Extensions;
 using IronMonkey.ApiService.Common.Results;
+using IronMonkey.Common.Auth;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
 using BC = BCrypt.Net.BCrypt;
@@ -16,8 +17,11 @@ public class CreateTenantUserEndpoint : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) => app
         .MapPost("/users", Handle)
-        .WithSummary("Create a new user in the current tenant with auto-generated password")
-        .RequireAuthorization()
+        // Kept for backward compatibility. The invitation flow (POST /users/invitations)
+        // is the primary path: it never has an admin choose or transmit someone else's
+        // password, which this endpoint unavoidably does.
+        .WithSummary("Create a new user in the current tenant with auto-generated password (legacy; prefer invitations)")
+        .RequireAuthorization(PermissionConstants.UsersWrite)
         .WithRequestValidation<Request>();
 
     public record Request(string Name, string Email, int RoleId);
@@ -33,10 +37,11 @@ public class CreateTenantUserEndpoint : IEndpoint
         }
     }
 
-    private static async Task<Results<Created<Response>, ValidationError, NotFound>> Handle(
+    internal static async Task<Results<Created<Response>, ValidationError, NotFound>> Handle(
         Request request,
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
+        IUserContext userContext,
         CentralDbContext centralDb,
         CancellationToken cancellationToken)
     {
@@ -49,6 +54,11 @@ public class CreateTenantUserEndpoint : IEndpoint
         var email = request.Email.Trim().ToLowerInvariant();
 
         await using var db = dbContextFactory.CreateForTenant(connectionString, tenantId);
+
+        // SuperAdmin is the platform operator's role; a tenant that could assign it would be
+        // minting itself a platform administrator.
+        if (!TenantRoleRules.IsVisibleToTenant(request.RoleId))
+            return TypedResults.NotFound();
 
         var role = await db.Roles.FirstOrDefaultAsync(r => r.Id == request.RoleId, cancellationToken);
         if (role is null)
@@ -80,6 +90,16 @@ public class CreateTenantUserEndpoint : IEndpoint
 
         var user = User.Create(tenantId, request.Name, email, hashed, role);
         db.Users.Add(user);
+
+        db.UserAuditLogs.Add(UserAuditLog.Record(
+            tenantId,
+            UserAuditEvent.UserCreated,
+            email,
+            DateTime.UtcNow,
+            targetUserId: user.Id,
+            actorUserId: userContext.UserId,
+            detail: $"Created directly as {role.Name}"));
+
         await db.SaveChangesAsync(cancellationToken);
 
         // Without this row LoginEndpoint's email -> tenant lookup finds nothing and the

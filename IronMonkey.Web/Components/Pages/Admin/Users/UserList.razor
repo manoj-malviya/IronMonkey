@@ -2,129 +2,257 @@
 @attribute [Authorize]
 @inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
-<PageTitle>User Management — IronMonkey Admin</PageTitle>
+<PageTitle>Team — IronMonkey Admin</PageTitle>
 
 <div class="space-y-6">
 
-    <!-- Top heading area -->
-    <div class="space-y-3">
-        <!-- Row 1: Title + Create button -->
-        <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-slate-900">User Management</h1>
-            <button @onclick="NavigateToCreate"
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-slate-900">Team</h1>
+        <div class="flex gap-2">
+            @* The invitation is the PRIMARY action: it never has an admin choose or transmit
+               someone else's password. Direct create is kept, de-emphasised, for the cases
+               that still need it. *@
+            <button @onclick='() => Nav.NavigateTo("/admin/users/invite")'
                     class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
-                <!-- Heroicon: plus -->
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-                + Create User
+                Invite teammate
             </button>
-        </div>
-
-        <!-- Row 2: Show Deactivated Users checkbox -->
-        <div class="flex items-center gap-2 mt-4">
-            <input type="checkbox" id="showInactive" @bind="_showInactive" class="rounded border-slate-300" />
-            <label for="showInactive" class="text-sm font-medium text-slate-700">Show Deactivated Users</label>
+            <button @onclick='() => Nav.NavigateTo("/admin/users/create")'
+                    class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                Create directly
+            </button>
         </div>
     </div>
 
-    <!-- Error banner -->
+    <!-- Tabs -->
+    <div class="border-b border-slate-200">
+        <nav class="-mb-px flex gap-6">
+            <button @onclick='() => SwitchTab("members")'
+                    class="border-b-2 px-1 pb-3 text-sm font-medium @(Tab != "invitations" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700")">
+                Members @(_page is not null ? $"({_page.TotalCount})" : "")
+            </button>
+            <button @onclick='() => SwitchTab("invitations")'
+                    class="border-b-2 px-1 pb-3 text-sm font-medium @(Tab == "invitations" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700")">
+                Invitations @(_invitations.Count > 0 ? $"({_invitations.Count})" : "")
+            </button>
+        </nav>
+    </div>
+
     @if (!string.IsNullOrEmpty(_errorBanner))
     {
-        <div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-            @_errorBanner
-        </div>
+        <div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">@_errorBanner</div>
+    }
+    @if (!string.IsNullOrEmpty(_successBanner))
+    {
+        <div class="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">@_successBanner</div>
     }
 
-    <!-- Loading state -->
-    @if (_isLoading)
+    @if (Tab != "invitations")
     {
-        <div class="py-12 text-center">
-            <p class="text-sm text-slate-500">Loading users...</p>
-        </div>
-    }
-
-    <!-- Empty state -->
-    @if (!_isLoading && DisplayedUsers.Count == 0)
-    {
-        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
-            <p class="text-slate-600">No users found.</p>
-            <button @onclick="NavigateToCreate"
-                    class="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
-                Create your first user
-            </button>
-        </div>
-    }
-
-    <!-- Table -->
-    @if (!_isLoading && DisplayedUsers.Count > 0)
-    {
-        <div class="overflow-x-auto rounded-lg border border-slate-200">
-            <table class="w-full">
-                <thead class="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Email</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Role</th>
-                        <th class="px-6 py-3 text-center text-xs font-semibold text-slate-900 uppercase tracking-wide">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Created</th>
-                        <th class="px-6 py-3 text-right text-xs font-semibold text-slate-900 uppercase tracking-wide">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var user in DisplayedUsers)
+        <!-- Filters. State lives in the URL so Back/Forward moves through filter states and
+             a shared link reproduces the view. -->
+        <div class="flex flex-wrap items-end gap-3">
+            <div class="flex-1 min-w-[220px]">
+                <label class="mb-1 block text-xs font-medium text-slate-600">Search</label>
+                <input value="@Search" @onchange="OnSearchChanged" placeholder="Name or email"
+                       class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-medium text-slate-600">Role</label>
+                <select value="@(RoleId?.ToString() ?? "")" @onchange="OnRoleChanged"
+                        class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                    <option value="">All roles</option>
+                    @foreach (var r in _roles)
                     {
-                        <tr class="border-b border-slate-100 hover:bg-slate-50">
-                            <td class="px-6 py-4 text-sm text-slate-900">@user.Name</td>
-                            <td class="px-6 py-4 text-sm text-slate-600">@user.Email</td>
-                            <td class="px-6 py-4 text-sm text-slate-600">@user.RoleName</td>
-                            <td class="px-6 py-4 text-center">
-                                <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold @GetStatusBadgeClass(user.IsActive)">
-                                    @(user.IsActive ? "Active" : "Deactivated")
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 text-sm text-slate-500">@user.CreatedAt.ToString("MMM d, yyyy")</td>
-                            <td class="px-6 py-4 text-right space-x-2">
-                                <button @onclick="() => NavigateToEdit(user.Id)"
-                                        class="text-sm font-medium text-indigo-600 hover:text-indigo-700">
-                                    Edit
-                                </button>
-                                @if (user.IsActive)
-                                {
-                                    <button @onclick="() => OpenDeactivateModal(user)"
-                                            class="text-sm font-medium text-red-600 hover:text-red-700">
-                                        Deactivate
-                                    </button>
-                                }
-                            </td>
-                        </tr>
+                        <option value="@r.RoleId">@r.RoleName</option>
                     }
-                </tbody>
-            </table>
+                </select>
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-medium text-slate-600">Status</label>
+                <select value="@(Active?.ToString().ToLowerInvariant() ?? "")" @onchange="OnActiveChanged"
+                        class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                    <option value="">All</option>
+                    <option value="true">Active</option>
+                    <option value="false">Deactivated</option>
+                </select>
+            </div>
         </div>
+
+        @if (_isLoading)
+        {
+            <div class="py-12 text-center"><p class="text-sm text-slate-500">Loading team…</p></div>
+        }
+        else if (_page is null || _page.Items.Count == 0)
+        {
+            <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
+                <p class="text-slate-600">No team members match these filters.</p>
+                <button @onclick='() => Nav.NavigateTo("/admin/users/invite")'
+                        class="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                    Invite your first teammate
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto rounded-lg border border-slate-200">
+                <table class="w-full">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Role</th>
+                            <th class="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-900">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Created</th>
+                            <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-900">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in _page.Items)
+                        {
+                            <tr class="border-b border-slate-100 hover:bg-slate-50">
+                                <td class="px-6 py-4 text-sm text-slate-900">@user.Name</td>
+                                <td class="px-6 py-4 text-sm text-slate-600">@user.Email</td>
+                                <td class="px-6 py-4 text-sm text-slate-600">@user.RoleName</td>
+                                <td class="px-6 py-4 text-center">
+                                    <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold @(user.IsActive ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600")">
+                                        @(user.IsActive ? "Active" : "Deactivated")
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-slate-500">@user.CreatedAt.ToString("MMM d, yyyy")</td>
+                                <td class="px-6 py-4 text-right space-x-3">
+                                    <button @onclick="() => NavigateToEdit(user.Id)"
+                                            class="text-sm font-medium text-indigo-600 hover:text-indigo-700">Edit</button>
+                                    @if (user.IsActive)
+                                    {
+                                        @* Destructive, so visually distinct and confirmed by
+                                           name before anything happens. *@
+                                        <button @onclick="() => OpenConfirm(user, deactivate: true)"
+                                                class="text-sm font-medium text-red-600 hover:text-red-700">Deactivate</button>
+                                    }
+                                    else
+                                    {
+                                        <button @onclick="() => OpenConfirm(user, deactivate: false)"
+                                                class="text-sm font-medium text-green-700 hover:text-green-800">Reactivate</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex items-center justify-between text-sm text-slate-600">
+                <span>Showing @((_page.Page - 1) * _page.PageSize + 1)–@Math.Min(_page.Page * _page.PageSize, _page.TotalCount) of @_page.TotalCount</span>
+                <div class="flex gap-2">
+                    <button disabled="@(_page.Page <= 1)" @onclick="() => GoToPage(_page.Page - 1)"
+                            class="rounded-lg border border-slate-300 px-3 py-1.5 disabled:opacity-40">Previous</button>
+                    <button disabled="@(_page.Page >= _page.TotalPages)" @onclick="() => GoToPage(_page.Page + 1)"
+                            class="rounded-lg border border-slate-300 px-3 py-1.5 disabled:opacity-40">Next</button>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        @if (_isLoading)
+        {
+            <div class="py-12 text-center"><p class="text-sm text-slate-500">Loading invitations…</p></div>
+        }
+        else if (_invitations.Count == 0)
+        {
+            <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
+                <p class="text-slate-600">No outstanding invitations.</p>
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto rounded-lg border border-slate-200">
+                <table class="w-full">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Invitee</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Role</th>
+                            <th class="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-900">State</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Sent</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Expires</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Next action</th>
+                            <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-900">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var inv in _invitations)
+                        {
+                            <tr class="border-b border-slate-100 hover:bg-slate-50">
+                                <td class="px-6 py-4 text-sm">
+                                    <div class="text-slate-900">@inv.Name</div>
+                                    <div class="text-xs text-slate-500">@inv.Email</div>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-slate-600">@inv.RoleName</td>
+                                <td class="px-6 py-4 text-center">
+                                    <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold @BadgeFor(inv.Status)">@inv.Status</span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-slate-500">@inv.SentAt.ToString("MMM d, yyyy")</td>
+                                <td class="px-6 py-4 text-sm text-slate-500">@inv.ExpiresAt.ToString("MMM d, yyyy")</td>
+                                <td class="px-6 py-4 text-xs text-slate-600">@inv.NextAction</td>
+                                <td class="px-6 py-4 text-right space-x-3">
+                                    @if (inv.Status is "Pending" or "Expired" or "Failed")
+                                    {
+                                        <button @onclick="() => ResendAsync(inv)" disabled="@_isBusy"
+                                                class="text-sm font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-40">Resend</button>
+                                        <button @onclick="() => RevokeAsync(inv)" disabled="@_isBusy"
+                                                class="text-sm font-medium text-red-600 hover:text-red-700 disabled:opacity-40">Revoke</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (_lastResendLink is not null)
+            {
+                <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-4">
+                    <p class="mb-2 text-sm font-semibold text-amber-900">
+                        New invitation link (shown once — the previous link no longer works)
+                    </p>
+                    <div class="flex gap-2">
+                        <input readonly value="@_lastResendLink" class="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs" />
+                        <button @onclick="CopyResendLinkAsync" class="rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-700">
+                            @(_copied ? "Copied" : "Copy")
+                        </button>
+                    </div>
+                </div>
+            }
+        }
     }
 
 </div>
 
-<!-- Deactivate confirmation modal -->
-@if (_showDeactivateModal)
+<!-- Confirmation naming the affected user -->
+@if (_confirmUser is not null)
 {
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-        <div class="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4">
-            <h3 class="text-lg font-semibold text-slate-900 mb-2">Deactivate User</h3>
-            <p class="text-sm text-slate-600 mb-6">
-                Are you sure you want to deactivate @_deactivatingUser?.Name? They will no longer be able to access the system.
+        <div class="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h3 class="mb-2 text-lg font-semibold text-slate-900">
+                @(_confirmDeactivate ? "Deactivate" : "Reactivate") @_confirmUser.Name
+            </h3>
+            <p class="mb-6 text-sm text-slate-600">
+                @if (_confirmDeactivate)
+                {
+                    <text>@_confirmUser.Name (@_confirmUser.Email) will no longer be able to sign in.</text>
+                }
+                else
+                {
+                    <text>@_confirmUser.Name (@_confirmUser.Email) will be able to sign in again.</text>
+                }
             </p>
             <div class="flex justify-end gap-3">
-                <button type="button" @onclick="CloseDeactivateModal"
-                        class="text-sm font-medium text-slate-700 hover:text-slate-800 px-4 py-2">
-                    Cancel
-                </button>
-                <button type="button" @onclick="ConfirmDeactivateAsync"
-                        disabled="@_isDeactivating"
-                        class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60">
-                    @(_isDeactivating ? "..." : "Deactivate")
+                <button type="button" @onclick="CloseConfirm" class="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-800">Cancel</button>
+                <button type="button" @onclick="ConfirmAsync" disabled="@_isBusy"
+                        class="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 @(_confirmDeactivate ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700")">
+                    @(_isBusy ? "…" : (_confirmDeactivate ? "Deactivate" : "Reactivate"))
                 </button>
             </div>
         </div>
@@ -132,56 +260,71 @@
 }
 
 @code {
-    private List<UserListItem> _users = [];
+    [SupplyParameterFromQuery(Name = "tab")] private string? Tab { get; set; }
+    [SupplyParameterFromQuery(Name = "search")] private string? Search { get; set; }
+    [SupplyParameterFromQuery(Name = "roleId")] private int? RoleId { get; set; }
+    [SupplyParameterFromQuery(Name = "active")] private bool? Active { get; set; }
+    [SupplyParameterFromQuery(Name = "page")] private int? PageNumber { get; set; }
+
+    private PagedUsers? _page;
+    private List<InvitationItem> _invitations = [];
+    private List<RoleItem> _roles = [];
     private bool _isLoading = true;
-    private bool _showInactive = false;
-    private string? _errorBanner = null;
-    private bool _isDeactivating = false;
-    private bool _showDeactivateModal = false;
-    private UserListItem? _deactivatingUser = null;
+    private bool _isBusy;
+    private bool _copied;
+    private string? _errorBanner;
+    private string? _successBanner;
+    private string? _lastResendLink;
+    private UserListItem? _confirmUser;
+    private bool _confirmDeactivate;
+    private bool _firstRenderDone;
 
-    private List<UserListItem> DisplayedUsers =>
-        _showInactive ? _users : _users.Where(u => u.IsActive).ToList();
-
-    protected override async Task OnInitializedAsync()
+    // Fetched after the first INTERACTIVE render: the JWT lives in ProtectedSessionStorage,
+    // which needs JS interop and is unreadable during prerender, so a fetch in
+    // OnInitializedAsync goes out with no Authorization header and 401s silently.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await LoadUsersAsync();
+        if (!firstRender) return;
+        _firstRenderDone = true;
+        await LoadAsync();
+        StateHasChanged();
     }
 
-    private void NavigateToCreate()
+    // Query-string changes re-run parameter set; reload only once interactive.
+    protected override async Task OnParametersSetAsync()
     {
-        Nav.NavigateTo("/admin/users/create");
+        if (!_firstRenderDone) return;
+        await LoadAsync();
     }
 
-    private void NavigateToEdit(Guid id)
-    {
-        Nav.NavigateTo($"/admin/users/{id}/edit");
-    }
-
-    private void OpenDeactivateModal(UserListItem user)
-    {
-        _deactivatingUser = user;
-        _showDeactivateModal = true;
-    }
-
-    private void CloseDeactivateModal()
-    {
-        _showDeactivateModal = false;
-        _deactivatingUser = null;
-    }
-
-    private async Task LoadUsersAsync()
+    private async Task LoadAsync()
     {
         _isLoading = true;
         _errorBanner = null;
+
         try
         {
-            var list = await Api.GetFromJsonAsync<List<UserListItem>>("/users");
-            _users = list ?? [];
+            _roles = await Api.GetFromJsonAsync<List<RoleItem>>("/users/roles") ?? [];
+
+            if (Tab == "invitations")
+            {
+                _invitations = await Api.GetFromJsonAsync<List<InvitationItem>>("/users/invitations") ?? [];
+            }
+            else
+            {
+                var q = new List<string>();
+                if (!string.IsNullOrWhiteSpace(Search)) q.Add($"search={Uri.EscapeDataString(Search)}");
+                if (RoleId is { } r) q.Add($"roleId={r}");
+                if (Active is { } a) q.Add($"isActive={a.ToString().ToLowerInvariant()}");
+                q.Add($"page={PageNumber ?? 1}");
+
+                _page = await Api.GetFromJsonAsync<PagedUsers>($"/users?{string.Join("&", q)}");
+                if (_page is null) _errorBanner = "Could not load the team list.";
+            }
         }
         catch (Exception ex)
         {
-            _errorBanner = $"Failed to load users: {ex.Message}";
+            _errorBanner = $"Failed to load: {ex.Message}";
         }
         finally
         {
@@ -189,52 +332,252 @@
         }
     }
 
-    private async Task ConfirmDeactivateAsync()
-    {
-        if (_deactivatingUser is null) return;
+    private void SwitchTab(string tab) => Navigate(tab: tab, page: 1);
 
-        _isDeactivating = true;
+    private void OnSearchChanged(ChangeEventArgs e)
+        => Navigate(search: e.Value?.ToString(), page: 1);
+
+    private void OnRoleChanged(ChangeEventArgs e)
+        => Navigate(roleId: int.TryParse(e.Value?.ToString(), out var r) ? r : null, page: 1, clearRole: true);
+
+    private void OnActiveChanged(ChangeEventArgs e)
+        => Navigate(active: bool.TryParse(e.Value?.ToString(), out var a) ? a : null, page: 1, clearActive: true);
+
+    private void GoToPage(int page) => Navigate(page: page);
+
+    private void Navigate(
+        string? tab = null, string? search = null, int? roleId = null, bool? active = null, int? page = null,
+        bool clearRole = false, bool clearActive = false)
+    {
+        var q = new List<string>();
+        var effectiveTab = tab ?? Tab;
+        if (!string.IsNullOrEmpty(effectiveTab)) q.Add($"tab={effectiveTab}");
+
+        var effectiveSearch = search ?? Search;
+        if (!string.IsNullOrWhiteSpace(effectiveSearch)) q.Add($"search={Uri.EscapeDataString(effectiveSearch)}");
+
+        var effectiveRole = clearRole ? roleId : (roleId ?? RoleId);
+        if (effectiveRole is { } r) q.Add($"roleId={r}");
+
+        var effectiveActive = clearActive ? active : (active ?? Active);
+        if (effectiveActive is { } a) q.Add($"active={a.ToString().ToLowerInvariant()}");
+
+        var effectivePage = page ?? PageNumber ?? 1;
+        if (effectivePage > 1) q.Add($"page={effectivePage}");
+
+        Nav.NavigateTo(q.Count == 0 ? "/admin/users" : $"/admin/users?{string.Join("&", q)}");
+    }
+
+    private void NavigateToEdit(Guid id) => Nav.NavigateTo($"/admin/users/{id}/edit");
+
+    private void OpenConfirm(UserListItem user, bool deactivate)
+    {
+        _confirmUser = user;
+        _confirmDeactivate = deactivate;
         _errorBanner = null;
+        _successBanner = null;
+    }
+
+    private void CloseConfirm() => _confirmUser = null;
+
+    private async Task ConfirmAsync()
+    {
+        if (_confirmUser is null) return;
+        _isBusy = true;
+        _errorBanner = null;
+
         try
         {
-            var response = await Api.DeleteAsync($"/users/{_deactivatingUser.Id}");
+            var response = _confirmDeactivate
+                ? await Api.DeleteAsync($"/users/{_confirmUser.Id}")
+                : await Api.PostAsync($"/users/{_confirmUser.Id}/reactivate");
+
             if (response.IsSuccessStatusCode)
             {
-                var item = _users.FirstOrDefault(u => u.Id == _deactivatingUser.Id);
-                if (item is not null) item.IsActive = false;
-                CloseDeactivateModal();
+                _successBanner = _confirmDeactivate
+                    ? $"{_confirmUser.Name} has been deactivated."
+                    : $"{_confirmUser.Name} has been reactivated.";
+                CloseConfirm();
+                await LoadAsync();
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
                 Nav.NavigateTo("/login");
             }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                _errorBanner = "You do not have permission to do that.";
+                CloseConfirm();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            {
+                // Carries the server-side last-Admin refusal, among others. The server is the
+                // enforcer; this only relays its reason.
+                var problem = await response.Content.ReadFromJsonAsync<ProblemBody>();
+                _errorBanner = problem?.Detail ?? "That change was refused.";
+                CloseConfirm();
+            }
             else
             {
-                _errorBanner = "Failed to deactivate user.";
-                CloseDeactivateModal();
+                _errorBanner = "Something went wrong. Please try again.";
+                CloseConfirm();
             }
         }
         catch (Exception ex)
         {
             _errorBanner = $"Error: {ex.Message}";
-            CloseDeactivateModal();
+            CloseConfirm();
         }
         finally
         {
-            _isDeactivating = false;
+            _isBusy = false;
         }
     }
 
-    private static string GetStatusBadgeClass(bool isActive) =>
-        isActive ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600";
+    private async Task ResendAsync(InvitationItem inv)
+    {
+        _isBusy = true;
+        _errorBanner = null;
+        _successBanner = null;
+        _lastResendLink = null;
+        _copied = false;
 
-    private class UserListItem
+        try
+        {
+            var response = await Api.PostAsync($"/users/invitations/{inv.Id}/resend");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ResendResult>();
+                _successBanner = result?.EmailSent == true
+                    ? $"Invitation resent to {inv.Email}."
+                    : $"A new link was created for {inv.Email}, but the email could not be sent.";
+                _lastResendLink = string.IsNullOrEmpty(result?.AcceptUrl) ? null : result.AcceptUrl;
+                await LoadAsync();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            {
+                var problem = await response.Content.ReadFromJsonAsync<ProblemBody>();
+                _errorBanner = problem?.Detail ?? "The invitation could not be resent.";
+            }
+            else
+            {
+                _errorBanner = "The invitation could not be resent.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task RevokeAsync(InvitationItem inv)
+    {
+        _isBusy = true;
+        _errorBanner = null;
+        _successBanner = null;
+        _lastResendLink = null;
+
+        try
+        {
+            var response = await Api.DeleteAsync($"/users/invitations/{inv.Id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                _successBanner = $"The invitation for {inv.Email} has been revoked.";
+                await LoadAsync();
+            }
+            else
+            {
+                var problem = await response.Content.ReadFromJsonAsync<ProblemBody>();
+                _errorBanner = problem?.Detail ?? "The invitation could not be revoked.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task CopyResendLinkAsync()
+    {
+        if (_lastResendLink is null) return;
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", _lastResendLink);
+            _copied = true;
+        }
+        catch { /* clipboard may be unavailable; the field is still selectable */ }
+    }
+
+    private static string BadgeFor(string status) => status switch
+    {
+        "Pending" => "bg-amber-100 text-amber-800",
+        "Accepted" => "bg-green-100 text-green-800",
+        "Expired" => "bg-slate-100 text-slate-600",
+        "Revoked" => "bg-slate-100 text-slate-600",
+        "Failed" => "bg-red-100 text-red-800",
+        _ => "bg-slate-100 text-slate-600"
+    };
+
+    private sealed class PagedUsers
+    {
+        public List<UserListItem> Items { get; set; } = [];
+        public int TotalCount { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages { get; set; }
+    }
+
+    private sealed class UserListItem
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public int RoleId { get; set; }
         public string RoleName { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; }
+    }
+
+    private sealed class InvitationItem
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public int RoleId { get; set; }
+        public string RoleName { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public DateTime SentAt { get; set; }
+        public DateTime ExpiresAt { get; set; }
+        public DateTime? AcceptedAt { get; set; }
+        public int SendCount { get; set; }
+        public string? FailureReason { get; set; }
+        public string NextAction { get; set; } = string.Empty;
+    }
+
+    private sealed class RoleItem
+    {
+        public int RoleId { get; set; }
+        public string RoleName { get; set; } = string.Empty;
+    }
+
+    private sealed class ResendResult
+    {
+        public string AcceptUrl { get; set; } = string.Empty;
+        public bool EmailSent { get; set; }
+    }
+
+    private sealed class ProblemBody
+    {
+        public string? Detail { get; set; }
     }
 }

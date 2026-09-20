@@ -1,0 +1,264 @@
+@page "/admin/users/invite"
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<PageTitle>Invite Teammate — IronMonkey Admin</PageTitle>
+
+<div class="max-w-3xl">
+
+    <button type="button" @onclick='() => Nav.NavigateTo("/admin/users")'
+            class="mb-4 text-sm text-indigo-600 hover:text-indigo-700">
+        ← Back to Users
+    </button>
+
+    <h1 class="mb-2 text-2xl font-bold text-slate-900">Invite a teammate</h1>
+    <p class="mb-6 text-sm text-slate-600">
+        They will receive a link to set their own password. You never choose or see it.
+    </p>
+
+    @if (!string.IsNullOrEmpty(_errorBanner))
+    {
+        <div class="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            @_errorBanner
+        </div>
+    }
+
+    @if (_result is not null)
+    {
+        <div class="mb-6 rounded-lg border px-4 py-4 @(_result.EmailSent ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200")">
+            <p class="text-sm font-semibold @(_result.EmailSent ? "text-green-800" : "text-amber-800")">
+                @(_result.EmailSent
+                    ? $"Invitation sent to {_result.Email}."
+                    : "Invitation created, but the email could not be sent.")
+            </p>
+            @if (!_result.EmailSent && !string.IsNullOrEmpty(_result.DeliveryError))
+            {
+                <p class="mt-1 text-xs text-amber-700">@_result.DeliveryError</p>
+            }
+            @* The link is shown ONCE. Only its hash is stored, so it cannot be re-derived
+               afterwards — which is also what makes the flow usable with no mail provider. *@
+            @if (!string.IsNullOrEmpty(_result.AcceptUrl))
+            {
+                <div class="mt-3">
+                    <label class="mb-1 block text-xs font-medium text-slate-700">
+                        Invitation link (shown once — copy it now if you need to send it yourself)
+                    </label>
+                    <div class="flex gap-2">
+                        <input readonly value="@_result.AcceptUrl"
+                               class="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700" />
+                        <button type="button" @onclick="CopyLinkAsync"
+                                class="rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-700">
+                            @(_copied ? "Copied" : "Copy")
+                        </button>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">Expires @_result.ExpiresAt.ToString("MMM d, yyyy HH:mm") UTC.</p>
+                </div>
+            }
+            <div class="mt-4 flex gap-3">
+                <button type="button" @onclick="ResetForAnother"
+                        class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                    Invite another
+                </button>
+                <button type="button" @onclick='() => Nav.NavigateTo("/admin/users")'
+                        class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    Back to Users
+                </button>
+            </div>
+        </div>
+    }
+
+    @if (_result is null)
+    {
+        <EditForm Model="_model" OnValidSubmit="HandleSubmitAsync">
+            <DataAnnotationsValidator />
+
+            <div class="mb-4">
+                <label class="mb-1 block text-sm font-medium text-slate-700">Name</label>
+                <InputText @bind-Value="_model.Name" placeholder="e.g. John Doe"
+                           class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <ValidationMessage For="() => _model.Name" class="mt-1 text-xs text-red-600" />
+            </div>
+
+            <div class="mb-4">
+                <label class="mb-1 block text-sm font-medium text-slate-700">Email</label>
+                <InputText @bind-Value="_model.Email" placeholder="e.g. john@example.com"
+                           class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <ValidationMessage For="() => _model.Email" class="mt-1 text-xs text-red-600" />
+            </div>
+
+            <div class="mb-4">
+                <label class="mb-1 block text-sm font-medium text-slate-700">Role</label>
+                <select @bind="_selectedRoleId"
+                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="0">Select a role</option>
+                    @foreach (var role in _roles)
+                    {
+                        <option value="@role.RoleId">@role.RoleName</option>
+                    }
+                </select>
+                @if (_submitted && _selectedRoleId == 0)
+                {
+                    <p class="mt-1 text-xs text-red-600">Role is required.</p>
+                }
+            </div>
+
+            <div class="mb-4">
+                <label class="mb-1 block text-sm font-medium text-slate-700">Message <span class="text-slate-400">(optional)</span></label>
+                <InputTextArea @bind-Value="_model.Message" rows="3" placeholder="A short note shown on the invitation."
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <ValidationMessage For="() => _model.Message" class="mt-1 text-xs text-red-600" />
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button type="submit" disabled="@_isSubmitting"
+                        class="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60">
+                    @(_isSubmitting ? "Sending..." : "Send invitation")
+                </button>
+            </div>
+        </EditForm>
+    }
+
+</div>
+
+@code {
+    private readonly InviteModel _model = new();
+    private List<RoleItem> _roles = [];
+    private int _selectedRoleId;
+    private bool _submitted;
+    private bool _isSubmitting;
+    private bool _copied;
+    private string? _errorBanner;
+    private InviteResult? _result;
+    private bool _loaded;
+
+    // Fetched after the FIRST INTERACTIVE RENDER, not in OnInitializedAsync: the JWT lives in
+    // ProtectedSessionStorage, which needs JS interop and is unreadable during prerender, so
+    // a fetch there goes out unauthenticated and 401s.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _loaded) return;
+        _loaded = true;
+
+        // Tenant roles come from /users/roles, never the legacy /roles, which queries the
+        // obsolete AppDbContext against the central DB and 500s.
+        var roles = await Api.GetFromJsonAsync<List<RoleItem>>("/users/roles");
+        _roles = roles ?? [];
+        StateHasChanged();
+    }
+
+    private async Task HandleSubmitAsync()
+    {
+        _submitted = true;
+        if (_selectedRoleId == 0) return;
+
+        _isSubmitting = true;
+        _errorBanner = null;
+
+        try
+        {
+            var response = await Api.PostAsJsonAsync("/users/invitations", new
+            {
+                _model.Name,
+                _model.Email,
+                RoleId = _selectedRoleId,
+                _model.Message
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                _result = await response.Content.ReadFromJsonAsync<InviteResult>();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                Nav.NavigateTo("/login");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                _errorBanner = "You do not have permission to invite teammates.";
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            {
+                var problem = await response.Content.ReadFromJsonAsync<ProblemBody>();
+                _errorBanner = problem?.Detail ?? "The invitation could not be created.";
+            }
+            else
+            {
+                _errorBanner = "Something went wrong creating the invitation. Please try again.";
+            }
+        }
+        catch (Exception)
+        {
+            _errorBanner = "Could not reach the server. Please try again.";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private async Task CopyLinkAsync()
+    {
+        if (_result?.AcceptUrl is null) return;
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", _result.AcceptUrl);
+            _copied = true;
+        }
+        catch
+        {
+            // Clipboard access can be refused (insecure origin, permission). The link is
+            // still selectable in the field, so this is not worth an error banner.
+        }
+    }
+
+    private void ResetForAnother()
+    {
+        _result = null;
+        _copied = false;
+        _submitted = false;
+        _model.Name = string.Empty;
+        _model.Email = string.Empty;
+        _model.Message = null;
+        _selectedRoleId = 0;
+    }
+
+    private sealed class InviteModel
+    {
+        [Required(ErrorMessage = "Name is required.")]
+        [StringLength(200)]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Enter a valid email address.")]
+        [StringLength(256)]
+        public string Email { get; set; } = string.Empty;
+
+        [StringLength(1000)]
+        public string? Message { get; set; }
+    }
+
+    private sealed class RoleItem
+    {
+        public int RoleId { get; set; }
+        public string RoleName { get; set; } = string.Empty;
+    }
+
+    private sealed class InviteResult
+    {
+        public Guid InvitationId { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public DateTime ExpiresAt { get; set; }
+        public string AcceptUrl { get; set; } = string.Empty;
+        public bool EmailSent { get; set; }
+        public string? DeliveryError { get; set; }
+    }
+
+    private sealed class ProblemBody
+    {
+        public string? Detail { get; set; }
+    }
+}

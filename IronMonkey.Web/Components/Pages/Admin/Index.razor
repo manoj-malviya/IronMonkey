@@ -81,6 +81,12 @@
         </div>
     }
 
+    @* Tenant context strip and first-run setup checklist. Additive: it owns its own
+       WidgetState, so a setup-status failure degrades here alone and the CRM panels below
+       are unaffected. The server decides whether the checklist shows at all, and it stops
+       showing once setup is complete — the strip above it stays. *@
+    <OnboardingChecklist State="_onboarding" OnRetry="LoadOnboardingAsync" />
+
     <!-- Headline metrics -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard Label="Open leads"
@@ -187,20 +193,28 @@
     private readonly WidgetState<DashboardAttention> _attention = new();
     private readonly WidgetState<DashboardActivity> _activity = new();
 
+    /// <summary>
+    /// First-run setup status. A fifth independently-fetched panel, held the same way as the
+    /// four CRM widgets so it cannot take the page down and is retried with them.
+    /// </summary>
+    private readonly WidgetState<OnboardingStatus> _onboarding = new();
+
     private string _preset = "last30days";
     private DateOnly? _customFrom;
     private DateOnly? _customTo;
 
     private bool _initialized;
 
-    private const int TotalWidgetCount = 4;
+    private const int TotalWidgetCount = 5;
 
     private bool IsAnyLoading =>
-        _summary.IsLoading || _opportunities.IsLoading || _attention.IsLoading || _activity.IsLoading;
+        _summary.IsLoading || _opportunities.IsLoading || _attention.IsLoading
+        || _activity.IsLoading || _onboarding.IsLoading;
 
     private int FailedWidgetCount =>
         (_summary.HasError ? 1 : 0) + (_opportunities.HasError ? 1 : 0)
-        + (_attention.HasError ? 1 : 0) + (_activity.HasError ? 1 : 0);
+        + (_attention.HasError ? 1 : 0) + (_activity.HasError ? 1 : 0)
+        + (_onboarding.HasError ? 1 : 0);
 
     // The JWT lives in ProtectedSessionStorage, which needs JS interop. During prerender
     // interop is unavailable, so a fetch here would go out with no Authorization header and
@@ -229,6 +243,7 @@
             LoadOpportunitiesAsync(),
             LoadAttentionAsync(),
             LoadActivityAsync(),
+            LoadOnboardingAsync(),
         };
 
         // Re-render as soon as the skeletons should appear, rather than only at the end.
@@ -245,6 +260,7 @@
         if (_opportunities.HasError) tasks.Add(LoadOpportunitiesAsync());
         if (_attention.HasError) tasks.Add(LoadAttentionAsync());
         if (_activity.HasError) tasks.Add(LoadActivityAsync());
+        if (_onboarding.HasError) tasks.Add(LoadOnboardingAsync());
 
         StateHasChanged();
         await Task.WhenAll(tasks);
@@ -256,6 +272,23 @@
         await _summary.LoadAsync(
             () => Api.GetFromJsonAsync<DashboardSummary>($"/api/dashboard/summary{RangeQuery}"),
             "Could not load pipeline metrics.");
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Fetches the server's setup status. Deliberately NOT date-range filtered: whether the
+    /// tenant has configured its pipeline is not a property of the window being inspected,
+    /// and re-fetching it on every range change would be a pointless round trip.
+    ///
+    /// Called from OnAfterRenderAsync with the rest, so the token in ProtectedSessionStorage
+    /// is readable — during prerender it is not, and the request would come back 401 and
+    /// render a false "setup incomplete".
+    /// </summary>
+    private async Task LoadOnboardingAsync()
+    {
+        await _onboarding.LoadAsync(
+            () => Api.GetFromJsonAsync<OnboardingStatus>("/api/onboarding/setup-status"),
+            "Could not load your setup status.");
         StateHasChanged();
     }
 

@@ -230,13 +230,21 @@
     protected override async Task OnInitializedAsync()
     {
         _customFields = await Api.GetFromJsonAsync<List<FieldDef>>("/api/custom-fields?entityType=Lead") ?? [];
-        _users = await Api.GetFromJsonAsync<List<UserRef>>("/users") ?? [];
+        // GET /users returns a page object, not an array. A large tenant would otherwise
+        // be truncated to the first page here, so ask for one big enough for a picker.
+        var users = await Api.GetFromJsonAsync<PagedUserRefs>("/users?pageSize=200");
+        _users = users?.Items ?? [];
     }
 
     private class FieldDef
     {
         public Guid Id { get; set; }
         public string FieldName { get; set; } = "";
+    }
+
+    private class PagedUserRefs
+    {
+        public List<UserRef> Items { get; set; } = [];
     }
 
     private class UserRef
