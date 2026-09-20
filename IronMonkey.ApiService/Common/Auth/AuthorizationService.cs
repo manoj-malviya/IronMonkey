@@ -58,6 +58,20 @@ internal sealed class AuthorizationService
         return permissions;
     }
 
+    /// <summary>
+    /// Drops a user's cached permission set so the next request re-resolves it from
+    /// role_permissions.
+    ///
+    /// Without this a role change would not take effect for up to the five minutes the
+    /// cache above holds, which is the opposite of what an administrator pressing "save"
+    /// expects — and, for a demotion, leaves elevated permissions live after they were
+    /// deliberately taken away. The key is built here, next to the one it must match: a
+    /// second copy of that format string at the call site would silently stop matching
+    /// the moment either changed.
+    /// </summary>
+    public Task InvalidatePermissionsAsync(Guid userId, Guid tenantId, CancellationToken cancellationToken = default)
+        => _cacheService.RemoveAsync($"auth:permissions-{tenantId}-{userId}", cancellationToken);
+
     private async Task<HashSet<string>> GetPlatformPermissionsAsync(string identityId)
     {
         // A platform token carries the PlatformUser's Id as its identity.

@@ -1,0 +1,218 @@
+@* First-run setup checklist and tenant context strip.
+
+   Additive to the dashboard: it renders above the widgets and owns its own WidgetState, so a
+   setup-status failure shows here and nowhere else — the CRM panels below are untouched.
+
+   It never computes completion itself. Every IsComplete, the percentage and even the decision
+   to show the checklist come from the server, so the rules live in one place.
+*@
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+
+@if (State.HasError && !State.HasData)
+{
+    @* Setup status alone failed. Said plainly and quietly: the CRM work below is fine, and
+       this panel is the least important thing on the page. *@
+    <div role="status" class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4">
+        <p class="text-sm text-slate-600">@State.ErrorMessage</p>
+        <button type="button" @onclick="OnRetry" disabled="@State.IsLoading"
+                class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60">
+            Retry
+        </button>
+    </div>
+}
+else if (State.Data is { } status)
+{
+    <!-- Tenant context strip: whose workspace this is, who you are in it. -->
+    <div class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4">
+        <div class="min-w-0">
+            <p class="truncate text-base font-semibold text-slate-900">@status.Tenant.TenantName</p>
+            <p class="mt-0.5 truncate text-xs text-slate-500">
+                Signed in as @status.Tenant.UserName@(string.IsNullOrWhiteSpace(status.Tenant.UserEmail) ? "" : $" ({status.Tenant.UserEmail})")
+            </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+            <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                @status.Tenant.RoleName
+            </span>
+
+            @if (!string.IsNullOrWhiteSpace(status.Tenant.SettingsLink))
+            {
+                <a href="@status.Tenant.SettingsLink"
+                   class="text-xs font-semibold text-indigo-600 hover:text-indigo-500">
+                    Organisation settings
+                </a>
+            }
+
+            @* Once setup is done the progress indicator shrinks to this single line and the
+               checklist disappears entirely, so it stops competing with real CRM work. *@
+            @if (status.IsComplete)
+            {
+                <span class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
+                    </svg>
+                    Setup complete
+                </span>
+            }
+            else if (status.IsDismissed)
+            {
+                @* Dismissed but unfinished: the only way back is from the dashboard, so the
+                   reopen control has to live here rather than inside the hidden checklist. *@
+                <button type="button" @onclick="ReopenAsync" disabled="@_isSaving"
+                        class="text-xs font-semibold text-indigo-600 hover:text-indigo-500 disabled:opacity-60">
+                    Show setup checklist (@status.CompletedCount of @status.TotalCount done)
+                </button>
+            }
+        </div>
+    </div>
+
+    @if (status.ShouldShowChecklist)
+    {
+        <section aria-labelledby="onboarding-heading"
+                 class="rounded-xl border border-indigo-200 bg-indigo-50/60 px-5 py-4">
+
+            <div class="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                    <h2 id="onboarding-heading" class="text-sm font-semibold text-slate-900">Finish setting up</h2>
+                    <p class="mt-0.5 text-xs text-slate-600">
+                        A few steps left before your team can work the way you want.
+                    </p>
+                </div>
+
+                <button type="button" @onclick="DismissAsync" disabled="@_isSaving"
+                        title="Hide this checklist"
+                        class="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-white/80 disabled:opacity-60">
+                    @(_isSaving ? "Hiding…" : "Dismiss")
+                </button>
+            </div>
+
+            <!-- Progress. The bar and the text say the same thing, so it is readable
+                 without colour and by a screen reader. -->
+            <div class="mt-4">
+                <div class="flex items-center justify-between text-xs font-medium text-slate-700">
+                    <span>@status.CompletedCount of @status.TotalCount complete</span>
+                    <span>@status.CompletionPercentage%</span>
+                </div>
+                <div class="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-indigo-100"
+                     role="progressbar"
+                     aria-valuenow="@status.CompletionPercentage"
+                     aria-valuemin="0"
+                     aria-valuemax="100"
+                     aria-label="Setup progress">
+                    <div class="h-full rounded-full bg-indigo-600 transition-all"
+                         style="width:@(status.CompletionPercentage)%"></div>
+                </div>
+            </div>
+
+            <ul class="mt-4 space-y-2">
+                @foreach (var step in status.Steps)
+                {
+                    <li class="flex flex-wrap items-start gap-3 rounded-lg border border-white bg-white px-4 py-3">
+                        @* Completion state carries an icon, a label and a text colour — never
+                           colour alone. *@
+                        @if (step.IsComplete)
+                        {
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                                 class="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd" />
+                            </svg>
+                        }
+                        else
+                        {
+                            <span class="mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 border-slate-300" aria-hidden="true"></span>
+                        }
+
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold @(step.IsComplete ? "text-slate-500 line-through" : "text-slate-900")">
+                                @step.Title
+                                <span class="sr-only">— @(step.IsComplete ? "complete" : "not started")</span>
+                            </p>
+                            <p class="mt-0.5 text-xs text-slate-600">
+                                @* The empty-state hint is the useful half for an unfinished
+                                   step: it says what is missing, not just what the step is. *@
+                                @(step.IsComplete ? step.Description : step.EmptyStateHint)
+                            </p>
+                        </div>
+
+                        @if (!step.IsComplete)
+                        {
+                            <a href="@step.Link"
+                               class="shrink-0 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500">
+                                @step.LinkText
+                            </a>
+                        }
+                        else
+                        {
+                            <a href="@step.Link"
+                               class="shrink-0 text-xs font-semibold text-slate-500 hover:text-slate-700">
+                                Review
+                            </a>
+                        }
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+}
+
+@code {
+    /// <summary>
+    /// Owned by the page, like every other dashboard panel, so a setup-status failure is
+    /// counted in the page's "N of M panels could not be loaded" notice alongside the rest.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public WidgetState<OnboardingStatus> State { get; set; } = default!;
+
+    /// <summary>Re-fetches after a failure. Supplied by the page so retry logic stays in one place.</summary>
+    [Parameter]
+    public EventCallback OnRetry { get; set; }
+
+    private bool _isSaving;
+
+    private Task DismissAsync() => SetDismissedAsync(true);
+
+    private Task ReopenAsync() => SetDismissedAsync(false);
+
+    /// <summary>
+    /// Persists the dismissal server-side and adopts the status the write returns.
+    ///
+    /// The response is the freshly recomputed status, so the panel re-renders from one round
+    /// trip. A failed write leaves the previous state on screen rather than optimistically
+    /// hiding a checklist the server still considers open — the next load would bring it back
+    /// and read as a bug.
+    /// </summary>
+    private async Task SetDismissedAsync(bool dismissed)
+    {
+        if (_isSaving)
+            return;
+
+        _isSaving = true;
+        try
+        {
+            var response = await Api.PostAsJsonAsync(
+                "/api/onboarding/dismissal", new { Dismissed = dismissed });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var updated = await response.Content.ReadFromJsonAsync<OnboardingStatus>();
+                if (updated is not null)
+                    State.Succeed(updated);
+            }
+            else
+            {
+                State.Fail(dismissed
+                    ? "Could not hide the setup checklist."
+                    : "Could not reopen the setup checklist.");
+            }
+        }
+        catch (Exception ex)
+        {
+            State.Fail($"Could not update the setup checklist. ({ex.Message})");
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

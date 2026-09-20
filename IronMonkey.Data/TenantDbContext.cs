@@ -49,6 +49,9 @@ public class TenantDbContext : DbContext
     public DbSet<MessageConsent> MessageConsents => Set<MessageConsent>();
     public DbSet<MessageTemplate> MessageTemplates => Set<MessageTemplate>();
     public DbSet<MessagingPolicy> MessagingPolicies => Set<MessagingPolicy>();
+    public DbSet<TeamInvitation> TeamInvitations => Set<TeamInvitation>();
+    public DbSet<UserAuditLog> UserAuditLogs => Set<UserAuditLog>();
+    public DbSet<TenantOnboardingDismissal> TenantOnboardingDismissals => Set<TenantOnboardingDismissal>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -87,6 +90,19 @@ public class TenantDbContext : DbContext
         modelBuilder.Entity<MessageConsent>().HasQueryFilter(c => c.TenantId == _tenantId);
         modelBuilder.Entity<MessageTemplate>().HasQueryFilter(t => t.TenantId == _tenantId && !t.IsDeleted);
         modelBuilder.Entity<MessagingPolicy>().HasQueryFilter(p => p.TenantId == _tenantId);
+
+        // Invitations and the team audit trail are never soft-deleted: a revoked invitation
+        // and a deactivation are both history that has to stay legible, so the filter is
+        // TenantId only. This filter is also the tenant binding on the acceptance path —
+        // a token issued by another tenant is simply not in scope, so it cannot be redeemed
+        // here even if the plaintext were guessed.
+        modelBuilder.Entity<TeamInvitation>().HasQueryFilter(i => i.TenantId == _tenantId);
+        modelBuilder.Entity<UserAuditLog>().HasQueryFilter(a => a.TenantId == _tenantId);
+
+        // A dismissal is a per-user UI preference and is never soft-deleted — reopening
+        // clears DismissedAt on the same row — so the filter is TenantId only. Without it a
+        // tenant could read (and toggle) another tenant's dismissal rows.
+        modelBuilder.Entity<TenantOnboardingDismissal>().HasQueryFilter(d => d.TenantId == _tenantId);
 
         // ActivityLog JSONB columns and dashboard indexes
         modelBuilder.Entity<ActivityLog>(entity =>

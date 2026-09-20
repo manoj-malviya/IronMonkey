@@ -60,6 +60,20 @@ public sealed class User : BaseTenantEntity
         UpdatedAt = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Clears the soft delete so the user can log in again.
+    ///
+    /// The caller must also restore the central UserTenantIndex row: DeactivateUserEndpoint
+    /// removes it, and without it login resolves no tenant for the email and the reactivated
+    /// user still cannot get in.
+    /// </summary>
+    public void Reactivate()
+    {
+        IsDeleted = false;
+        DeletedAt = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void ResetPassword(string hashedPassword)
     {
         Password = hashedPassword;

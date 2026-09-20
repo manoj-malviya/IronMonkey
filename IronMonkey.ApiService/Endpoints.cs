@@ -26,12 +26,14 @@ using Microsoft.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
 using IronMonkey.Data.Entities;
 using IronMonkey.ApiService.Features.UserManagement;
+using IronMonkey.ApiService.Features.UserManagement.Invitations;
 using IronMonkey.ApiService.Features.RoleManagement;
 using IronMonkey.ApiService.Features.Contacts;
 using IronMonkey.ApiService.Features.Opportunities;
 using IronMonkey.ApiService.Features.Communications.Endpoints;
 using IronMonkey.ApiService.Features.Communications.Webhooks;
 using IronMonkey.ApiService.Features.Presentation;
+using IronMonkey.ApiService.Features.Onboarding;
 
 namespace IronMonkey.ApiService;
 
@@ -62,6 +64,7 @@ public static class Endpoints
         endpoints.MapContactEndpoints();
         endpoints.MapOpportunityEndpoints();
         endpoints.MapPresentationEndpoints();
+        endpoints.MapOnboardingEndpoints();
         endpoints.MapCommunicationEndpoints();
     }
 
@@ -158,7 +161,22 @@ public static class Endpoints
                 .MapEndpoint<CreateTenantUserEndpoint>()
                 .MapEndpoint<UpdateUserEndpoint>()
                 .MapEndpoint<DeactivateUserEndpoint>()
-                .MapEndpoint<ResetPasswordEndpoint>();
+                .MapEndpoint<ReactivateUserEndpoint>()
+                .MapEndpoint<ResetPasswordEndpoint>()
+                .MapEndpoint<ListUserAuditEndpoint>()
+                // Invitation lifecycle. Each carries its own permission requirement, so the
+                // group's bare RequireAuthorization is a floor, not the whole gate.
+                .MapEndpoint<InviteTeamMemberEndpoint>()
+                .MapEndpoint<ListInvitationsEndpoint>()
+                .MapEndpoint<ResendInvitationEndpoint>()
+                .MapEndpoint<RevokeInvitationEndpoint>();
+
+            // Acceptance is anonymous by necessity: the invitee has no account yet, so the
+            // token IS the authentication. It sits outside the authenticated group above,
+            // which would otherwise 401 the very person the link was sent to.
+            endpoints.MapPublicGroup()
+                .MapEndpoint<AcceptInvitationEndpoint>()
+                .MapEndpoint<PreviewInvitationEndpoint>();
         }
 
         private void MapRoleManagementEndpoints()
@@ -245,6 +263,17 @@ public static class Endpoints
             // settings:write, since it changes what the whole tenant sees.
             GetTenantPresentationEndpoint.Map(app);
             UpdateTenantPresentationEndpoint.Map(app);
+        }
+
+        private void MapOnboardingEndpoints()
+        {
+            // First-run setup status for the tenant CRM dashboard. Both are plainly
+            // authorized: every member of the tenant lands on /admin, and the payload holds
+            // only counts of the caller's own tenant plus their own name and role. The
+            // tenant and user both come from the claims, so neither endpoint can be pointed
+            // at another tenant or another user.
+            GetOnboardingStatusEndpoint.Map(app);
+            SetOnboardingDismissalEndpoint.Map(app);
         }
 
         private void MapContactEndpoints()
