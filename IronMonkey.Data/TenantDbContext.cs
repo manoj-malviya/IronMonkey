@@ -45,6 +45,10 @@ public class TenantDbContext : DbContext
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
     public DbSet<WorkflowExecutionLog> WorkflowExecutionLogs => Set<WorkflowExecutionLog>();
     public DbSet<WorkflowExecutionStep> WorkflowExecutionSteps => Set<WorkflowExecutionStep>();
+    public DbSet<Message> Messages => Set<Message>();
+    public DbSet<MessageConsent> MessageConsents => Set<MessageConsent>();
+    public DbSet<MessageTemplate> MessageTemplates => Set<MessageTemplate>();
+    public DbSet<MessagingPolicy> MessagingPolicies => Set<MessagingPolicy>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -74,6 +78,15 @@ public class TenantDbContext : DbContext
         // queried directly by the action-type filter.
         modelBuilder.Entity<WorkflowExecutionLog>().HasQueryFilter(l => l.TenantId == _tenantId);
         modelBuilder.Entity<WorkflowExecutionStep>().HasQueryFilter(s => s.TenantId == _tenantId);
+
+        // Messages are conversation history and are never soft-deleted: a record of what was
+        // said to a customer must survive the lead being removed, so the filter is TenantId
+        // only. Consent is likewise permanent — an opt-out that could be soft-deleted would
+        // silently become permission to message again.
+        modelBuilder.Entity<Message>().HasQueryFilter(m => m.TenantId == _tenantId);
+        modelBuilder.Entity<MessageConsent>().HasQueryFilter(c => c.TenantId == _tenantId);
+        modelBuilder.Entity<MessageTemplate>().HasQueryFilter(t => t.TenantId == _tenantId && !t.IsDeleted);
+        modelBuilder.Entity<MessagingPolicy>().HasQueryFilter(p => p.TenantId == _tenantId);
 
         // ActivityLog JSONB columns and dashboard indexes
         modelBuilder.Entity<ActivityLog>(entity =>

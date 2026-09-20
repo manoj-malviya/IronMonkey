@@ -1,0 +1,437 @@
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@using IronMonkey.Web.Communications
+@using System.Net.Http.Json
+
+@* Message templates and the suppression list. Templates are validated by the API against the
+   tenant's real field definitions on save, so a placeholder naming nothing is caught here
+   rather than rendering blank in a customer's inbox. *@
+
+<div class="space-y-8">
+
+    <section>
+        <div class="mb-3 flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-slate-900">Message templates</h3>
+            <button type="button" @onclick="StartCreate"
+                    class="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500">
+                + New template
+            </button>
+        </div>
+
+        @if (_editing is not null)
+        {
+            <div class="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-700">Name</label>
+                        <input @bind="_editing.Name"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-700">Channel</label>
+                        <select @bind="_editing.Channel" disabled="@(_editingId is not null)"
+                                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100">
+                            <option value="Email">Email</option>
+                            <option value="Sms">SMS</option>
+                            <option value="WhatsApp">WhatsApp</option>
+                        </select>
+                    </div>
+                </div>
+
+                @if (_editing.Channel == "Email")
+                {
+                    <div class="mt-3">
+                        <label class="mb-1 block text-xs font-medium text-slate-700">Subject</label>
+                        <input @bind="_editing.Subject"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                    </div>
+                }
+
+                @if (_editing.Channel == "WhatsApp")
+                {
+                    <div class="mt-3">
+                        <label class="mb-1 block text-xs font-medium text-slate-700">
+                            Approved template name
+                        </label>
+                        <input @bind="_editing.ProviderTemplateName"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                        <p class="mt-1 text-xs text-slate-500">
+                            Outside the 24-hour customer-service window, WhatsApp accepts only
+                            pre-approved templates.
+                        </p>
+                    </div>
+                }
+
+                <div class="mt-3">
+                    <label class="mb-1 block text-xs font-medium text-slate-700">Body</label>
+                    <textarea @bind="_editing.Body" rows="5"
+                              class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm"></textarea>
+                    <p class="mt-1 text-xs text-slate-500">
+                        Use <code>&#123;&#123;FirstName&#125;&#125;</code> to insert a field. Every
+                        inserted value is escaped, so a name containing markup is shown as text.
+                    </p>
+                </div>
+
+                <div class="mt-3 flex gap-2">
+                    <button type="button" @onclick="SaveAsync" disabled="@_isSaving"
+                            class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50">
+                        @(_isSaving ? "Saving..." : "Save")
+                    </button>
+                    <button type="button" @onclick="CancelEdit"
+                            class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        }
+
+        @if (_isLoading)
+        {
+            <p class="py-4 text-sm text-slate-500">Loading templates...</p>
+        }
+        else if (_templates.Count == 0)
+        {
+            <p class="py-4 text-sm text-slate-500">No templates yet.</p>
+        }
+        else
+        {
+            <div class="overflow-hidden rounded-lg border border-slate-200">
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left font-medium text-slate-600">Name</th>
+                            <th class="px-4 py-2 text-left font-medium text-slate-600">Channel</th>
+                            <th class="px-4 py-2 text-left font-medium text-slate-600">Subject</th>
+                            <th class="px-4 py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 bg-white">
+                        @foreach (var template in _templates)
+                        {
+                            <tr>
+                                <td class="px-4 py-2 font-medium text-slate-900">@template.Name</td>
+                                <td class="px-4 py-2 text-slate-600">@template.Channel</td>
+                                <td class="px-4 py-2 text-slate-600">@(template.Subject ?? "—")</td>
+                                <td class="px-4 py-2 text-right">
+                                    <button type="button" @onclick="() => StartEdit(template)"
+                                            class="text-xs font-semibold text-indigo-600 hover:text-indigo-500">
+                                        Edit
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <section>
+        <h3 class="mb-1 text-sm font-semibold text-slate-900">Sending hours</h3>
+        <p class="mb-3 text-xs text-slate-500">
+            Messages are held during these hours and sent when the window closes — they are
+            delayed, not dropped. Times are in your organisation's timezone, set under Appearance.
+        </p>
+
+        <div class="grid gap-3 sm:grid-cols-3">
+            <div>
+                <label class="mb-1 block text-xs font-medium text-slate-700">Quiet from</label>
+                <input type="time" @bind="_policy.QuietHoursStart"
+                       class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-medium text-slate-700">Quiet until</label>
+                <input type="time" @bind="_policy.QuietHoursEnd"
+                       class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-medium text-slate-700">Max per hour</label>
+                <input type="number" min="0" @bind="_policy.MaxMessagesPerHour"
+                       placeholder="No limit"
+                       class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+        </div>
+
+        <div class="mt-3 flex flex-wrap items-center gap-4">
+            <span class="text-xs font-medium text-slate-700">Applies to:</span>
+            @foreach (var channel in AllChannels)
+            {
+                <label class="flex items-center gap-1.5 text-xs text-slate-600">
+                    <input type="checkbox" checked="@_policy.QuietHoursChannels.Contains(channel)"
+                           @onchange="e => ToggleChannel(channel, (bool?)e.Value == true)"
+                           class="rounded border-slate-300" />
+                    @channel
+                </label>
+            }
+            <span class="text-xs text-slate-400">(none ticked = every channel)</span>
+        </div>
+
+        <button type="button" @onclick="SavePolicyAsync" disabled="@_isSavingPolicy"
+                class="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50">
+            @(_isSavingPolicy ? "Saving..." : "Save sending hours")
+        </button>
+    </section>
+
+    <section>
+        <h3 class="mb-1 text-sm font-semibold text-slate-900">Opt-outs</h3>
+        <p class="mb-3 text-xs text-slate-500">
+            Addresses that will not be messaged on a channel, however the send is triggered —
+            including by a workflow rule.
+        </p>
+
+        @if (_consent.Count == 0)
+        {
+            <p class="py-4 text-sm text-slate-500">No opt-outs recorded.</p>
+        }
+        else
+        {
+            <div class="overflow-hidden rounded-lg border border-slate-200">
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left font-medium text-slate-600">Address</th>
+                            <th class="px-4 py-2 text-left font-medium text-slate-600">Channel</th>
+                            <th class="px-4 py-2 text-left font-medium text-slate-600">Recorded from</th>
+                            <th class="px-4 py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 bg-white">
+                        @foreach (var row in _consent)
+                        {
+                            <tr>
+                                <td class="px-4 py-2 font-medium text-slate-900">@row.Address</td>
+                                <td class="px-4 py-2 text-slate-600">@row.Channel</td>
+                                <td class="px-4 py-2 text-slate-600">@row.Source</td>
+                                <td class="px-4 py-2 text-right">
+                                    <button type="button" @onclick="() => OptInAsync(row)"
+                                            class="text-xs font-semibold text-indigo-600 hover:text-indigo-500">
+                                        Remove
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>
+
+@code {
+    [Parameter] public EventCallback<string> OnSuccess { get; set; }
+    [Parameter] public EventCallback<string> OnError { get; set; }
+
+    private static readonly string[] AllChannels = ["Email", "Sms", "WhatsApp"];
+
+    private readonly PolicyDraft _policy = new();
+    private bool _isSavingPolicy;
+    private readonly List<MessageTemplateItem> _templates = [];
+    private readonly List<ConsentRow> _consent = [];
+    private TemplateDraft? _editing;
+    private Guid? _editingId;
+    private bool _isLoading = true;
+    private bool _isSaving;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Fetched after the first interactive render — the JWT is unreadable during prerender.
+        if (!firstRender) return;
+
+        await LoadAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+
+        try
+        {
+            var templates = await Api.GetFromJsonAsync<List<MessageTemplateItem>>("/api/message-templates");
+            _templates.Clear();
+            if (templates is not null) _templates.AddRange(templates);
+
+            var consent = await Api.GetFromJsonAsync<List<ConsentRow>>("/api/message-consent");
+            _consent.Clear();
+            if (consent is not null) _consent.AddRange(consent);
+
+            var policy = await Api.GetFromJsonAsync<PolicyResponse>("/api/messaging-policy");
+            if (policy is not null)
+            {
+                _policy.QuietHoursStart = ParseTime(policy.QuietHoursStart);
+                _policy.QuietHoursEnd = ParseTime(policy.QuietHoursEnd);
+                _policy.MaxMessagesPerHour = policy.MaxMessagesPerHour;
+                _policy.QuietHoursChannels.Clear();
+                _policy.QuietHoursChannels.AddRange(policy.QuietHoursChannels);
+            }
+        }
+        catch (Exception ex) { await OnError.InvokeAsync($"Failed to load messaging settings: {ex.Message}"); }
+        finally { _isLoading = false; }
+    }
+
+    private void StartCreate()
+    {
+        _editingId = null;
+        _editing = new TemplateDraft { Channel = "Email" };
+    }
+
+    private void StartEdit(MessageTemplateItem template)
+    {
+        _editingId = template.Id;
+        _editing = new TemplateDraft
+        {
+            Name = template.Name,
+            Channel = template.Channel,
+            Subject = template.Subject,
+            Body = template.Body,
+            ProviderTemplateName = template.ProviderTemplateName
+        };
+    }
+
+    private void CancelEdit()
+    {
+        _editing = null;
+        _editingId = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_editing is null) return;
+
+        _isSaving = true;
+
+        try
+        {
+            var payload = new
+            {
+                _editing.Name,
+                _editing.Channel,
+                _editing.Subject,
+                _editing.Body,
+                _editing.ProviderTemplateName
+            };
+
+            var response = _editingId is null
+                ? await Api.PostAsJsonAsync("/api/message-templates", payload)
+                : await Api.PutAsJsonAsync($"/api/message-templates/{_editingId}", payload);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                // The API's Detail carries the specific problem — which placeholder does not
+                // match a field, for instance — so it is surfaced rather than replaced with a
+                // generic failure message.
+                var problem = await ReadProblemAsync(response);
+                await OnError.InvokeAsync(problem);
+                return;
+            }
+
+            CancelEdit();
+            await LoadAsync();
+            await OnSuccess.InvokeAsync("Template saved.");
+        }
+        catch (Exception ex) { await OnError.InvokeAsync($"Failed to save template: {ex.Message}"); }
+        finally { _isSaving = false; }
+    }
+
+    private async Task OptInAsync(ConsentRow row)
+    {
+        try
+        {
+            var response = await Api.PutAsJsonAsync("/api/message-consent",
+                new { row.Channel, row.Address, IsOptedOut = false });
+
+            if (!response.IsSuccessStatusCode)
+            {
+                await OnError.InvokeAsync(await ReadProblemAsync(response));
+                return;
+            }
+
+            await LoadAsync();
+            await OnSuccess.InvokeAsync("Opt-out removed.");
+        }
+        catch (Exception ex) { await OnError.InvokeAsync($"Failed to update consent: {ex.Message}"); }
+    }
+
+    private static async Task<string> ReadProblemAsync(HttpResponseMessage response)
+    {
+        try
+        {
+            var problem = await response.Content.ReadFromJsonAsync<ProblemPayload>();
+            return problem?.Detail ?? $"The request failed ({(int)response.StatusCode}).";
+        }
+        catch
+        {
+            return $"The request failed ({(int)response.StatusCode}).";
+        }
+    }
+
+    private void ToggleChannel(string channel, bool isChecked)
+    {
+        if (isChecked)
+        {
+            if (!_policy.QuietHoursChannels.Contains(channel))
+                _policy.QuietHoursChannels.Add(channel);
+        }
+        else
+        {
+            _policy.QuietHoursChannels.Remove(channel);
+        }
+    }
+
+    private async Task SavePolicyAsync()
+    {
+        _isSavingPolicy = true;
+
+        try
+        {
+            var response = await Api.PutAsJsonAsync("/api/messaging-policy", new
+            {
+                QuietHoursStart = Format(_policy.QuietHoursStart),
+                QuietHoursEnd = Format(_policy.QuietHoursEnd),
+                QuietHoursChannels = _policy.QuietHoursChannels,
+                _policy.MaxMessagesPerHour
+            });
+
+            if (!response.IsSuccessStatusCode)
+            {
+                await OnError.InvokeAsync(await ReadProblemAsync(response));
+                return;
+            }
+
+            await LoadAsync();
+            await OnSuccess.InvokeAsync("Sending hours saved.");
+        }
+        catch (Exception ex) { await OnError.InvokeAsync($"Failed to save sending hours: {ex.Message}"); }
+        finally { _isSavingPolicy = false; }
+    }
+
+    /// <summary>The API speaks "HH:mm"; the time input binds TimeOnly.</summary>
+    private static TimeOnly? ParseTime(string? value) =>
+        TimeOnly.TryParse(value, out var parsed) ? parsed : null;
+
+    private static string? Format(TimeOnly? value) => value?.ToString("HH\\:mm");
+
+    private sealed record PolicyResponse(string? QuietHoursStart, string? QuietHoursEnd,
+        List<string> QuietHoursChannels, int? MaxMessagesPerHour);
+
+    private sealed class PolicyDraft
+    {
+        public TimeOnly? QuietHoursStart { get; set; }
+        public TimeOnly? QuietHoursEnd { get; set; }
+        public List<string> QuietHoursChannels { get; } = [];
+        public int? MaxMessagesPerHour { get; set; }
+    }
+
+    private sealed record ProblemPayload(string? Detail);
+
+    private sealed record ConsentRow(Guid Id, string Channel, string Address, bool IsOptedOut,
+        string Source, DateTime UpdatedAtUtc);
+
+    private sealed class TemplateDraft
+    {
+        public string Name { get; set; } = "";
+        public string Channel { get; set; } = "Email";
+        public string? Subject { get; set; }
+        public string Body { get; set; } = "";
+        public string? ProviderTemplateName { get; set; }
+    }
+}

@@ -34,6 +34,24 @@ public static class PermissionConstants
     /// </summary>
     public const string WorkflowLogsRead = "workflow:logs:read";
 
+    /// <summary>
+    /// Send a message to a lead or contact, and read the conversation.
+    ///
+    /// Separate from leads:write because sending is outward-facing in a way editing a record
+    /// is not: a mistake reaches a customer and cannot be undone. A tenant may reasonably let
+    /// a junior user edit leads while withholding the ability to email them.
+    /// </summary>
+    public const string MessagesSend = "messages:send";
+
+    /// <summary>
+    /// Read message history and manage templates and consent.
+    ///
+    /// Read is split from send because the conversation body is the most sensitive data in
+    /// the CRM — it carries whatever a customer wrote — and a role that may see a lead does
+    /// not automatically need to read their correspondence.
+    /// </summary>
+    public const string MessagesRead = "messages:read";
+
     /// <summary>Platform administration: approve/reject signups, provision tenants.</summary>
     public const string AdminAccess = "admin:access";
 
@@ -56,6 +74,7 @@ public static class PermissionConstants
         ReportsRead, ReportsWrite,
         SettingsRead, SettingsWrite,
         WorkflowLogsRead,
+        MessagesSend, MessagesRead,
         AdminAccess
     };
 }

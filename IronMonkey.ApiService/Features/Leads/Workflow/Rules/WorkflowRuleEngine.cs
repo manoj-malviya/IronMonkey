@@ -1,7 +1,9 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using IronMonkey.ApiService.Features.Communications;
 using IronMonkey.ApiService.Features.Leads.Workflow.Execution;
 using IronMonkey.ApiService.Notifications;
+using IronMonkey.Data.Communications;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +14,8 @@ public class WorkflowRuleEngine(
     INotificationService notificationService,
     IHttpClientFactory httpClientFactory,
     ILogger<WorkflowRuleEngine> logger,
-    IWorkflowExecutionRecorder? executionRecorder = null)
+    IWorkflowExecutionRecorder? executionRecorder = null,
+    IMessageDispatcher? messageDispatcher = null)
     : IWorkflowRuleEngine
 {
     /// <summary>Named client so the webhook action gets its own timeout and no ambient auth.</summary>
@@ -115,7 +118,7 @@ public class WorkflowRuleEngine(
         if (run is not null)
             await run.ConditionMatchedAsync("Condition matched.", cancellationToken);
 
-        await ExecuteActionAsync(rule.ActionJson, tenantId, lead, db, run, trigger, cancellationToken);
+        await ExecuteActionAsync(rule.ActionJson, tenantId, lead, db, run, rule.Id, trigger, cancellationToken);
 
         if (run is not null)
             await run.CompleteAsync(cancellationToken);
@@ -235,7 +238,7 @@ public class WorkflowRuleEngine(
     }
 
     private async Task ExecuteActionAsync(string actionJson, Guid tenantId, Lead lead,
-        TenantDbContext db, WorkflowExecutionRun? run, WorkflowTrigger trigger,
+        TenantDbContext db, WorkflowExecutionRun? run, Guid ruleId, WorkflowTrigger trigger,
         CancellationToken cancellationToken)
     {
         JsonDocument doc;
@@ -274,13 +277,14 @@ public class WorkflowRuleEngine(
 
             LogActionStart(tenantId, lead, trigger, actionType, run);
 
-            await DispatchActionAsync(root, actionType, tenantId, lead, db, run, cancellationToken);
+            await DispatchActionAsync(root, actionType, tenantId, lead, db, run, ruleId, trigger, cancellationToken);
         }
     }
 
     private async Task DispatchActionAsync(
         JsonElement root, string? actionType, Guid tenantId, Lead lead,
-        TenantDbContext db, WorkflowExecutionRun? run, CancellationToken cancellationToken)
+        TenantDbContext db, WorkflowExecutionRun? run, Guid ruleId, WorkflowTrigger trigger,
+        CancellationToken cancellationToken)
     {
         switch (actionType)
         {
@@ -301,7 +305,7 @@ public class WorkflowRuleEngine(
                 break;
 
             case "email":
-                await SendEmailAsync(root, lead, run, cancellationToken);
+                await SendEmailAsync(root, tenantId, lead, db, run, ruleId, trigger, cancellationToken);
                 break;
 
             default:
@@ -503,17 +507,24 @@ public class WorkflowRuleEngine(
     }
 
     /// <summary>
-    /// Records the email that would be sent. Delivery is deliberately not wired up yet —
-    /// there is no tenant-level SMTP configuration, so sending would depend on a single
-    /// shared mailbox. The rendered subject and body are logged so the rule can be verified.
+    /// Sends the rule's email through the communications layer.
     ///
-    /// The execution row records that delivery is not configured as its own diagnostic
-    /// category, so an Admin can tell "the rule is fine, email is not set up" from "the rule
-    /// is broken" — and the subject/body are logged for operators but never persisted, since a
-    /// rendered body carries lead PII.
+    /// The failure semantics of the old logged-only implementation are kept deliberately: a
+    /// send that cannot be made is recorded as a <em>failed action</em> on this run, and does
+    /// not roll back the lead write that triggered the rule or stop the remaining rules from
+    /// being evaluated. Only the outcome changed — a message is now actually delivered.
+    ///
+    /// Queueing is what succeeds here, not delivery. The dispatcher hands the message to
+    /// Hangfire and returns; the provider result lands on the message row minutes later. So
+    /// this step reports "queued", and the message's own status is where delivery is read —
+    /// which is honest, unlike reporting a send that has not happened yet as succeeded.
+    ///
+    /// The rendered subject and body are never persisted into the execution history: a body
+    /// carries lead PII and this table is tenant-readable and exportable.
     /// </summary>
-    private async Task SendEmailAsync(JsonElement action, Lead lead,
-        WorkflowExecutionRun? run, CancellationToken cancellationToken)
+    private async Task SendEmailAsync(JsonElement action, Guid tenantId, Lead lead,
+        TenantDbContext db, WorkflowExecutionRun? run, Guid ruleId, WorkflowTrigger trigger,
+        CancellationToken cancellationToken)
     {
         var to = action.TryGetProperty("to", out var toProp) ? toProp.GetString() : null;
 
@@ -539,16 +550,60 @@ public class WorkflowRuleEngine(
 
         run?.RecordRecipient(recipient);
 
-        logger.LogInformation(
-            "Workflow email (not delivered — SMTP not configured) to {Recipient} for lead {LeadId}: {Subject} | {Body}",
-            recipient, lead.Id, subject, body);
+        if (messageDispatcher is null)
+        {
+            // The engine is constructed without a dispatcher only in tests that exercise
+            // condition evaluation. Reported as not-configured rather than as success, for the
+            // same reason as before: a silently undelivered email must never look sent.
+            await FailActionAsync(run, WorkflowErrorCategory.EmailDeliveryNotConfigured,
+                "Email was rendered but not delivered: messaging is not available in this context.",
+                cancellationToken);
+            return;
+        }
 
-        // Recorded as a failure, not a success: nothing was delivered, and showing it as
-        // succeeded would make a silently undelivered email look like a sent one.
-        await FailActionAsync(run, WorkflowErrorCategory.EmailDeliveryNotConfigured,
-            "Email was rendered but not delivered: email sending is not configured for this organisation.",
+        // Derived from the rule, the lead and the trigger — all of which are known here
+        // regardless of whether the audit row opened. It deliberately does NOT fall back to a
+        // different shape when `run` is null: a key that changes because the history table
+        // rejected a write is not an idempotency key, and that fallback sent a second copy to
+        // the customer whenever a retry's execution row collided on the unique correlation
+        // index. Recording failing must never change what the customer receives.
+        var idempotencyKey = $"workflow:{ruleId}:{lead.Id}:{trigger}";
+
+        var outcome = await messageDispatcher.QueueAsync(db, new SendMessageCommand(
+            tenantId,
+            MessageChannel.Email,
+            recipient,
+            subject,
+            body,
+            idempotencyKey,
+            LeadId: lead.Id,
+            WorkflowRuleId: ruleId), cancellationToken);
+
+        if (outcome.Queued || outcome.Accepted)
+        {
+            await SucceedActionAsync(run,
+                $"Email queued for delivery (message {outcome.MessageId}).", cancellationToken);
+            return;
+        }
+
+        // A refusal before the provider — unconfigured channel, opted-out recipient, channel
+        // rule violation — is a failed action with the dispatcher's own category, so the
+        // execution history distinguishes "we chose not to send" from "sending broke".
+        await FailActionAsync(run, MapCategory(outcome.ErrorCategory),
+            outcome.ErrorMessage ?? $"The message was not sent ({outcome.ErrorCategory}).",
             cancellationToken);
     }
+
+    /// <summary>
+    /// Maps a messaging refusal onto the workflow's own category vocabulary, so the execution
+    /// history keeps one set of categories an Admin can filter on.
+    /// </summary>
+    private static WorkflowErrorCategory MapCategory(MessageErrorCategory category) => category switch
+    {
+        MessageErrorCategory.ChannelNotConfigured => WorkflowErrorCategory.EmailDeliveryNotConfigured,
+        MessageErrorCategory.InvalidRecipient => WorkflowErrorCategory.MissingEmailRecipient,
+        _ => WorkflowErrorCategory.InvalidActionConfiguration
+    };
 
     private static Task SucceedActionAsync(WorkflowExecutionRun? run, string message, CancellationToken cancellationToken)
         => run?.ActionSucceededAsync(message, cancellationToken) ?? Task.CompletedTask;

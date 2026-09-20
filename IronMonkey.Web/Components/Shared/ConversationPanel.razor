@@ -1,0 +1,302 @@
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@using IronMonkey.Web.Communications
+@using IronMonkey.Data.Communications
+@using System.Net.Http.Json
+
+@* The conversation attached to one lead or contact: outbound and inbound on one thread,
+   with the delivery status the provider actually reported. Sits alongside ActivityTimeline
+   on the detail pages rather than being a separate inbox. *@
+
+<div class="rounded-xl border border-slate-200 bg-white">
+
+    <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <h2 class="text-sm font-semibold text-slate-900">Messages</h2>
+        <span class="text-xs text-slate-500">@_totalCount message@(_totalCount == 1 ? "" : "s")</span>
+    </div>
+
+    @if (_availableChannels.Count > 0)
+    {
+        <div class="border-b border-slate-100 px-5 py-4">
+            <div class="mb-2 flex gap-2">
+                @foreach (var channel in _availableChannels)
+                {
+                    <button type="button" @onclick="() => SelectChannel(channel)"
+                            class="@ChannelTabClass(channel)">
+                        @channel
+                    </button>
+                }
+            </div>
+
+            @if (_selectedChannel == "Email")
+            {
+                <input @bind="_subject" placeholder="Subject"
+                       class="mb-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            }
+
+            <div class="flex items-start gap-2">
+                <textarea @bind="_body" rows="2" placeholder="@($"Write a {_selectedChannel.ToLowerInvariant()}...")"
+                          class="flex-1 resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                <button type="button" @onclick="SendAsync"
+                        disabled="@(_isSending || string.IsNullOrWhiteSpace(_body))"
+                        class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50">
+                    @(_isSending ? "..." : "Send")
+                </button>
+            </div>
+
+            @if (_selectedChannel == "Sms" && !string.IsNullOrEmpty(_body))
+            {
+                <p class="mt-1 text-xs text-slate-500">@SegmentCount() segment@(SegmentCount() == 1 ? "" : "s")</p>
+            }
+        </div>
+    }
+    else if (!_isLoading)
+    {
+        <div class="border-b border-slate-100 px-5 py-4">
+            <p class="text-sm text-slate-500">No messaging channel is configured for this deployment.</p>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">@_error</div>
+    }
+
+    <div class="px-5 py-4">
+        @if (_isLoading)
+        {
+            <p class="py-6 text-center text-sm text-slate-500">Loading messages...</p>
+        }
+        else if (_messages.Count == 0)
+        {
+            <p class="py-6 text-center text-sm text-slate-500">No messages yet.</p>
+        }
+        else
+        {
+            <ol class="space-y-4">
+                @foreach (var message in _messages)
+                {
+                    <li class="@BubbleWrapperClass(message)">
+                        <div class="@BubbleClass(message)">
+                            <div class="mb-1 flex flex-wrap items-baseline gap-x-2">
+                                <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">@message.Channel</span>
+                                @if (message.WorkflowRuleId is not null)
+                                {
+                                    <span class="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">Automated</span>
+                                }
+                                <span class="text-xs text-slate-400" title="@message.QueuedAt.ToString("f")">@Relative(message.QueuedAt)</span>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(message.Subject))
+                            {
+                                <p class="text-sm font-medium text-slate-900">@message.Subject</p>
+                            }
+
+                            @* Rendered as text, never as markup. The body of an inbound message is
+                               written by whoever sent it, and an outbound one carries substituted
+                               lead data — both are untrusted in this browser. *@
+                            <p class="whitespace-pre-wrap text-sm text-slate-700">@message.Body</p>
+
+                            <div class="mt-1 flex flex-wrap items-center gap-2">
+                                <span class="@StatusClass(message.Status)">@StatusLabel(message)</span>
+                                @if (!string.IsNullOrEmpty(message.ErrorMessage))
+                                {
+                                    <span class="text-xs text-red-600">@message.ErrorMessage</span>
+                                }
+                            </div>
+                        </div>
+                    </li>
+                }
+            </ol>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid? LeadId { get; set; }
+    [Parameter] public Guid? ContactId { get; set; }
+
+    /// <summary>Prefilled recipient, so the panel does not have to re-derive it from the record.</summary>
+    [Parameter] public string? EmailAddress { get; set; }
+    [Parameter] public string? MobileNumber { get; set; }
+
+    private readonly List<MessageItem> _messages = [];
+    private readonly List<string> _availableChannels = [];
+    private string _selectedChannel = "Email";
+    private string _subject = "";
+    private string _body = "";
+    private bool _isLoading = true;
+    private bool _isSending;
+    private int _totalCount;
+    private string? _error;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Fetched after the first interactive render: the JWT lives in ProtectedSessionStorage
+        // and is unreadable during prerender, so an earlier call would go out unauthenticated.
+        if (!firstRender) return;
+
+        await LoadChannelsAsync();
+        await LoadAsync();
+
+        StateHasChanged();
+    }
+
+    private async Task LoadChannelsAsync()
+    {
+        try
+        {
+            var channels = await Api.GetFromJsonAsync<List<ChannelAvailability>>("/api/messages/channels");
+
+            _availableChannels.Clear();
+            foreach (var channel in channels?.Where(c => c.IsAvailable) ?? [])
+                _availableChannels.Add(channel.Channel);
+
+            if (_availableChannels.Count > 0 && !_availableChannels.Contains(_selectedChannel))
+                _selectedChannel = _availableChannels[0];
+        }
+        catch (Exception ex) { _error = $"Failed to load channels: {ex.Message}"; }
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            var query = LeadId is not null ? $"leadId={LeadId}" : $"contactId={ContactId}";
+            var page = await Api.GetFromJsonAsync<MessagePage>($"/api/messages?{query}");
+
+            _messages.Clear();
+            if (page is not null)
+            {
+                // Newest-first from the API; reversed so the thread reads top to bottom like a
+                // conversation rather than like a log.
+                _messages.AddRange(page.Items.AsEnumerable().Reverse());
+                _totalCount = page.TotalCount;
+            }
+        }
+        catch (Exception ex) { _error = $"Failed to load messages: {ex.Message}"; }
+        finally { _isLoading = false; }
+    }
+
+    private void SelectChannel(string channel)
+    {
+        _selectedChannel = channel;
+        if (channel != "Email") _subject = "";
+    }
+
+    private async Task SendAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_body)) return;
+
+        _isSending = true;
+        _error = null;
+
+        try
+        {
+            var recipient = _selectedChannel == "Email" ? EmailAddress : MobileNumber;
+
+            var request = new SendMessageRequest(
+                _selectedChannel,
+                recipient ?? "",
+                _selectedChannel == "Email" ? _subject : null,
+                _body,
+                TemplateId: null,
+                LeadId,
+                ContactId,
+                // A fresh key per press, so a double-click cannot produce two messages.
+                IdempotencyKey: Guid.NewGuid().ToString("N"));
+
+            var response = await Api.PostAsJsonAsync("/api/messages", request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _error = await ReadProblemAsync(response);
+                return;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<SendMessageResponse>();
+
+            // A message the server refused up front comes back already terminal. Surfacing the
+            // reason here matters: "Rejected — RecipientSuppressed" is actionable, while a
+            // generic success toast would hide that nothing was sent.
+            if (result is not null && result.Status == "Rejected")
+                _error = result.ErrorMessage ?? $"The message was not sent ({result.ErrorCategory}).";
+
+            _body = "";
+            _subject = "";
+            await LoadAsync();
+        }
+        catch (Exception ex) { _error = $"Failed to send: {ex.Message}"; }
+        finally { _isSending = false; }
+    }
+
+    private static async Task<string> ReadProblemAsync(HttpResponseMessage response)
+    {
+        try
+        {
+            var problem = await response.Content.ReadFromJsonAsync<ProblemPayload>();
+            return problem?.Detail ?? $"The message could not be sent ({(int)response.StatusCode}).";
+        }
+        catch
+        {
+            return $"The message could not be sent ({(int)response.StatusCode}).";
+        }
+    }
+
+    private sealed record ProblemPayload(string? Detail);
+
+    // Delegates to the same rule the API enforces, rather than re-deriving the segment
+    // maths here — a second copy would drift and show the user a different count from the
+    // one they are billed for.
+    private int SegmentCount() => ChannelRules.SegmentCount(_body);
+
+    private string ChannelTabClass(string channel) => channel == _selectedChannel
+        ? "rounded-lg bg-indigo-600 px-3 py-1 text-xs font-semibold text-white"
+        : "rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50";
+
+    private static string BubbleWrapperClass(MessageItem message) =>
+        message.Direction == "Inbound" ? "flex justify-start" : "flex justify-end";
+
+    private static string BubbleClass(MessageItem message) =>
+        message.Direction == "Inbound"
+            ? "max-w-[85%] rounded-lg bg-slate-100 px-3 py-2"
+            : "max-w-[85%] rounded-lg bg-indigo-50 px-3 py-2";
+
+    /// <summary>
+    /// The status as the provider reported it. "Sent" is deliberately not shown as
+    /// "Delivered" — a provider accepting a message is not the recipient receiving it.
+    /// </summary>
+    private static string StatusLabel(MessageItem message) => message.Status switch
+    {
+        "Queued" => "Queued",
+        "Sent" => "Sent",
+        "Delivered" => "Delivered",
+        "Bounced" => "Bounced",
+        "Failed" => "Failed",
+        "Rejected" => $"Not sent — {message.ErrorCategory}",
+        _ => message.Status
+    };
+
+    private static string StatusClass(string status) => status switch
+    {
+        "Delivered" => "rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700",
+        "Sent" => "rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-700",
+        "Queued" => "rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-600",
+        "Bounced" or "Failed" or "Rejected" => "rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-700",
+        _ => "rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-600"
+    };
+
+    private static string Relative(DateTime utc)
+    {
+        var delta = DateTime.UtcNow - utc;
+
+        if (delta.TotalMinutes < 1) return "just now";
+        if (delta.TotalHours < 1) return $"{(int)delta.TotalMinutes}m ago";
+        if (delta.TotalDays < 1) return $"{(int)delta.TotalHours}h ago";
+        if (delta.TotalDays < 30) return $"{(int)delta.TotalDays}d ago";
+
+        return utc.ToString("d MMM yyyy");
+    }
+}

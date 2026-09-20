@@ -30,7 +30,9 @@ internal sealed class PermissionConfiguration : IEntityTypeConfiguration<Permiss
             Permission.SettingsRead,
             Permission.SettingsWrite,
             Permission.AdminAccess,
-            Permission.WorkflowLogsRead
+            Permission.WorkflowLogsRead,
+            Permission.MessagesSend,
+            Permission.MessagesRead
         ]);
     }
 }

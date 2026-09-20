@@ -25,6 +25,8 @@ public sealed class Permission
     // Ids are stable identities referenced by seeded role_permissions rows, so a new
     // permission appends rather than renumbering.
     public static readonly Permission WorkflowLogsRead = new(18, PermissionConstants.WorkflowLogsRead);
+    public static readonly Permission MessagesSend = new(19, PermissionConstants.MessagesSend);
+    public static readonly Permission MessagesRead = new(20, PermissionConstants.MessagesRead);
 
     private Permission(int id, string name)
     {

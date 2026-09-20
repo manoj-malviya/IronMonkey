@@ -10,7 +10,9 @@ using IronMonkey.ApiService.BackgroundJobs;
 using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Common.Cache;
-using IronMonkey.ApiService.Common.Services;
+using IronMonkey.ApiService.Features.Communications;
+using IronMonkey.ApiService.Features.Communications.Providers;
+using IronMonkey.ApiService.Features.Communications.Webhooks;
 using IronMonkey.ApiService.Features.Leads.Duplicates;
 using IronMonkey.ApiService.Features.Leads.Ingestion.Api;
 using IronMonkey.ApiService.Features.Leads.Ingestion.Csv;
@@ -33,6 +35,8 @@ using Serilog;
 using Swashbuckle.AspNetCore.Filters;
 
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using IronMonkey.Data.Communications;
 
 namespace IronMonkey.ApiService;
 
@@ -54,7 +58,7 @@ public static class ConfigureServices
             builder.AddJwtAuthentication();
             builder.AddAuthorization();
             builder.AddCache();
-            builder.AddEmailServices();
+            builder.AddCommunications();
 
             builder.addApiVersioning();
             builder.addCors();
@@ -159,8 +163,6 @@ public static class ConfigureServices
             //     .AddEntityFrameworkStores<AppDbContext>();
             //
             // builder.Services.AddAuthorization();
-            // builder.Services.AddTransient<IEmailSender, EmailSender>();
-            // builder.Services.Configure<AuthMessageSenderOptions>(builder.Configuration);
 
             builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
             builder.Services.AddTransient<Jwt>();
@@ -197,10 +199,64 @@ public static class ConfigureServices
             builder.Services.AddScoped<IPlatformAdminSeeder, PlatformAdminSeeder>();
         }
 
-        private void AddEmailServices()
+        /// <summary>
+        /// Registers the communications layer.
+        ///
+        /// Providers are registered unconditionally and report their own configured state;
+        /// the registry then indexes only the ones that can actually send. That is what makes
+        /// absent credentials disable a channel cleanly rather than crashing at startup or
+        /// half-configuring it — the same rule the PlatformAdmin seeder follows.
+        /// </summary>
+        private void AddCommunications()
         {
-            builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));
-            builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.Configure<CommunicationsOptions>(
+                builder.Configuration.GetSection(CommunicationsOptions.SectionName));
+
+            // Named client so provider calls get their own timeout and carry no ambient auth.
+            builder.Services.AddHttpClient(TwilioMessageProvider.HttpClientName);
+
+            var options = builder.Configuration
+                .GetSection(CommunicationsOptions.SectionName)
+                .Get<CommunicationsOptions>() ?? new CommunicationsOptions();
+
+            if (options.UseNoopProviders)
+            {
+                // Explicit opt-in to no-op for every channel. Registered instead of, not
+                // alongside, the real providers so a stray credential in user-secrets cannot
+                // send a real message from a local run.
+                foreach (var channel in Enum.GetValues<MessageChannel>())
+                {
+                    builder.Services.AddSingleton<IMessageProvider>(sp =>
+                        new NoopMessageProvider(channel,
+                            sp.GetRequiredService<ILogger<NoopMessageProvider>>()));
+                }
+            }
+            else
+            {
+                builder.Services.AddSingleton<IMessageProvider, SmtpMessageProvider>();
+
+                builder.Services.AddSingleton<IMessageProvider>(sp =>
+                    new TwilioMessageProvider(MessageChannel.Sms,
+                        sp.GetRequiredService<IHttpClientFactory>(),
+                        sp.GetRequiredService<IOptions<CommunicationsOptions>>(),
+                        sp.GetRequiredService<ILogger<TwilioMessageProvider>>()));
+
+                builder.Services.AddSingleton<IMessageProvider>(sp =>
+                    new TwilioMessageProvider(MessageChannel.WhatsApp,
+                        sp.GetRequiredService<IHttpClientFactory>(),
+                        sp.GetRequiredService<IOptions<CommunicationsOptions>>(),
+                        sp.GetRequiredService<ILogger<TwilioMessageProvider>>()));
+            }
+
+            builder.Services.AddSingleton<IMessageProviderRegistry, MessageProviderRegistry>();
+            builder.Services.AddScoped<ISuppressionService, SuppressionService>();
+            builder.Services.AddScoped<IMergeFieldResolver, MergeFieldResolver>();
+            builder.Services.AddScoped<IMessagingPolicyService, MessagingPolicyService>();
+            builder.Services.AddScoped<IMessageDispatcher, MessageDispatcher>();
+            builder.Services.AddScoped<IMessageSendScheduler, HangfireMessageSendScheduler>();
+            builder.Services.AddScoped<IInboundMessageService, InboundMessageService>();
+            builder.Services.AddScoped<IWebhookTenantResolver, WebhookTenantResolver>();
+            builder.Services.AddScoped<MessageDeliveryJob>();
         }
 
         private void addApiVersioning()

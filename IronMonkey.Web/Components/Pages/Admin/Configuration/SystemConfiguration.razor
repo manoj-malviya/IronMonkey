@@ -73,6 +73,10 @@
             <AppearanceTab OnSuccess="ShowSuccess" OnError="ShowError" />
             break;
 
+        case "messaging":
+            <MessagingTab OnSuccess="ShowSuccess" OnError="ShowError" />
+            break;
+
         case "workflows":
             <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3">
                 <p class="text-sm text-indigo-900">
@@ -325,6 +329,8 @@
             "Automatic actions that run when a lead changes."),
         new("appearance", "Appearance",
             "What you call things, how money and dates are shown, and your branding."),
+        new("messaging", "Messaging",
+            "Email, SMS and WhatsApp templates, and who has opted out of being contacted."),
     ];
 
     [SupplyParameterFromQuery(Name = "tab")]

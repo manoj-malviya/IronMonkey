@@ -29,6 +29,8 @@ using IronMonkey.ApiService.Features.UserManagement;
 using IronMonkey.ApiService.Features.RoleManagement;
 using IronMonkey.ApiService.Features.Contacts;
 using IronMonkey.ApiService.Features.Opportunities;
+using IronMonkey.ApiService.Features.Communications.Endpoints;
+using IronMonkey.ApiService.Features.Communications.Webhooks;
 using IronMonkey.ApiService.Features.Presentation;
 
 namespace IronMonkey.ApiService;
@@ -60,6 +62,7 @@ public static class Endpoints
         endpoints.MapContactEndpoints();
         endpoints.MapOpportunityEndpoints();
         endpoints.MapPresentationEndpoints();
+        endpoints.MapCommunicationEndpoints();
     }
 
     extension(IEndpointRouteBuilder app)
@@ -205,6 +208,34 @@ public static class Endpoints
             UpdateLeadEndpoint.Map(app);
             DeleteLeadEndpoint.Map(app);
             ConvertLeadEndpoint.Map(app);
+        }
+
+        private void MapCommunicationEndpoints()
+        {
+            // Messaging. Sending is gated on messages:send and reading on messages:read, both
+            // separate from leads:* — sending is outward-facing and a message body is the most
+            // sensitive data in the CRM.
+            SendMessageEndpoint.Map(app);
+            ListMessagesEndpoint.Map(app);
+            ListChannelsEndpoint.Map(app);
+            AttachMessageEndpoint.Map(app);
+            GetWebhookUrlsEndpoint.Map(app);
+
+            GetMessagingPolicyEndpoint.Map(app);
+            UpdateMessagingPolicyEndpoint.Map(app);
+
+            ListMessageTemplatesEndpoint.Map(app);
+            CreateMessageTemplateEndpoint.Map(app);
+            UpdateMessageTemplateEndpoint.Map(app);
+
+            ListConsentEndpoint.Map(app);
+            UpdateConsentEndpoint.Map(app);
+
+            // Provider callbacks. Anonymous by necessity — a provider has no session — so the
+            // signature authenticates and the routing token in the path selects the tenant.
+            // Neither reads a tenant id from the request body.
+            TwilioWebhookEndpoint.Map(app);
+            GenericInboundWebhookEndpoint.Map(app);
         }
 
         private void MapPresentationEndpoints()

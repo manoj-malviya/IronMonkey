@@ -223,6 +223,61 @@ dotnet ef migrations add <Name> --project IronMonkey.Data --startup-project Iron
   takes it so the run can record Hangfire's job id and retry count; the dispatcher passes `null`
   at enqueue time and Hangfire substitutes the live context at invocation.
 
+### Communications (`/api/messages`, `/admin/messages/unmatched`)
+- **Providers are platform-wide, not per-tenant.** Credentials come from the `Communications`
+  configuration section and secrets, never from tenant-editable data. Per-tenant credentials
+  would put an API key in a table every tenant Admin can read, and any endpoint returning
+  tenant settings would become a credential leak. Tenants get a from-identity, not a secret.
+  No endpoint returns provider configuration — `GET /api/messages/channels` reports
+  availability only.
+- **Absent credentials disable a channel cleanly**, like the `PlatformAdmin` seeder. An
+  unconfigured provider reports `IsConfigured == false` and `MessageProviderRegistry` indexes
+  only configured ones, so it is indistinguishable from an absent one at the call site. Sends
+  are then recorded as `Rejected`/`ChannelNotConfigured` — an actionable diagnostic — rather
+  than failing at the network layer with something that reads like an outage. Nothing throws
+  at startup. `Communications:UseNoopProviders` forces the no-op provider for every channel,
+  which is how tests run with no credentials and no network call.
+- **`IMessageDispatcher` is the only way to send.** Consent, channel rules and provider
+  resolution all live there, so a manual send and a workflow-triggered send cannot diverge —
+  an opt-out honoured in one call site but not another is not an opt-out. Suppression is
+  checked at queue time *and* again at delivery, because an opt-out can arrive while a message
+  sits through a retry backoff.
+- **`Sent` is not `Delivered`.** A provider accepting a message is a handover, not delivery;
+  only a verified receipt writes `Delivered`. `Failed` is retryable and `Rejected` is not, so
+  a suppressed recipient or a rejected credential does not burn three retries.
+  `Message.CanAttemptSend()` is the duplicate-send guard: a Hangfire retry of a job whose
+  provider call already succeeded stops there instead of sending a second copy.
+- **An idempotency key must not read from the audit object.** The workflow email action derives
+  its key from the rule id, lead id and trigger — never from `WorkflowExecutionRun`, which is
+  optional and whose row can be rejected by the unique correlation index. A `run?.X ?? fallback`
+  term silently changed the key on a retry and delivered the customer a second copy.
+  `(TenantId, IdempotencyKey)` is uniquely indexed, so the guarantee is the database's.
+- **Quiet hours defer; the rate limit rejects.** `MessagingPolicy` (tenant DB, one row per
+  tenant, absent = unrestricted) holds both. A message inside the quiet window stays `Queued`
+  and is Hangfire-scheduled for when the window closes — the tenant asked for it to go, just
+  not at 3am, so dropping it would lose a message. A rate-limited one is `Rejected`, because
+  there is no known time at which it becomes acceptable. The window is evaluated in the
+  tenant's timezone from `TenantFormatting`, the same one the UI renders dates with; an
+  overnight window has `Start > End` and a naive `start <= t < end` comparison reports it as
+  never active.
+- **Consent is keyed by normalized address, not by record id.** The same person is routinely
+  several leads and a contact, so keying on a record would let the next duplicate be messaged
+  after a STOP. Every read and write goes through `ConsentAddress.Normalize` — asymmetry there
+  means the lookup misses and someone who opted out gets messaged.
+- **Webhooks take the tenant from a routing token in the URL path**, derived by HMAC from the
+  tenant id, never from the request body — an anonymous endpoint's body is attacker-supplied,
+  and a tenant id in it would let anyone write into any tenant. The provider signature is the
+  authentication (fixed-time compared, with a replay window on the timestamp); the token only
+  routes. An unsigned or mis-signed callback is refused before anything is read from it.
+- **Every substituted template value is escaped.** A lead name arrives from a public web form,
+  so it is attacker-controlled, and it reaches both an HTML email and the tenant's own browser.
+  `MessageTemplateRenderer` escapes by output format (HTML for email, verbatim for SMS), and
+  templates are validated against real field definitions at save time so a bad placeholder is
+  caught by the author rather than rendering blank at 3am.
+- **`EmailService` and `EmailSender` are gone.** They were dead code from another product —
+  hardcoded sender, commented-out TLS, a fire-and-forget send logged as success via
+  `true ? ... : ...`. There is exactly one email path now.
+
 ### Tenant CRM Dashboard (`/admin`)
 - **One endpoint per widget, not one payload.** `/api/dashboard/{summary,opportunities,attention,activity}`
   are separate so a widget that fails degrades alone — the page renders the rest, shows that
