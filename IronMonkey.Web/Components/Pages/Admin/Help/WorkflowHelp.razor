@@ -1,0 +1,247 @@
+@page "/admin/help/workflows"
+@attribute [Authorize]
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>Workflow Rules — Help</PageTitle>
+
+<div class="max-w-4xl space-y-8 pb-16">
+
+    <div>
+        <button type="button" @onclick='() => Nav.NavigateTo("/admin/configuration")'
+                class="mb-4 text-sm text-indigo-600 hover:text-indigo-700">&larr; Back to System Configuration</button>
+        <h1 class="text-2xl font-bold text-slate-900">Workflow Rules</h1>
+        <p class="mt-2 text-slate-600">
+            A rule watches your leads and does something automatically. Every rule has three parts:
+            a <strong>trigger</strong> (when to check), a <strong>condition</strong> (which leads
+            qualify) and an <strong>action</strong> (what to do).
+        </p>
+    </div>
+
+    <!-- Triggers -->
+    <section>
+        <h2 class="mb-3 text-lg font-semibold text-slate-900">1. Triggers — when the rule is checked</h2>
+        <div class="overflow-hidden rounded-lg border border-slate-200">
+            <table class="w-full text-sm">
+                <thead class="border-b border-slate-200 bg-slate-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left font-semibold text-slate-900">Trigger</th>
+                        <th class="px-4 py-2 text-left font-semibold text-slate-900">Fires when</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="border-b border-slate-100">
+                        <td class="px-4 py-3 font-mono text-xs text-slate-900">FieldChange</td>
+                        <td class="px-4 py-3 text-slate-600">A lead is created, or any of its details are edited.</td>
+                    </tr>
+                    <tr class="border-b border-slate-100">
+                        <td class="px-4 py-3 font-mono text-xs text-slate-900">StatusChange</td>
+                        <td class="px-4 py-3 text-slate-600">A lead moves to a different pipeline stage — on the board or from the edit form.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs text-slate-900">TimeElapsed</td>
+                        <td class="px-4 py-3 text-slate-600">
+                            Checked hourly for every lead not yet in a closed stage. Pair it with
+                            <code class="rounded bg-slate-100 px-1">olderThanDays</code>, or the rule fires every hour.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="mt-2 text-xs text-slate-500">
+            Rules run in the background a moment after the change, so the action may take a few
+            seconds to appear.
+        </p>
+    </section>
+
+    <!-- Conditions -->
+    <section>
+        <h2 class="mb-3 text-lg font-semibold text-slate-900">2. Conditions — which leads qualify</h2>
+        <p class="mb-3 text-sm text-slate-600">
+            Leave it as <code class="rounded bg-slate-100 px-1">{"always": true}</code> to act on every lead.
+            Fields you can test: <code class="rounded bg-slate-100 px-1">Source</code>,
+            <code class="rounded bg-slate-100 px-1">Email</code>,
+            <code class="rounded bg-slate-100 px-1">Mobile</code>,
+            <code class="rounded bg-slate-100 px-1">FirstName</code>,
+            <code class="rounded bg-slate-100 px-1">LastName</code>,
+            <code class="rounded bg-slate-100 px-1">StageName</code>,
+            <code class="rounded bg-slate-100 px-1">IsConverted</code>.
+        </p>
+
+        <div class="space-y-3">
+            @foreach (var c in _conditions)
+            {
+                <CodeSample Title="@c.Title" Description="@c.Description" Code="@c.Code" />
+            }
+        </div>
+
+        @if (_customFields.Count > 0)
+        {
+            <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p class="mb-2 text-sm font-semibold text-slate-900">Your custom fields</p>
+                <p class="mb-3 text-xs text-slate-600">
+                    Custom fields are matched by id, not by name — renaming a field keeps your rules working.
+                </p>
+                <div class="space-y-2">
+                    @foreach (var f in _customFields)
+                    {
+                        <CodeSample Title="@f.FieldName"
+                                    Code="@($"{{\"customField\": \"{f.Id}\", \"equals\": \"…\"}}")" />
+                    }
+                </div>
+            </div>
+        }
+    </section>
+
+    <!-- Actions -->
+    <section>
+        <h2 class="mb-3 text-lg font-semibold text-slate-900">3. Actions — what happens</h2>
+        <p class="mb-3 text-sm text-slate-600">
+            In any text you can use placeholders:
+            <code class="rounded bg-slate-100 px-1">{{FirstName}}</code>,
+            <code class="rounded bg-slate-100 px-1">{{LastName}}</code>,
+            <code class="rounded bg-slate-100 px-1">{{FullName}}</code>,
+            <code class="rounded bg-slate-100 px-1">{{Email}}</code>,
+            <code class="rounded bg-slate-100 px-1">{{Mobile}}</code>,
+            <code class="rounded bg-slate-100 px-1">{{Source}}</code>,
+            <code class="rounded bg-slate-100 px-1">{{StageName}}</code>.
+        </p>
+
+        <div class="space-y-3">
+            @foreach (var a in _actions)
+            {
+                <CodeSample Title="@a.Title" Description="@a.Description" Code="@a.Code" />
+            }
+        </div>
+
+        @if (_users.Count > 0)
+        {
+            <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p class="mb-2 text-sm font-semibold text-slate-900">Your team's user ids</p>
+                <p class="mb-3 text-xs text-slate-600">Use these in the <code>notify</code> and <code>assign</code> actions.</p>
+                <div class="space-y-1">
+                    @foreach (var u in _users)
+                    {
+                        <div class="flex flex-wrap items-baseline gap-2 text-xs">
+                            <span class="font-medium text-slate-900">@u.Name</span>
+                            <code class="rounded bg-white px-1.5 py-0.5 font-mono text-slate-600">@u.Id</code>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </section>
+
+    <!-- Worked examples -->
+    <section>
+        <h2 class="mb-3 text-lg font-semibold text-slate-900">Complete examples</h2>
+        <div class="space-y-4">
+            @foreach (var e in _examples)
+            {
+                <div class="rounded-lg border border-slate-200 p-4">
+                    <p class="text-sm font-semibold text-slate-900">@e.Title</p>
+                    <p class="mt-1 text-sm text-slate-600">@e.Description</p>
+                    <div class="mt-3 grid gap-3 sm:grid-cols-[auto_1fr]">
+                        <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">Trigger</span>
+                        <code class="text-xs text-slate-900">@e.Trigger</code>
+                    </div>
+                    <div class="mt-3 space-y-2">
+                        <CodeSample Title="Condition" Code="@e.Condition" />
+                        <CodeSample Title="Action" Code="@e.Action" />
+                    </div>
+                </div>
+            }
+        </div>
+    </section>
+
+    <!-- Caveats -->
+    <section class="rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <h2 class="mb-2 text-sm font-semibold text-amber-900">Good to know</h2>
+        <ul class="list-disc space-y-1 pl-5 text-sm text-amber-800">
+            <li>Rules apply to <strong>leads only</strong> — not contacts or opportunities.</li>
+            <li>If a rule fails (bad JSON, an unreachable URL), it is skipped and logged. It never blocks the change that triggered it, and never rolls it back.</li>
+            <li><code>email</code> actions are <strong>recorded but not delivered</strong> — no mail server is configured yet. Use <code>notify</code> for something your team will actually see today.</li>
+            <li>A <code>webhook</code> gets 10 seconds to respond. Slow or failing endpoints are abandoned, not retried.</li>
+            <li>Turning a rule off with the toggle stops it immediately; it does not undo anything already done.</li>
+        </ul>
+    </section>
+</div>
+
+@code {
+    private List<FieldDef> _customFields = [];
+    private List<UserRef> _users = [];
+
+    private record Sample(string Title, string Code, string? Description = null);
+    private record Example(string Title, string Description, string Trigger, string Condition, string Action);
+
+    private readonly List<Sample> _conditions =
+    [
+        new("Every lead", """{"always": true}""", "No filtering — the action runs for all leads."),
+        new("Only leads from a given source", """{"field": "Source", "equals": "WebForm"}""",
+            "Sources: Manual, Import, Api, WebForm."),
+        new("Email from a particular company", """{"field": "Email", "contains": "@acme.com"}"""),
+        new("Leads that reached a stage", """{"field": "StageName", "equals": "Qualified"}""",
+            "Best paired with the Status Change trigger."),
+        new("Untouched for 3 days", """{"olderThanDays": 3}""",
+            "Use with the Time Elapsed trigger to chase stale leads."),
+        new("Several conditions at once", """{"all": [{"field": "Source", "equals": "Api"}, {"olderThanDays": 2}]}""",
+            "\"all\" needs every condition to pass; \"any\" needs just one.")
+    ];
+
+    private readonly List<Sample> _actions =
+    [
+        new("Notify a team member", """{"type": "notify", "userId": "<user-id>", "message": "New lead: {{FullName}} ({{Source}})"}""",
+            "Creates an in-app notification. This is the one that works end to end today."),
+        new("Assign the lead to someone", """{"type": "assign", "userId": "<user-id>"}"""),
+        new("Create a follow-up task", """{"type": "schedule_task", "title": "Call {{FirstName}}", "dueDays": 1}"""),
+        new("Call an external API (webhook)", """{"type": "webhook", "url": "https://example.com/hooks/lead", "headers": {"X-Api-Key": "your-key"}}""",
+            "POSTs the whole lead as JSON — including custom fields — to your endpoint. Headers are optional."),
+        new("Send an email", """{"type": "email", "to": "lead", "subject": "Thanks, {{FirstName}}", "body": "We received your enquiry."}""",
+            "\"to\" accepts \"lead\" for the lead's own address, or a fixed address. Currently recorded in the logs only — see below.")
+    ];
+
+    private readonly List<Example> _examples =
+    [
+        new("Push new API leads to another system",
+            "Whenever a lead arrives through the public API, forward it to your own endpoint.",
+            "FieldChange",
+            """{"field": "Source", "equals": "Api"}""",
+            """{"type": "webhook", "url": "https://example.com/hooks/lead", "headers": {"X-Api-Key": "your-key"}}"""),
+
+        new("Welcome every web-form enquiry",
+            "Email the person who filled in your public form.",
+            "FieldChange",
+            """{"field": "Source", "equals": "WebForm"}""",
+            """{"type": "email", "to": "lead", "subject": "Thanks for getting in touch, {{FirstName}}", "body": "We've received your enquiry and will call you shortly."}"""),
+
+        new("Chase leads going cold",
+            "If a lead has sat in the pipeline for 3 days, tell the owner to follow up.",
+            "TimeElapsed",
+            """{"olderThanDays": 3}""",
+            """{"type": "notify", "userId": "<user-id>", "message": "{{FullName}} has been waiting 3 days in {{StageName}}"}"""),
+
+        new("Book a call when a lead qualifies",
+            "As soon as a lead reaches the Qualified stage, create a task for tomorrow.",
+            "StatusChange",
+            """{"field": "StageName", "equals": "Qualified"}""",
+            """{"type": "schedule_task", "title": "Call {{FullName}} — now qualified", "dueDays": 1}""")
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _customFields = await Api.GetFromJsonAsync<List<FieldDef>>("/api/custom-fields?entityType=Lead") ?? [];
+        _users = await Api.GetFromJsonAsync<List<UserRef>>("/users") ?? [];
+    }
+
+    private class FieldDef
+    {
+        public Guid Id { get; set; }
+        public string FieldName { get; set; } = "";
+    }
+
+    private class UserRef
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = "";
+    }
+}

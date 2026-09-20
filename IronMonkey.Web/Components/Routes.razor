@@ -3,11 +3,30 @@
         <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
             <NotAuthorized>
                 @{
-                    // D-11: Blazor-native auth guard — redirect to login on unauthorized access
-                    if (context.User.Identity?.IsAuthenticated != true)
+                    // D-11: Blazor-native auth guard — redirect to login on unauthorized access.
+                    // Public pages (/, /login, /signup) are excluded from the redirect.
+                    //
+                    // The redirect must not fire while auth state is still unresolved. The JWT
+                    // lives in ProtectedSessionStorage, which is unreadable during prerender
+                    // (no JS interop), so this block runs once with an anonymous principal on
+                    // every full page load. Redirecting there sends an authenticated user to
+                    // /login on any deep link — hitting refresh on a working page logs you out.
+                    // _authResolved is set from OnAfterRenderAsync, once interop is available.
+                    var path = Nav.Uri.Replace(Nav.BaseUri, "/").TrimEnd('/');
+                    var isPublic = path is "/" or "/login" or "/signup" or "/signup/success"
+                                || string.IsNullOrEmpty(path);
+
+                    if (_authResolved && !isPublic)
                     {
                         Nav.NavigateTo("/login", forceLoad: false);
                     }
+                }
+
+                @if (!_authResolved)
+                {
+                    <div class="flex min-h-screen items-center justify-center">
+                        <p class="text-sm text-slate-500">Loading...</p>
+                    </div>
                 }
             </NotAuthorized>
         </AuthorizeRouteView>
@@ -26,3 +45,22 @@
 </Router>
 
 @inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+
+@code {
+    private bool _authResolved = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _authResolved)
+            return;
+
+        // Read the token now that JS interop is available. Only after this has run is an
+        // anonymous principal genuinely "not logged in" rather than "not yet known".
+        if (AuthStateProvider is AdminAuthenticationStateProvider provider)
+            await provider.InitializeAsync();
+
+        _authResolved = true;
+        StateHasChanged();
+    }
+}

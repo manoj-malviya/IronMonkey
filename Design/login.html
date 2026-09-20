@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>IronMonkey | Kinetic Industrialism CRM</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-tint": "#ff5d2b",
+                      "primary-fixed-dim": "#ff5d2b",
+                      "surface-container-low": "#f7f7f7",
+                      "inverse-on-surface": "#ffffff",
+                      "secondary": "#445362",
+                      "tertiary-fixed": "#611b79",
+                      "on-surface-variant": "#484847",
+                      "on-background": "#131313",
+                      "secondary-dim": "#31414f",
+                      "on-primary-fixed-variant": "#ffffff",
+                      "secondary-container": "#e0e2e5",
+                      "error-dim": "#ba1a1a",
+                      "surface": "#fcfcfc",
+                      "primary": "#ff5d2b",
+                      "on-primary-fixed": "#ffffff",
+                      "on-secondary-container": "#131313",
+                      "primary-dim": "#e44a1b",
+                      "tertiary": "#8d3ba1",
+                      "surface-bright": "#ffffff",
+                      "tertiary-dim": "#77288a",
+                      "on-tertiary-container": "#ffffff",
+                      "on-tertiary-fixed-variant": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-container": "#f0f0f0",
+                      "on-secondary-fixed-variant": "#ffffff",
+                      "on-primary-container": "#ffffff",
+                      "error": "#ba1a1a",
+                      "on-secondary": "#ffffff",
+                      "inverse-primary": "#ffb4a0",
+                      "outline-variant": "#c4c4c4",
+                      "surface-variant": "#eeeeee",
+                      "on-primary": "#ffffff",
+                      "inverse-surface": "#2c2c2c",
+                      "on-tertiary-fixed": "#ffffff",
+                      "primary-container": "#ff5d2b",
+                      "secondary-fixed": "#445362",
+                      "surface-dim": "#e0e0e0",
+                      "surface-container-highest": "#e6e6e6",
+                      "tertiary-fixed-dim": "#77288a",
+                      "tertiary-container": "#8d3ba1",
+                      "secondary-fixed-dim": "#31414f",
+                      "on-secondary-fixed": "#ffffff",
+                      "on-error": "#ffffff",
+                      "on-error-container": "#ffffff",
+                      "surface-container-high": "#ebebeb",
+                      "on-surface": "#131313",
+                      "primary-fixed": "#ff5d2b",
+                      "error-container": "#ffdad6",
+                      "outline": "#767575",
+                      "on-tertiary": "#ffffff",
+                      "background": "#fcfcfc"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "fontFamily": {
+                      "headline": ["Space Grotesk"],
+                      "body": ["Inter"],
+                      "label": ["Inter"]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        .industrial-shadow {
+            box-shadow: 10px 10px 0px 0px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface selection:bg-primary selection:text-on-primary">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-outline-variant/30">
+<div class="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
+<div class="text-2xl font-bold tracking-tighter text-primary uppercase font-['Space_Grotesk']">
+            IronMonkey
+        </div>
+<nav class="hidden md:flex items-center gap-10 font-['Space_Grotesk'] tracking-tighter uppercase font-bold text-xs">
+<a class="text-primary border-b-2 border-primary pb-1" href="#">Product</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors" href="#">Pricing</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors" href="#">About</a>
+</nav>
+<div class="flex items-center gap-6">
+<button class="text-on-surface-variant hover:text-on-surface transition-colors font-['Space_Grotesk'] tracking-tighter uppercase font-bold text-xs">Login</button>
+<button class="bg-primary text-on-primary px-6 py-2 rounded-lg font-bold uppercase tracking-tighter hover:bg-primary-dim transition-all duration-200 scale-95 active:scale-90">Sign Up</button>
+</div>
+</div>
+</header>
+<main class="pt-24">
+<!-- Hero Section -->
+<section class="relative w-full min-h-[80vh] flex items-center overflow-hidden">
+<div class="absolute inset-0 z-0">
+<div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-background pointer-events-none"></div>
+<div class="absolute top-1/4 -right-1/4 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px]"></div>
+</div>
+<div class="relative z-10 max-w-7xl mx-auto px-8 w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center py-20">
+<div class="max-w-2xl">
+<h1 class="text-6xl md:text-8xl font-bold leading-[0.9] tracking-tighter mb-8 uppercase italic text-on-surface">
+                    Master Your <br/>
+<span class="text-primary">Workflow</span> <br/>
+                    With IronMonkey
+                </h1>
+<p class="text-xl text-on-surface-variant font-medium mb-10 max-w-lg leading-relaxed">
+                    A high-octane CRM engineered for precision. Scale your sales machinery with industrial-grade automation and relentless analytics.
+                </p>
+<div class="flex flex-col sm:flex-row gap-4">
+<button class="bg-primary text-on-primary px-10 py-5 rounded-lg text-lg font-black uppercase tracking-widest hover:bg-primary-dim hover:shadow-[0_10px_20px_-10px_rgba(255,93,43,0.5)] transition-all">
+                        Get Started
+                    </button>
+<button class="bg-surface-container-high text-on-surface px-10 py-5 rounded-lg text-lg font-bold uppercase tracking-widest hover:bg-surface-dim transition-all border border-outline-variant/30">
+                        View Demo
+                    </button>
+</div>
+</div>
+<div class="relative hidden lg:block">
+<div class="relative z-10 bg-surface-container p-4 rounded-xl border border-outline-variant shadow-2xl rotate-2 hover:rotate-0 transition-transform duration-500 industrial-shadow">
+<img alt="CRM Interface" class="rounded-lg contrast-[1.05] saturate-[0.8] hover:saturate-100 transition-all duration-700" data-alt="Modern high-contrast light mode CRM dashboard interface with vibrant orange charts and clean geometric data visualizations" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBIM9rJzkdV-C2opjTURrVmpzkotMSMMPeiKukDgYhRW6tiJL4mWZFGtvA4O8m_8aUiZP0A-w2bCKORgRYpwHGhnIH7iCq6_KH8C3USHg8GsWPvNZV3qVNFgOuCJaGWCGnY9flvMSNvpt2FjeblwcoowUzt98App75Fh9B6urUshomOibE2CBlCijhpxbCvL9biXcDq1-S2OnH5RkjZUKSv2-xxUgoPZ9TtYUglECPU8_6PRN71p_AUMEnBE7DlfqMw4mGuep1Vg"/>
+<div class="absolute -bottom-6 -left-6 bg-primary text-on-primary p-6 rounded-lg shadow-xl">
+<span class="text-4xl font-black block leading-none">124%</span>
+<span class="text-xs uppercase font-bold tracking-widest">Revenue Growth</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Feature Showcase (Bento Grid) -->
+<section class="py-32 bg-surface-container-low">
+<div class="max-w-7xl mx-auto px-8">
+<div class="mb-20 text-center md:text-left border-l-8 border-primary pl-8">
+<h2 class="text-4xl md:text-6xl font-extrabold tracking-tighter uppercase mb-4 text-on-surface">Precision Engineering</h2>
+<p class="text-on-surface-variant uppercase tracking-widest text-sm font-bold">Modules built for heavy-duty operations</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Lead Management -->
+<div class="md:col-span-2 group relative overflow-hidden bg-surface p-10 rounded-xl hover:bg-surface-bright transition-all border border-outline-variant/30 industrial-shadow">
+<div class="relative z-10 h-full flex flex-col justify-between">
+<div>
+<span class="material-symbols-outlined text-primary text-5xl mb-6" data-icon="hub">hub</span>
+<h3 class="text-3xl font-bold uppercase mb-4 tracking-tighter">Lead Management</h3>
+<p class="text-on-surface-variant text-lg leading-relaxed max-w-md font-medium">
+                                Centralize every interaction. From first contact to final handshake, track every pulse of your pipeline with zero friction.
+                            </p>
+</div>
+<div class="mt-8 flex items-center text-primary font-bold uppercase tracking-widest text-xs">
+                            Explore Module <span class="material-symbols-outlined ml-2 text-sm">arrow_forward</span>
+</div>
+</div>
+<div class="absolute top-0 right-0 w-1/2 h-full opacity-5 group-hover:opacity-10 transition-opacity">
+<img alt="Feature Decor" class="object-cover h-full w-full grayscale" data-alt="Close-up of industrial machinery gears interlocking precisely" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCjNTNazXrK4ga_HB7MzV9xiL2wrzW3ai2p9VJlFBEj5_6Aq9o47bDrw-e217RjP6wt_zXfTvobGgg2P_VrUU4iu5XG016El6K0BsqQTmkzG1baEq_1Jc29snx85gG_VD-w4er7L5HbOw0gFOCHX482rGE3rrB_FwsY9ukf6X_U5_jWV9zjcK6sshNkaXjWUh4wwsr0Gtd05gBz356RRdRrPOfTA-kLVmvbw-6V3tTSJsFbJZXC0J6b5inPPXTUnY0SmVw75L4XuA"/>
+</div>
+</div>
+<!-- Automated Sales -->
+<div class="bg-surface p-10 rounded-xl hover:bg-surface-bright transition-all border border-outline-variant/30 industrial-shadow">
+<span class="material-symbols-outlined text-primary text-5xl mb-6" data-icon="bolt">bolt</span>
+<h3 class="text-3xl font-bold uppercase mb-4 tracking-tighter">Automated Sales</h3>
+<p class="text-on-surface-variant leading-relaxed font-medium">
+                        Set your outreach on autopilot. Intelligent triggers that work while you sleep.
+                    </p>
+</div>
+<!-- Advanced Analytics -->
+<div class="bg-surface p-10 rounded-xl hover:bg-surface-bright transition-all border border-outline-variant/30 industrial-shadow">
+<span class="material-symbols-outlined text-primary text-5xl mb-6" data-icon="monitoring">monitoring</span>
+<h3 class="text-3xl font-bold uppercase mb-4 tracking-tighter">Advanced Analytics</h3>
+<p class="text-on-surface-variant leading-relaxed font-medium">
+                        Real-time data visualization that reveals the architecture of your success.
+                    </p>
+</div>
+<!-- Additional Bento Item -->
+<div class="md:col-span-2 bg-on-surface text-background p-10 rounded-xl flex flex-col md:flex-row items-center gap-10 shadow-xl">
+<div class="flex-1">
+<h3 class="text-3xl font-bold uppercase mb-4 tracking-tighter">Integration Matrix</h3>
+<p class="text-outline-variant leading-relaxed font-medium">
+                            Connect IronMonkey to over 500+ industrial tools. Your workflow, unified.
+                        </p>
+</div>
+<div class="grid grid-cols-3 gap-4">
+<div class="w-16 h-16 bg-surface-container-highest/10 rounded-lg flex items-center justify-center border border-outline-variant/20"><span class="material-symbols-outlined text-background">terminal</span></div>
+<div class="w-16 h-16 bg-surface-container-highest/10 rounded-lg flex items-center justify-center border border-outline-variant/20"><span class="material-symbols-outlined text-background">database</span></div>
+<div class="w-16 h-16 bg-surface-container-highest/10 rounded-lg flex items-center justify-center border border-outline-variant/20"><span class="material-symbols-outlined text-background">cloud_sync</span></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Why IronMonkey? -->
+<section class="py-32 relative bg-background">
+<div class="max-w-7xl mx-auto px-8 grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+<div class="order-2 lg:order-1">
+<div class="grid grid-cols-2 gap-4">
+<div class="h-64 bg-surface-container rounded-xl overflow-hidden border border-outline-variant/30">
+<img alt="Texture" class="object-cover w-full h-full grayscale opacity-40 hover:scale-110 transition-transform duration-700" data-alt="Brushed steel texture with heavy industrial metal panels" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzafaVXqfoSCG2c9UB1oFyaPc8VPYpPgf_uZ_eRIX5y2tZ3FJDEIXPXPKwKoRI4JkAlXx0qohHFR68kta03u70ghyRXXjO_ZLIAON7lwwAB2NwpQxG6f_VLVjaD7mdnZa8zpoyxFhq0QJ8sGy-9xYOngmp65qCF8l2z7xKMtNVTFihDTHEO2U0EWuEbx6y1QxBzP-IlBVHsyHRhk8vbqMypn1WMA8OEq4YQ8fUtpCJJATJtq_XGDYkWPckudVM3FG0_Y1SoPtD0w"/>
+</div>
+<div class="h-64 bg-primary rounded-xl flex items-center justify-center p-8 text-on-primary industrial-shadow">
+<span class="text-6xl font-black italic tracking-tighter uppercase">IRON</span>
+</div>
+<div class="h-64 bg-surface-container-high rounded-xl p-8 flex flex-col justify-end border border-outline-variant/30">
+<span class="text-4xl font-black text-primary">99.9%</span>
+<span class="text-xs uppercase tracking-widest text-on-surface-variant font-bold">Uptime SLA</span>
+</div>
+<div class="h-64 bg-surface-container rounded-xl overflow-hidden border border-outline-variant/30">
+<img alt="Robotics" class="object-cover w-full h-full grayscale opacity-40" data-alt="Modern high-tech factory robotic arm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDoqGmjdaYClINv3EaZWOrP6rzVCgW_w3re02wr9HtXT3T3egRuZLMbMJwQ3lDmg2tj68U80NbezP5PffP1oI8Rm8DLpS07TMsRF0Wgcb0sHT3BySVqQCUx77Vla5JXeWyvPelgjNBieQpzyUiO8LCJnFZRptuhtRCa1sr-U02tKbQxvnoWVXw8SKdIe8P9X3sqSbKP14fx1BeI72olMASGry186RzGpAruf6CpZXg1rSNJMd90LkRWmaElcNDU45sa9qAixqMruQ"/>
+</div>
+</div>
+</div>
+<div class="order-1 lg:order-2">
+<h2 class="text-5xl md:text-7xl font-bold uppercase tracking-tighter mb-8 leading-tight text-on-surface">
+                    Built For <br/><span class="text-primary italic">Relentless</span> Growth.
+                </h2>
+<div class="space-y-10">
+<div class="flex gap-6">
+<div class="w-12 h-12 shrink-0 bg-primary/10 flex items-center justify-center rounded-lg">
+<span class="material-symbols-outlined text-primary" data-icon="shield">shield</span>
+</div>
+<div>
+<h4 class="text-xl font-bold uppercase tracking-tight mb-2 text-on-surface">Military-Grade Security</h4>
+<p class="text-on-surface-variant font-medium">Encrypted at every layer. Your data is protected by the strongest digital vault in the industry.</p>
+</div>
+</div>
+<div class="flex gap-6">
+<div class="w-12 h-12 shrink-0 bg-primary/10 flex items-center justify-center rounded-lg">
+<span class="material-symbols-outlined text-primary" data-icon="speed">speed</span>
+</div>
+<div>
+<h4 class="text-xl font-bold uppercase tracking-tight mb-2 text-on-surface">Zero-Latency Infrastructure</h4>
+<p class="text-on-surface-variant font-medium">Built on a distributed cloud network that guarantees sub-millisecond response times globally.</p>
+</div>
+</div>
+<div class="flex gap-6">
+<div class="w-12 h-12 shrink-0 bg-primary/10 flex items-center justify-center rounded-lg">
+<span class="material-symbols-outlined text-primary" data-icon="handyman">handyman</span>
+</div>
+<div>
+<h4 class="text-xl font-bold uppercase tracking-tight mb-2 text-on-surface">Atomic Scalability</h4>
+<p class="text-on-surface-variant font-medium">From a team of 5 to a workforce of 50,000, our infrastructure grows dynamically with your needs.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- CTA Section -->
+<section class="py-32 px-8 bg-surface-container-low">
+<div class="max-w-7xl mx-auto glass-panel p-16 md:p-24 rounded-3xl text-center relative overflow-hidden shadow-2xl border-2 border-primary/20">
+<div class="absolute inset-0 bg-gradient-to-tr from-primary/5 to-transparent pointer-events-none"></div>
+<h2 class="text-5xl md:text-8xl font-black uppercase tracking-tighter mb-10 relative z-10 italic text-on-surface">
+                Ready to <span class="text-primary">Scale?</span>
+</h2>
+<p class="text-xl text-on-surface-variant mb-12 max-w-2xl mx-auto relative z-10 font-medium">
+                Join over 2,500 industrial giants who have optimized their sales force with IronMonkey's kinetic platform.
+            </p>
+<div class="flex flex-col sm:flex-row justify-center gap-6 relative z-10">
+<button class="bg-primary text-on-primary px-12 py-6 rounded-lg text-xl font-black uppercase tracking-widest hover:scale-105 transition-transform duration-200 industrial-shadow">
+                    Initiate Launch
+                </button>
+<button class="bg-on-surface text-background px-12 py-6 rounded-lg text-xl font-bold uppercase tracking-widest hover:bg-secondary transition-colors industrial-shadow">
+                    Speak to Command
+                </button>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-background border-t border-outline-variant/30 w-full">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-8 px-8 py-12 max-w-7xl mx-auto">
+<div class="col-span-2 md:col-span-1">
+<div class="text-lg font-black text-on-surface uppercase tracking-widest mb-6">IronMonkey</div>
+<p class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">© 2024 IronMonkey CRM. <br/>Kinetic Industrialism.</p>
+</div>
+<div>
+<h5 class="text-sm uppercase tracking-widest text-primary mb-6 font-bold">Resources</h5>
+<ul class="space-y-4 text-xs uppercase tracking-widest font-bold">
+<li><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Documentation</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">API Status</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Twitter</a></li>
+</ul>
+</div>
+<div>
+<h5 class="text-sm uppercase tracking-widest text-primary mb-6 font-bold">Company</h5>
+<ul class="space-y-4 text-xs uppercase tracking-widest font-bold">
+<li><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">About Us</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Careers</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">LinkedIn</a></li>
+</ul>
+</div>
+<div>
+<h5 class="text-sm uppercase tracking-widest text-primary mb-6 font-bold">Legal</h5>
+<ul class="space-y-4 text-xs uppercase tracking-widest font-bold">
+<li><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Terms</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">GitHub</a></li>
+</ul>
+</div>
+</div>
+</footer>
+</body></html>

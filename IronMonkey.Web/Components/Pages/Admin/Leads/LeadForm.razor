@@ -1,0 +1,273 @@
+@page "/admin/leads/create"
+@page "/admin/leads/{Id:guid}/edit"
+@attribute [Authorize]
+@using IronMonkey.Web.Components.Shared
+@using System.ComponentModel.DataAnnotations
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>@(IsEdit ? "Edit Lead" : "New Lead") — IronMonkey</PageTitle>
+
+<div class="max-w-3xl">
+
+    <a href="@BackHref" class="mb-4 inline-block text-sm text-indigo-600 hover:text-indigo-700">
+        &larr; Back to Leads
+    </a>
+
+    <h1 class="mb-6 text-2xl font-bold text-slate-900">@(IsEdit ? "Edit Lead" : "New Lead")</h1>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">@_error</div>
+    }
+
+    @if (_duplicates.Count > 0)
+    {
+        <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <p class="font-semibold">Possible duplicate@(_duplicates.Count > 1 ? "s" : "") found</p>
+            <ul class="mt-2 list-disc pl-5">
+                @foreach (var d in _duplicates)
+                {
+                    <li>@d.FullName — @d.Email (@d.ConfidenceScore% match)</li>
+                }
+            </ul>
+            <button type="button" @onclick="SaveAnywayAsync"
+                    class="mt-3 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
+                Create anyway
+            </button>
+        </div>
+    }
+
+    @if (_isLoadingForm)
+    {
+        <p class="text-sm text-slate-500">Loading...</p>
+    }
+    else
+    {
+        <EditForm Model="_model" OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
+
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700">First name</label>
+                    <InputText @bind-Value="_model.FirstName"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <ValidationMessage For="() => _model.FirstName" class="mt-1 text-xs text-red-600" />
+                </div>
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700">Last name</label>
+                    <InputText @bind-Value="_model.LastName"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <ValidationMessage For="() => _model.LastName" class="mt-1 text-xs text-red-600" />
+                </div>
+            </div>
+
+            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700">Email</label>
+                    <InputText @bind-Value="_model.Email"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <ValidationMessage For="() => _model.Email" class="mt-1 text-xs text-red-600" />
+                </div>
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700">Phone</label>
+                    <InputText @bind-Value="_model.Mobile"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+            </div>
+
+            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700">Pipeline stage</label>
+                    <select @bind="_model.PipelineStageId"
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        @foreach (var s in _stages)
+                        {
+                            <option value="@s.Id">@s.Name</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700">Source</label>
+                    <select @bind="_model.Source"
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="Manual">Manual</option>
+                        <option value="Import">Import</option>
+                        <option value="Api">API</option>
+                        <option value="WebForm">Web form</option>
+                    </select>
+                </div>
+            </div>
+
+            <CustomFieldsEditor @ref="_customFieldsEditor" Fields="_customFields"
+                                @bind-Values="_customValues" ApplyDefaults="@(!IsEdit)" />
+
+            <div class="mt-6 flex justify-end">
+                <button type="submit" disabled="@_isSaving"
+                        class="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60">
+                    @(_isSaving ? "Saving..." : IsEdit ? "Save Changes" : "Create Lead")
+                </button>
+            </div>
+        </EditForm>
+    }
+</div>
+
+@code {
+    // Carries the list's filter/sort/page state so returning restores the view the user
+    // left. Validated rather than used verbatim — it arrives from the query string.
+    [SupplyParameterFromQuery(Name = "returnUrl")] public string? ReturnUrl { get; set; }
+
+    private string BackHref => ListReturn.Resolve(ReturnUrl, "/admin/leads");
+
+    [Parameter] public Guid? Id { get; set; }
+
+    private bool IsEdit => Id.HasValue;
+
+    private LeadModel _model = new();
+    private List<StageItem> _stages = [];
+    private List<DuplicateMatch> _duplicates = [];
+    private List<CustomFieldsEditor.CustomFieldItem> _customFields = [];
+    private CustomFieldsEditor? _customFieldsEditor;
+    private Dictionary<string, object?> _customValues = new();
+    private bool _isSaving;
+    private bool _isLoadingForm = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _stages = await Api.GetFromJsonAsync<List<StageItem>>("/api/pipeline-stages") ?? [];
+        _customFields = await Api.GetFromJsonAsync<List<CustomFieldsEditor.CustomFieldItem>>(
+            "/api/custom-fields?appliesTo=Lead") ?? [];
+
+        if (IsEdit)
+        {
+            var lead = await Api.GetFromJsonAsync<LeadDetail>($"/api/leads/{Id}");
+            if (lead is not null)
+            {
+                _model = new LeadModel
+                {
+                    FirstName = lead.FirstName,
+                    LastName = lead.LastName,
+                    Email = lead.Email,
+                    Mobile = lead.Mobile,
+                    Source = lead.Source,
+                    PipelineStageId = lead.PipelineStageId
+                };
+                _customValues = lead.CustomFields ?? new();
+            }
+            else _error = "Lead not found.";
+        }
+        else if (_stages.Count > 0)
+        {
+            _model.PipelineStageId = _stages[0].Id;
+        }
+
+        _isLoadingForm = false;
+    }
+
+    private Task SaveAsync() => SubmitAsync(force: false);
+
+    // The create endpoint answers 200-with-duplicates instead of creating; re-posting with
+    // forceCreate tells it the operator has seen the warning and wants the lead anyway.
+    private Task SaveAnywayAsync() => SubmitAsync(force: true);
+
+    private async Task SubmitAsync(bool force)
+    {
+        if (_stages.Count == 0) { _error = "No pipeline stages are configured."; return; }
+
+        // Required custom fields are enforced here as well as by the API, so a missing one is
+        // shown against the field rather than as a sentence at the top of a re-rendered form.
+        if (_customFieldsEditor?.Validate() == false) return;
+
+        _isSaving = true;
+        _error = null;
+        if (!force) _duplicates = [];
+
+        try
+        {
+            HttpResponseMessage res;
+            if (IsEdit)
+            {
+                res = await Api.PutAsJsonAsync($"/api/leads/{Id}", new
+                {
+                    _model.FirstName, _model.LastName, _model.Mobile, _model.Email,
+                    _model.Source, _model.PipelineStageId, AssignedToUserId = (Guid?)null,
+                    CustomFields = _customValues
+                });
+            }
+            else
+            {
+                res = await Api.PostAsJsonAsync("/api/leads", new
+                {
+                    _model.FirstName, _model.LastName, _model.Mobile, _model.Email,
+                    _model.Source, _model.PipelineStageId, ForceCreate = force,
+                    CustomFields = _customValues
+                });
+            }
+
+            if (res.IsSuccessStatusCode)
+            {
+                if (!IsEdit)
+                {
+                    var created = await res.Content.ReadFromJsonAsync<CreateLeadResponse>();
+                    if (created is not null && !created.WasCreated)
+                    {
+                        // 200 + WasCreated:false means duplicates were found and nothing saved.
+                        _duplicates = created.Duplicates ?? [];
+                        return;
+                    }
+                }
+                Nav.NavigateTo(BackHref);
+                return;
+            }
+
+            if (res.StatusCode == System.Net.HttpStatusCode.Unauthorized) { Nav.NavigateTo("/login"); return; }
+            _error = await res.Content.ReadAsStringAsync();
+        }
+        catch (Exception ex) { _error = $"Unable to save: {ex.Message}"; }
+        finally { _isSaving = false; }
+    }
+
+    private class LeadModel
+    {
+        [Required(ErrorMessage = "First name is required.")]
+        public string FirstName { get; set; } = "";
+
+        [Required(ErrorMessage = "Last name is required.")]
+        public string LastName { get; set; } = "";
+
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Email must be valid.")]
+        public string Email { get; set; } = "";
+
+        public string Mobile { get; set; } = "";
+        public string Source { get; set; } = "Manual";
+        public Guid PipelineStageId { get; set; }
+    }
+
+    private class StageItem { public Guid Id { get; set; } public string Name { get; set; } = ""; }
+
+    private class LeadDetail
+    {
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Mobile { get; set; } = "";
+        public string Source { get; set; } = "";
+        public Guid PipelineStageId { get; set; }
+        public Dictionary<string, object?>? CustomFields { get; set; }
+    }
+
+    private class DuplicateMatch
+    {
+        public string FullName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public int ConfidenceScore { get; set; }
+    }
+
+    private class CreateLeadResponse
+    {
+        public bool WasCreated { get; set; }
+        public List<DuplicateMatch>? Duplicates { get; set; }
+    }
+}

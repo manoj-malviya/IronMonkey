@@ -1,0 +1,539 @@
+@using IronMonkey.Web.HttpHandlers
+@inject AdminApiClient Api
+
+@* Pipeline stages: ordering is staged locally and saved as one atomic request, so a partly
+   applied order can never be left behind. Editing happens in a side panel rather than inline
+   so the row keeps showing the stage's real state while a draft is open. *@
+
+<div class="space-y-4">
+
+    <div class="flex flex-wrap items-center justify-end gap-3">
+        <button type="button" @onclick="StartAdd"
+                class="shrink-0 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+            Add stage
+        </button>
+    </div>
+
+    @if (_loading)
+    {
+        <p class="py-12 text-center text-sm text-slate-500">Loading stages…</p>
+    }
+    else if (_stages.Count == 0)
+    {
+        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
+            <p class="text-slate-600">No pipeline stages yet. Add your first stage to get started.</p>
+        </div>
+    }
+    else
+    {
+        @* Ordering state. Announced politely so a screen-reader user driving the move buttons
+           hears the result of each press. *@
+        <div class="flex flex-wrap items-center gap-3" role="status" aria-live="polite">
+            @switch (_orderState)
+            {
+                case SaveState.Unsaved:
+                    <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                        Unsaved order changes
+                    </span>
+                    <button type="button" @onclick="SaveOrderAsync"
+                            class="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">
+                        Save order
+                    </button>
+                    <button type="button" @onclick="DiscardOrderAsync"
+                            class="rounded-lg border border-slate-300 px-4 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                        Discard
+                    </button>
+                    break;
+
+                case SaveState.Saving:
+                    <span class="text-xs font-semibold text-slate-600">Saving order…</span>
+                    break;
+
+                case SaveState.Saved:
+                    <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
+                        Order saved
+                    </span>
+                    break;
+
+                case SaveState.Error:
+                    <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-800">
+                        @(_orderError ?? "Order could not be saved")
+                    </span>
+                    break;
+            }
+        </div>
+
+        @* A list rather than a table: the primary task is reading an ordered sequence and
+           moving items within it, which reflows to one column on a phone without the
+           horizontal scrolling a table would force. *@
+        <ul class="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
+            @foreach (var (stage, index) in _stages.Select((s, i) => (s, i)))
+            {
+                @* basis-full on the actions makes them wrap to their own line below ~480px,
+                   which gives the name the full width instead of truncating it to make room. *@
+                <li @key="stage.Id" class="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
+                    <span class="w-6 shrink-0 text-sm tabular-nums text-slate-400">@(index + 1)</span>
+
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-medium text-slate-900">@stage.Name</p>
+                        @if (!stage.IsActive)
+                        {
+                            <span class="mt-0.5 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                                Inactive
+                            </span>
+                        }
+                    </div>
+
+                    <div class="flex shrink-0 basis-full items-center justify-end gap-1 sm:basis-auto">
+                        <button type="button" @onclick="() => MoveUp(index)" disabled="@(index == 0)"
+                                aria-label="@($"Move {stage.Name} up")"
+                                class="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-30">
+                            ↑
+                        </button>
+                        <button type="button" @onclick="() => MoveDown(index)" disabled="@(index == _stages.Count - 1)"
+                                aria-label="@($"Move {stage.Name} down")"
+                                class="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-30">
+                            ↓
+                        </button>
+                        <button type="button" @onclick="() => StartEdit(stage)"
+                                aria-label="@($"Edit {stage.Name}")"
+                                class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                            Edit
+                        </button>
+                        <button type="button" @onclick="() => OpenRemoveAsync(stage)"
+                                aria-label="@($"Remove {stage.Name}")"
+                                class="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50">
+                            Remove
+                        </button>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@* ── Edit / create panel ────────────────────────────────────────────────────── *@
+@if (_panelOpen)
+{
+    <div class="fixed inset-0 z-40 bg-slate-900/30" @onclick="ClosePanel"></div>
+
+    <aside role="dialog" aria-modal="true" aria-label="@(_editing is null ? "Add stage" : "Edit stage")"
+           class="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white shadow-xl">
+
+        <header class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+            <h2 class="text-lg font-semibold text-slate-900">
+                @(_editing is null ? "Add stage" : "Edit stage")
+            </h2>
+            <button type="button" @onclick="ClosePanel" aria-label="Close"
+                    class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">✕</button>
+        </header>
+
+        <div class="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+            @if (_panelError is not null)
+            {
+                <p class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">@_panelError</p>
+            }
+
+            <div>
+                <label for="stage-name" class="mb-1 block text-sm font-medium text-slate-700">Stage name</label>
+                <input id="stage-name" @bind="_draftName" @bind:event="oninput" maxlength="100"
+                       class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <p class="mt-1 text-xs text-slate-500">Shown as a column heading on the lead board.</p>
+            </div>
+
+            @if (_editing is not null)
+            {
+                <div>
+                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                        <input type="checkbox" checked="@_draftActive"
+                               @onchange="e => _draftActive = (bool)(e.Value ?? false)"
+                               class="rounded border-slate-300" />
+                        <span>Active</span>
+                    </label>
+                    <p class="mt-1 text-xs text-slate-500">
+                        Inactive stages stay on existing leads but are not offered for new ones.
+                    </p>
+                </div>
+            }
+        </div>
+
+        <footer class="flex justify-end gap-2 border-t border-slate-200 px-6 py-4">
+            <button type="button" @onclick="ClosePanel"
+                    class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                Cancel
+            </button>
+            <button type="button" @onclick="SavePanelAsync" disabled="@_panelSaving"
+                    class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                @(_panelSaving ? "Saving…" : "Save")
+            </button>
+        </footer>
+    </aside>
+}
+
+@* ── Remove confirmation, with impact ───────────────────────────────────────── *@
+@if (_removing is not null)
+{
+    <div class="fixed inset-0 z-40 bg-slate-900/40" @onclick="CancelRemove"></div>
+
+    <div role="dialog" aria-modal="true" aria-labelledby="remove-stage-title"
+         class="fixed left-1/2 top-1/2 z-50 w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-xl">
+
+        <h2 id="remove-stage-title" class="text-lg font-semibold text-slate-900">
+            Remove “@_removing.Name”?
+        </h2>
+
+        @if (_impact is null)
+        {
+            <p class="mt-3 text-sm text-slate-600">Checking what this affects…</p>
+        }
+        else
+        {
+            <div class="mt-3 space-y-3 text-sm text-slate-600">
+                @if (_impact.IsOnlyActiveStage)
+                {
+                    <p class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-red-700">
+                        This is the only active stage. A pipeline needs at least one active stage
+                        to accept leads, so it cannot be removed.
+                    </p>
+                }
+                else
+                {
+                    <p>
+                        This stage is used by
+                        <strong>@_impact.LeadCount lead@(_impact.LeadCount == 1 ? "" : "s")</strong>@(_impact.TransitionCount > 0
+                            ? $" and {_impact.TransitionCount} stage transition rule{(_impact.TransitionCount == 1 ? "" : "s")}"
+                            : "").
+                    </p>
+
+                    @if (_impact.LeadCount > 0)
+                    {
+                        <div>
+                            <label for="reassign" class="mb-1 block text-sm font-medium text-slate-700">
+                                Move those leads to
+                            </label>
+                            <select id="reassign" @bind="_reassignTo"
+                                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                                <option value="">— Choose a stage —</option>
+                                @foreach (var target in _impact.ReassignTargets)
+                                {
+                                    <option value="@target.Id">@target.Name</option>
+                                }
+                            </select>
+                        </div>
+                    }
+
+                    <p class="text-slate-500">
+                        The stage is deactivated rather than deleted, so history that refers to it
+                        stays readable.
+                    </p>
+                }
+            </div>
+        }
+
+        @if (_removeError is not null)
+        {
+            <p class="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">@_removeError</p>
+        }
+
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" @onclick="CancelRemove"
+                    class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                Cancel
+            </button>
+            <button type="button" @onclick="ConfirmRemoveAsync"
+                    disabled="@(_removeBusy || _impact is null || _impact.IsOnlyActiveStage
+                                || (_impact.LeadCount > 0 && string.IsNullOrEmpty(_reassignTo)))"
+                    class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+                @(_removeBusy ? "Removing…" : "Remove stage")
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>Raised so the workspace can show a single success banner for every tab.</summary>
+    [Parameter] public EventCallback<string> OnSuccess { get; set; }
+
+    [Parameter] public EventCallback<string> OnError { get; set; }
+
+    private List<StageItem> _stages = [];
+
+    /// <summary>The order as last confirmed by the server, to restore on discard.</summary>
+    private List<StageItem> _savedOrder = [];
+
+    private bool _loading = true;
+
+    private SaveState _orderState = SaveState.Idle;
+    private string? _orderError;
+
+    // Panel state
+    private bool _panelOpen;
+    private StageItem? _editing;
+    private string _draftName = string.Empty;
+    private bool _draftActive = true;
+    private bool _panelSaving;
+    private string? _panelError;
+
+    // Remove state
+    private StageItem? _removing;
+    private StageImpact? _impact;
+    private string _reassignTo = string.Empty;
+    private bool _removeBusy;
+    private string? _removeError;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var stages = await Api.GetFromJsonAsync<List<StageItem>>("/api/pipeline-stages") ?? [];
+            _stages = [.. stages.OrderBy(s => s.Order)];
+            _savedOrder = [.. _stages];
+            _orderState = SaveState.Idle;
+        }
+        catch (Exception ex)
+        {
+            await OnError.InvokeAsync($"Failed to load pipeline stages: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    // ── Ordering ────────────────────────────────────────────────────────────
+
+    private void MoveUp(int index)
+    {
+        if (index <= 0) return;
+        (_stages[index - 1], _stages[index]) = (_stages[index], _stages[index - 1]);
+        _orderState = SaveState.Unsaved;
+    }
+
+    private void MoveDown(int index)
+    {
+        if (index >= _stages.Count - 1) return;
+        (_stages[index + 1], _stages[index]) = (_stages[index], _stages[index + 1]);
+        _orderState = SaveState.Unsaved;
+    }
+
+    private async Task SaveOrderAsync()
+    {
+        _orderState = SaveState.Saving;
+        _orderError = null;
+
+        try
+        {
+            var response = await Api.PutAsJsonAsync("/api/pipeline-stages/order",
+                new { StageIds = _stages.Select(s => s.Id).ToList() });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var updated = await response.Content.ReadFromJsonAsync<List<StageItem>>() ?? [];
+                _stages = [.. updated.OrderBy(s => s.Order)];
+                _savedOrder = [.. _stages];
+                _orderState = SaveState.Saved;
+            }
+            else
+            {
+                // A conflict means someone else changed the stage list — reload rather than
+                // leave a stale order on screen that would fail again.
+                _orderError = await ReadProblemAsync(response);
+                _orderState = SaveState.Error;
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+                    await LoadAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _orderError = ex.Message;
+            _orderState = SaveState.Error;
+        }
+    }
+
+    private async Task DiscardOrderAsync()
+    {
+        _stages = [.. _savedOrder];
+        _orderState = SaveState.Idle;
+        await Task.CompletedTask;
+    }
+
+    // ── Create / edit ───────────────────────────────────────────────────────
+
+    private void StartAdd()
+    {
+        _editing = null;
+        _draftName = string.Empty;
+        _draftActive = true;
+        _panelError = null;
+        _panelOpen = true;
+    }
+
+    private void StartEdit(StageItem stage)
+    {
+        _editing = stage;
+        _draftName = stage.Name;
+        _draftActive = stage.IsActive;
+        _panelError = null;
+        _panelOpen = true;
+    }
+
+    private void ClosePanel()
+    {
+        _panelOpen = false;
+        _editing = null;
+        _panelError = null;
+    }
+
+    private async Task SavePanelAsync()
+    {
+        var name = _draftName.Trim();
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            _panelError = "Enter a stage name.";
+            return;
+        }
+
+        // Catch the duplicate here as well as server-side, so the Admin is told before the
+        // round-trip rather than after it.
+        var clash = _stages.Any(s =>
+            (_editing is null || s.Id != _editing.Id)
+            && string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase));
+
+        if (clash)
+        {
+            _panelError = $"A stage named '{name}' already exists.";
+            return;
+        }
+
+        _panelSaving = true;
+        _panelError = null;
+
+        try
+        {
+            HttpResponseMessage response;
+
+            if (_editing is null)
+            {
+                response = await Api.PostAsJsonAsync("/api/pipeline-stages", new { Name = name });
+            }
+            else
+            {
+                response = await Api.PutAsJsonAsync($"/api/pipeline-stages/{_editing.Id}",
+                    new { Name = name, IsActive = _draftActive });
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                var verb = _editing is null ? "created" : "updated";
+                ClosePanel();
+                await LoadAsync();
+                await OnSuccess.InvokeAsync($"Stage '{name}' {verb}.");
+            }
+            else
+            {
+                _panelError = await ReadProblemAsync(response);
+            }
+        }
+        catch (Exception ex)
+        {
+            _panelError = ex.Message;
+        }
+        finally
+        {
+            _panelSaving = false;
+        }
+    }
+
+    // ── Remove ──────────────────────────────────────────────────────────────
+
+    private async Task OpenRemoveAsync(StageItem stage)
+    {
+        _removing = stage;
+        _impact = null;
+        _reassignTo = string.Empty;
+        _removeError = null;
+
+        try
+        {
+            _impact = await Api.GetFromJsonAsync<StageImpact>($"/api/pipeline-stages/{stage.Id}/impact");
+
+            if (_impact is null)
+                _removeError = "Could not check what this stage affects. Try again.";
+        }
+        catch (Exception ex)
+        {
+            _removeError = ex.Message;
+        }
+    }
+
+    private void CancelRemove()
+    {
+        _removing = null;
+        _impact = null;
+        _removeError = null;
+    }
+
+    private async Task ConfirmRemoveAsync()
+    {
+        if (_removing is null) return;
+
+        _removeBusy = true;
+        _removeError = null;
+
+        try
+        {
+            var url = $"/api/pipeline-stages/{_removing.Id}";
+            if (!string.IsNullOrEmpty(_reassignTo)) url += $"?reassignTo={_reassignTo}";
+
+            var response = await Api.DeleteAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var name = _removing.Name;
+                CancelRemove();
+                await LoadAsync();
+                await OnSuccess.InvokeAsync($"Stage '{name}' removed.");
+            }
+            else
+            {
+                _removeError = await ReadProblemAsync(response);
+            }
+        }
+        catch (Exception ex)
+        {
+            _removeError = ex.Message;
+        }
+        finally
+        {
+            _removeBusy = false;
+        }
+    }
+
+    /// <summary>
+    /// Endpoints return a bare JSON string for conflicts and bad requests. Unwrap it so the
+    /// user sees the sentence, not a quoted blob.
+    /// </summary>
+    private static async Task<string> ReadProblemAsync(HttpResponseMessage response)
+    {
+        var body = await response.Content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(body)) return $"Request failed ({(int)response.StatusCode}).";
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(body);
+            if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.String)
+                return doc.RootElement.GetString() ?? body;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            // Not JSON — show it as-is.
+        }
+
+        return body;
+    }
+}

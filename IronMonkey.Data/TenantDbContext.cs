@@ -43,6 +43,12 @@ public class TenantDbContext : DbContext
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<RoutingConfig> RoutingConfigs => Set<RoutingConfig>();
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
+    public DbSet<WorkflowExecutionLog> WorkflowExecutionLogs => Set<WorkflowExecutionLog>();
+    public DbSet<WorkflowExecutionStep> WorkflowExecutionSteps => Set<WorkflowExecutionStep>();
+    public DbSet<Message> Messages => Set<Message>();
+    public DbSet<MessageConsent> MessageConsents => Set<MessageConsent>();
+    public DbSet<MessageTemplate> MessageTemplates => Set<MessageTemplate>();
+    public DbSet<MessagingPolicy> MessagingPolicies => Set<MessagingPolicy>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -66,6 +72,22 @@ public class TenantDbContext : DbContext
         modelBuilder.Entity<RoutingConfig>().HasQueryFilter(r => r.TenantId == _tenantId);
         modelBuilder.Entity<ActivityLog>().HasQueryFilter(a => a.TenantId == _tenantId);
 
+        // Execution history is never soft-deleted — retention removes it outright — so the
+        // filter is TenantId only. Steps carry their own filter rather than relying on the
+        // parent's: a step loaded through Include inherits nothing, and the table is also
+        // queried directly by the action-type filter.
+        modelBuilder.Entity<WorkflowExecutionLog>().HasQueryFilter(l => l.TenantId == _tenantId);
+        modelBuilder.Entity<WorkflowExecutionStep>().HasQueryFilter(s => s.TenantId == _tenantId);
+
+        // Messages are conversation history and are never soft-deleted: a record of what was
+        // said to a customer must survive the lead being removed, so the filter is TenantId
+        // only. Consent is likewise permanent — an opt-out that could be soft-deleted would
+        // silently become permission to message again.
+        modelBuilder.Entity<Message>().HasQueryFilter(m => m.TenantId == _tenantId);
+        modelBuilder.Entity<MessageConsent>().HasQueryFilter(c => c.TenantId == _tenantId);
+        modelBuilder.Entity<MessageTemplate>().HasQueryFilter(t => t.TenantId == _tenantId && !t.IsDeleted);
+        modelBuilder.Entity<MessagingPolicy>().HasQueryFilter(p => p.TenantId == _tenantId);
+
         // ActivityLog JSONB columns and dashboard indexes
         modelBuilder.Entity<ActivityLog>(entity =>
         {
@@ -85,6 +107,23 @@ public class TenantDbContext : DbContext
             entity.HasIndex(a => new { a.TenantId, a.LeadId }).HasDatabaseName("IX_ActivityLogs_TenantId_LeadId");
             entity.HasIndex(a => new { a.TenantId, a.EventType }).HasDatabaseName("IX_ActivityLogs_TenantId_EventType");
             entity.HasIndex(a => a.CreatedAt).HasDatabaseName("IX_ActivityLogs_CreatedAt");
+
+            entity.Property(a => a.SubjectType).IsRequired().HasMaxLength(50).HasDefaultValue("Lead");
+
+            // Actor is optional: system and background-job events carry Guid.Empty, which
+            // matches no user. Convention made this a required FK, so EF built an INNER JOIN
+            // against a User set that also has a soft-delete query filter — the required
+            // navigation and the filtered principal are incompatible and every timeline read
+            // threw. Optional makes it a LEFT JOIN and ActorName simply comes back null.
+            entity.HasOne(a => a.Actor)
+                .WithMany()
+                .HasForeignKey(a => a.ActorId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // The timeline query is exactly (tenant, subject) ordered by time.
+            entity.HasIndex(a => new { a.TenantId, a.SubjectType, a.SubjectId, a.CreatedAt })
+                .HasDatabaseName("IX_ActivityLogs_TenantId_Subject_CreatedAt");
         });
 
         // Dashboard performance indexes for Lead entity (per D-08)

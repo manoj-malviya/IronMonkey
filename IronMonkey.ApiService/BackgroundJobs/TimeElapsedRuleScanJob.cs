@@ -1,4 +1,5 @@
 using Hangfire;
+using IronMonkey.ApiService.Features.Leads.Workflow.Execution;
 using IronMonkey.ApiService.Features.Leads.Workflow.Rules;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
@@ -40,7 +41,14 @@ public class TimeElapsedRuleScanJob(
 
                 foreach (var lead in leads)
                 {
-                    await ruleEngine.EvaluateAsync(tenantId, lead, WorkflowTrigger.TimeElapsed, db, cancellationToken);
+                    // One correlation id per lead, not per scan: each lead is its own logical
+                    // run, and sharing an id across the batch would collide on the unique
+                    // (tenant, correlation, attempt) index after the first lead.
+                    var context = WorkflowExecutionContext.ForDirectCall(
+                        tenantId, lead.Id, WorkflowTrigger.TimeElapsed);
+
+                    await ruleEngine.EvaluateAsync(
+                        tenantId, lead, WorkflowTrigger.TimeElapsed, db, cancellationToken, context);
                 }
 
                 logger.LogDebug("Time-elapsed scan complete for tenant {TenantId}: {Count} leads evaluated",

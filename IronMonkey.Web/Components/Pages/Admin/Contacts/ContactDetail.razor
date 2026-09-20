@@ -1,0 +1,128 @@
+@page "/admin/contacts/{Id:guid}"
+@attribute [Authorize]
+@using IronMonkey.Web.Components.Shared
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>Contact — IronMonkey</PageTitle>
+
+<div class="space-y-6">
+
+    <button type="button" @onclick='() => Nav.NavigateTo("/admin/contacts")'
+            class="text-sm text-indigo-600 hover:text-indigo-700">
+        &larr; Back to Contacts
+    </button>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">@_error</div>
+    }
+
+    @if (_isLoading)
+    {
+        <p class="text-sm text-slate-500">Loading...</p>
+    }
+    else if (_contact is not null)
+    {
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">@_contact.Name</h1>
+                <p class="mt-1 text-sm text-slate-500">@_contact.Email</p>
+            </div>
+            <button @onclick='() => Nav.NavigateTo($"/admin/contacts/{Id}/edit")'
+                    class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                Edit
+            </button>
+        </div>
+
+        <div class="grid gap-6 lg:grid-cols-3">
+
+            <div class="space-y-6 lg:col-span-1">
+                <div class="rounded-xl border border-slate-200 bg-white p-5">
+                    <h2 class="mb-3 text-sm font-semibold text-slate-900">Details</h2>
+                    <dl class="space-y-2 text-sm">
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-slate-500">Email</dt>
+                            <dd class="truncate text-right text-slate-900" title="@_contact.Email">@_contact.Email</dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-slate-500">Phone</dt>
+                            <dd class="text-slate-900">@(string.IsNullOrWhiteSpace(_contact.Mobile) ? "—" : _contact.Mobile)</dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-slate-500">Created</dt>
+                            <dd class="text-slate-900">@_contact.CreatedAt.ToString("MMM d, yyyy")</dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <div class="rounded-xl border border-slate-200 bg-white p-5">
+                    <div class="mb-3 flex items-center justify-between">
+                        <h2 class="text-sm font-semibold text-slate-900">Opportunities</h2>
+                        <span class="text-xs text-slate-500">@_contact.Opportunities.Count</span>
+                    </div>
+                    @if (_contact.Opportunities.Count == 0)
+                    {
+                        <p class="text-sm text-slate-500">No opportunities yet.</p>
+                    }
+                    else
+                    {
+                        <ul class="space-y-2">
+                            @foreach (var o in _contact.Opportunities)
+                            {
+                                <li>
+                                    <button type="button" @onclick='() => Nav.NavigateTo($"/admin/opportunities/{o.Id}")'
+                                            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-left hover:border-indigo-300">
+                                        <span class="block text-sm font-medium text-slate-900">@o.Title</span>
+                                        <span class="mt-0.5 block text-xs text-slate-500">@o.Stage · @o.Amount.ToString("N0")</span>
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 space-y-6">
+                <ConversationPanel ContactId="@Id" EmailAddress="@_contact?.Email" MobileNumber="@_contact?.Mobile" />
+                <ActivityTimeline SubjectType="Contact" SubjectId="@Id" />
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private ContactViewModel? _contact;
+    private bool _isLoading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _contact = await Api.GetFromJsonAsync<ContactViewModel>($"/api/contacts/{Id}");
+            if (_contact is null) _error = "Contact not found.";
+        }
+        catch (Exception ex) { _error = $"Failed to load contact: {ex.Message}"; }
+        finally { _isLoading = false; }
+    }
+
+    private class ContactViewModel
+    {
+        public string Name { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Mobile { get; set; } = "";
+        public DateTime CreatedAt { get; set; }
+        public List<OpportunitySummary> Opportunities { get; set; } = [];
+    }
+
+    private class OpportunitySummary
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Stage { get; set; } = "";
+        public decimal Amount { get; set; }
+    }
+}

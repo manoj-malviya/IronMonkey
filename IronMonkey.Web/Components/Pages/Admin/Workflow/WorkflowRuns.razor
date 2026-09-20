@@ -1,0 +1,479 @@
+@page "/admin/workflow-runs"
+@attribute [Authorize]
+@using IronMonkey.Web.HttpHandlers
+@using IronMonkey.Web.Components.Pages.Admin.Workflow
+@inject AdminApiClient Api
+@inject NavigationManager Nav
+
+@* Workflow execution history.
+
+   Separate from the lead activity timeline on purpose: that answers "what happened to this
+   lead", this answers "did my automation work". Each row links back to its lead, so the two
+   are connected without being merged.
+
+   Filter state lives in the query string so Back/Forward moves through filter states and a
+   shared link reproduces the view, matching LeadList. *@
+
+<PageTitle>Workflow Runs — IronMonkey</PageTitle>
+
+<div class="space-y-6">
+
+    <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900">Workflow runs</h1>
+            <p class="mt-1 text-sm text-slate-600">
+                Every time an automation rule was triggered, and what happened.
+            </p>
+        </div>
+        <a href="/admin/configuration?tab=workflows"
+           class="shrink-0 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            Manage rules
+        </a>
+    </div>
+
+    <div class="flex flex-wrap items-end gap-3">
+        <div>
+            <label for="run-status" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Status</label>
+            <select id="run-status" value="@Status" @onchange="OnStatusChanged"
+                    class="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">All statuses</option>
+                <option value="Succeeded">Succeeded</option>
+                <option value="Skipped">Skipped (condition did not match)</option>
+                <option value="Failed">Failed</option>
+                <option value="PartiallySucceeded">Partly succeeded</option>
+                <option value="Abandoned">Abandoned</option>
+                <option value="Running">Running</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="run-rule" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Rule</label>
+            <select id="run-rule" value="@RuleId?.ToString()" @onchange="OnRuleChanged"
+                    class="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">All rules</option>
+                @foreach (var rule in _rules)
+                {
+                    <option value="@rule.Id">@rule.Name</option>
+                }
+            </select>
+        </div>
+
+        <div>
+            <label for="run-trigger" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Trigger</label>
+            <select id="run-trigger" value="@Trigger" @onchange="OnTriggerChanged"
+                    class="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">All triggers</option>
+                <option value="FieldChange">Field change</option>
+                <option value="StatusChange">Status change</option>
+                <option value="TimeElapsed">Time elapsed</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="run-action" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Action</label>
+            <select id="run-action" value="@ActionType" @onchange="OnActionChanged"
+                    class="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">All actions</option>
+                <option value="notify">Notify</option>
+                <option value="assign">Assign</option>
+                <option value="schedule_task">Schedule task</option>
+                <option value="webhook">Webhook</option>
+                <option value="email">Email</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="run-from" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">From</label>
+            <input id="run-from" type="date" value="@From" @onchange="OnFromChanged"
+                   class="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+
+        <div>
+            <label for="run-to" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">To</label>
+            <input id="run-to" type="date" value="@To" @onchange="OnToChanged"
+                   class="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+
+        @if (HasActiveFilter)
+        {
+            <button type="button" @onclick="ClearFiltersAsync"
+                    class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                Clear filters
+            </button>
+        }
+
+        <p class="text-sm text-slate-500 py-2" role="status">@ResultSummary</p>
+    </div>
+
+    @if (_unauthorized)
+    {
+        @* Distinct from a load failure: retrying will not help, and telling the user to try
+           again would be wrong. *@
+        <div role="alert" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <p class="text-sm font-semibold text-amber-900">You do not have access to workflow run history.</p>
+            <p class="mt-1 text-sm text-amber-800">
+                Viewing execution history needs the
+                <span class="rounded bg-amber-100 px-1 font-mono text-xs">workflow:logs:read</span>
+                permission. An administrator can grant it from Roles.
+            </p>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(_error))
+    {
+        <div role="alert" class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+            <span class="text-sm text-red-700">@_error</span>
+            @* Retries the data load only. It deliberately does NOT re-run the workflow —
+               re-firing a business rule from a UI retry button would send duplicate webhooks
+               and duplicate notifications. *@
+            <button type="button" @onclick="() => LoadAsync()" disabled="@_isLoading"
+                    class="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60">
+                @(_isLoading ? "Retrying…" : "Try again")
+            </button>
+        </div>
+    }
+
+    @if (_rulesFailed && !_unauthorized)
+    {
+        @* Partial failure: the runs loaded but the rule filter's options did not. The page
+           stays usable and says what is missing rather than failing whole. *@
+        <div role="status" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+            Rule names could not be loaded, so the rule filter is empty. Everything else is up to date.
+        </div>
+    }
+
+    @if (_isLoading && _page is null)
+    {
+        <div class="py-12 text-center text-sm text-slate-500" aria-busy="true">Loading workflow runs…</div>
+    }
+    else if (_page is { Items.Count: 0 } empty)
+    {
+        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
+            @if (HasActiveFilter)
+            {
+                <p class="text-slate-600">No runs match these filters.</p>
+                <button type="button" @onclick="ClearFiltersAsync"
+                        class="mt-4 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                    Clear filters
+                </button>
+            }
+            else
+            {
+                <p class="text-slate-600">No workflow runs recorded yet.</p>
+                <p class="mt-1 text-sm text-slate-500">
+                    Runs appear here the first time an active rule is triggered by a lead change.
+                </p>
+                <a href="/admin/configuration?tab=workflows"
+                   class="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                    Set up a rule
+                </a>
+            }
+
+            @if (empty.OldestRetainedAt is null && empty.RetentionDays > 0 && !HasActiveFilter)
+            {
+                <p class="mt-4 text-xs text-slate-400">Runs are kept for @empty.RetentionDays days.</p>
+            }
+        </div>
+    }
+    else if (_page is { } pg)
+    {
+        <div class="overflow-x-auto rounded-lg border border-slate-200 @(_isLoading ? "opacity-60" : "")">
+            <table class="w-full">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">When</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Rule</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Lead</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Trigger</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Actions</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">Result</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-900">Took</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var run in pg.Items)
+                    {
+                        <tr @key="run.Id" class="border-b border-slate-100 hover:bg-slate-50">
+                            <td class="px-4 py-3 text-sm whitespace-nowrap">
+                                <a href="@DetailHref(run.Id)" class="font-medium text-indigo-600 hover:text-indigo-700 hover:underline">
+                                    @run.StartedAt.ToString("dd MMM, HH:mm:ss")
+                                </a>
+                                @if (run.Attempt > 1)
+                                {
+                                    <span class="ml-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600"
+                                          title="This is a retry of an earlier attempt at the same trigger.">
+                                        retry @run.Attempt
+                                    </span>
+                                }
+                            </td>
+                            <td class="px-4 py-3 text-sm text-slate-900">
+                                <span class="block max-w-[200px] truncate" title="@run.WorkflowRuleName">@run.WorkflowRuleName</span>
+                            </td>
+                            <td class="px-4 py-3 text-sm">
+                                @* Links to the lead, which keeps this view connected to the
+                                   lead's own timeline without duplicating it. *@
+                                <a href="@LeadHref(run.LeadId)" class="text-indigo-600 hover:text-indigo-700 hover:underline">
+                                    <span class="block max-w-[180px] truncate" title="@run.LeadName">@run.LeadName</span>
+                                </a>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-slate-600 whitespace-nowrap">@FriendlyTrigger(run.Trigger)</td>
+                            <td class="px-4 py-3 text-sm text-slate-600">
+                                @if (run.ActionTypes.Count == 0)
+                                {
+                                    <span class="text-slate-400">—</span>
+                                }
+                                else
+                                {
+                                    <span class="block max-w-[160px] truncate">@string.Join(", ", run.ActionTypes)</span>
+                                }
+                            </td>
+                            <td class="px-4 py-3 text-sm">
+                                <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold @WorkflowRunStatusDisplay.Badge(run.Status)">
+                                    @WorkflowRunStatusDisplay.Label(run.Status)
+                                </span>
+                                @if (!string.IsNullOrEmpty(run.ErrorMessage))
+                                {
+                                    <span class="mt-1 block max-w-[280px] truncate text-xs text-slate-500" title="@run.ErrorMessage">@run.ErrorMessage</span>
+                                }
+                                else if (!string.IsNullOrEmpty(run.SkipReason))
+                                {
+                                    <span class="mt-1 block text-xs text-slate-400">@run.SkipReason</span>
+                                }
+                            </td>
+                            <td class="px-4 py-3 text-right text-sm text-slate-600 whitespace-nowrap">
+                                @WorkflowRunStatusDisplay.Duration(run.DurationMs)
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (pg.TotalPages > 1)
+        {
+            <div class="flex items-center justify-between gap-3">
+                <button type="button" @onclick="() => GoToPageAsync(pg.Page - 1)" disabled="@(pg.Page <= 1 || _isLoading)"
+                        class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                    ← Previous
+                </button>
+                <span class="text-sm text-slate-600">Page @pg.Page of @pg.TotalPages</span>
+                <button type="button" @onclick="() => GoToPageAsync(pg.Page + 1)" disabled="@(pg.Page >= pg.TotalPages || _isLoading)"
+                        class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                    Next →
+                </button>
+            </div>
+        }
+
+        @if (pg.OldestRetainedAt is { } oldest)
+        {
+            @* Retention is stated so an absent older run reads as "removed on schedule"
+               rather than "never happened". *@
+            <p class="text-xs text-slate-400">
+                Runs are kept for @pg.RetentionDays days. The oldest run still held is from
+                @oldest.ToString("dd MMM yyyy").
+            </p>
+        }
+    }
+</div>
+
+@code {
+    // Filter state in the query string: Back/Forward moves through filter states, and a
+    // shared link reproduces the view.
+    [SupplyParameterFromQuery(Name = "status")] private string? Status { get; set; }
+    [SupplyParameterFromQuery(Name = "ruleId")] private Guid? RuleId { get; set; }
+    [SupplyParameterFromQuery(Name = "trigger")] private string? Trigger { get; set; }
+    [SupplyParameterFromQuery(Name = "actionType")] private string? ActionType { get; set; }
+    [SupplyParameterFromQuery(Name = "leadId")] private Guid? LeadId { get; set; }
+    [SupplyParameterFromQuery(Name = "from")] private string? From { get; set; }
+    [SupplyParameterFromQuery(Name = "to")] private string? To { get; set; }
+    [SupplyParameterFromQuery(Name = "page")] private int? Page { get; set; }
+
+    private WorkflowRunPage? _page;
+    private List<RuleOption> _rules = new();
+    private bool _isLoading;
+    private bool _rulesFailed;
+    private bool _unauthorized;
+    private string? _error;
+
+    private sealed class RuleOption
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private bool HasActiveFilter =>
+        !string.IsNullOrEmpty(Status) || RuleId.HasValue || !string.IsNullOrEmpty(Trigger)
+        || !string.IsNullOrEmpty(ActionType) || LeadId.HasValue
+        || !string.IsNullOrEmpty(From) || !string.IsNullOrEmpty(To);
+
+    private string ResultSummary => _page is null
+        ? string.Empty
+        : _page.TotalCount == 0
+            ? "No runs"
+            : $"{(_page.Page - 1) * _page.PageSize + 1}–{Math.Min(_page.Page * _page.PageSize, _page.TotalCount)} of {_page.TotalCount}";
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    /// <summary>
+    /// Loads after the first interactive render as well as during prerender: the JWT lives in
+    /// ProtectedSessionStorage, which is unreadable while prerendering, so the prerendered
+    /// attempt goes out unauthenticated and is retried here.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _page is null && !_unauthorized)
+        {
+            await LoadAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            var response = await Api.GetAsync(BuildQuery());
+
+            if (response.StatusCode is System.Net.HttpStatusCode.Forbidden)
+            {
+                // 403 is a settled answer, not a transient failure — no retry offered.
+                _unauthorized = true;
+                _page = null;
+                return;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                // A 401 during prerender is expected and is retried on the interactive render,
+                // so it must not paint an error the user will see flash and disappear.
+                if (response.StatusCode is not System.Net.HttpStatusCode.Unauthorized)
+                    _error = "Workflow runs could not be loaded.";
+                return;
+            }
+
+            _page = await response.Content.ReadFromJsonAsync<WorkflowRunPage>();
+            await LoadRuleOptionsAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Workflow runs could not be loaded: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Populates the rule filter. Failing here is a partial failure, not a page failure: the
+    /// runs are already on screen and are usable without the rule names.
+    /// </summary>
+    private async Task LoadRuleOptionsAsync()
+    {
+        if (_rules.Count > 0) return;
+
+        try
+        {
+            var rules = await Api.GetFromJsonAsync<List<RuleOption>>("/api/workflow-rules");
+            _rules = rules ?? new();
+            _rulesFailed = rules is null;
+        }
+        catch
+        {
+            _rulesFailed = true;
+        }
+    }
+
+    private string BuildQuery()
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(Status)) parts.Add($"status={Uri.EscapeDataString(Status)}");
+        if (RuleId.HasValue) parts.Add($"ruleId={RuleId}");
+        if (!string.IsNullOrEmpty(Trigger)) parts.Add($"trigger={Uri.EscapeDataString(Trigger)}");
+        if (!string.IsNullOrEmpty(ActionType)) parts.Add($"actionType={Uri.EscapeDataString(ActionType)}");
+        if (LeadId.HasValue) parts.Add($"leadId={LeadId}");
+        if (!string.IsNullOrEmpty(From)) parts.Add($"from={Uri.EscapeDataString(From)}");
+        if (!string.IsNullOrEmpty(To)) parts.Add($"to={Uri.EscapeDataString(To)}");
+        if (Page is > 1) parts.Add($"page={Page}");
+
+        return "/api/workflow-executions" + (parts.Count == 0 ? "" : "?" + string.Join("&", parts));
+    }
+
+    /// <summary>
+    /// The current view as a URL, handed to the detail page as returnUrl so "back" lands on
+    /// the same filtered page rather than a reset list.
+    /// </summary>
+    private string CurrentListUrl()
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(Status)) parts.Add($"status={Uri.EscapeDataString(Status)}");
+        if (RuleId.HasValue) parts.Add($"ruleId={RuleId}");
+        if (!string.IsNullOrEmpty(Trigger)) parts.Add($"trigger={Uri.EscapeDataString(Trigger)}");
+        if (!string.IsNullOrEmpty(ActionType)) parts.Add($"actionType={Uri.EscapeDataString(ActionType)}");
+        if (LeadId.HasValue) parts.Add($"leadId={LeadId}");
+        if (!string.IsNullOrEmpty(From)) parts.Add($"from={Uri.EscapeDataString(From)}");
+        if (!string.IsNullOrEmpty(To)) parts.Add($"to={Uri.EscapeDataString(To)}");
+        if (Page is > 1) parts.Add($"page={Page}");
+
+        return "/admin/workflow-runs" + (parts.Count == 0 ? "" : "?" + string.Join("&", parts));
+    }
+
+    private string DetailHref(Guid id) =>
+        $"/admin/workflow-runs/{id}?returnUrl={Uri.EscapeDataString(CurrentListUrl())}";
+
+    private string LeadHref(Guid leadId) => $"/admin/leads/{leadId}";
+
+    private static string FriendlyTrigger(string trigger) => trigger switch
+    {
+        "FieldChange" => "Field change",
+        "StatusChange" => "Status change",
+        "TimeElapsed" => "Time elapsed",
+        _ => trigger
+    };
+
+    // Every filter change resets to page 1: staying on page 7 of a narrower result set lands
+    // the user on an empty page that reads as "no results".
+    private Task OnStatusChanged(ChangeEventArgs e) => ApplyAsync(status: e.Value?.ToString());
+    private Task OnRuleChanged(ChangeEventArgs e) => ApplyAsync(ruleId: e.Value?.ToString());
+    private Task OnTriggerChanged(ChangeEventArgs e) => ApplyAsync(trigger: e.Value?.ToString());
+    private Task OnActionChanged(ChangeEventArgs e) => ApplyAsync(actionType: e.Value?.ToString());
+    private Task OnFromChanged(ChangeEventArgs e) => ApplyAsync(from: e.Value?.ToString());
+    private Task OnToChanged(ChangeEventArgs e) => ApplyAsync(to: e.Value?.ToString());
+
+    private Task ApplyAsync(
+        string? status = null, string? ruleId = null, string? trigger = null,
+        string? actionType = null, string? from = null, string? to = null)
+    {
+        Status = status ?? Status;
+        Trigger = trigger ?? Trigger;
+        ActionType = actionType ?? ActionType;
+        From = from ?? From;
+        To = to ?? To;
+
+        if (ruleId is not null)
+            RuleId = Guid.TryParse(ruleId, out var parsed) ? parsed : null;
+
+        Page = 1;
+        Navigate();
+        return Task.CompletedTask;
+    }
+
+    private Task GoToPageAsync(int page)
+    {
+        Page = Math.Max(1, page);
+        Navigate();
+        return Task.CompletedTask;
+    }
+
+    private Task ClearFiltersAsync()
+    {
+        Status = null; RuleId = null; Trigger = null; ActionType = null;
+        LeadId = null; From = null; To = null; Page = 1;
+        Navigate();
+        return Task.CompletedTask;
+    }
+
+    private void Navigate() => Nav.NavigateTo(CurrentListUrl());
+}

@@ -24,6 +24,13 @@ internal sealed class ContactConfiguration : IEntityTypeConfiguration<Contact>
             .IsRequired()
             .HasMaxLength(256);
 
+        builder.Property(c => c.CustomFields)
+            .HasColumnName("custom_field_values")
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
+                v => System.Text.Json.JsonSerializer.Deserialize<CustomFieldValues>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new());
+
         builder.HasIndex(contact => contact.TenantId);
 
         builder.HasIndex(contact => new { contact.TenantId, contact.Email });

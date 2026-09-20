@@ -1,0 +1,56 @@
+@page "/signup/success"
+@layout IronMonkey.Web.Components.Layout.PublicLayout
+
+<PageTitle>Signup Successful — IronMonkey</PageTitle>
+
+<!-- Header -->
+<header class="w-full px-8 py-8 flex justify-between items-center max-w-7xl mx-auto">
+    <a href="/" class="text-2xl font-bold tracking-tighter text-primary uppercase font-headline">
+        IronMonkey
+    </a>
+</header>
+
+<main class="flex-grow flex items-center justify-center px-4 py-24">
+    <div class="w-full max-w-md text-center">
+
+        <!-- Check icon -->
+        <div class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary">
+            <span class="material-symbols-outlined text-on-primary text-3xl">check_circle</span>
+        </div>
+
+        <h1 class="text-4xl font-headline font-bold text-on-surface leading-tight uppercase tracking-tighter">
+            Request <span class="text-primary italic">Submitted!</span>
+        </h1>
+
+        <p class="mt-4 text-base text-on-surface-variant font-medium">
+            Our team will review your signup and get back to you within 24 hours.
+        </p>
+
+        <p class="mt-2 text-sm text-outline">
+            You'll receive a confirmation email shortly.
+        </p>
+
+        <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a href="/"
+               class="bg-surface-container-high text-on-surface px-8 py-4 rounded-lg font-bold uppercase tracking-widest hover:bg-surface-dim transition-all border border-outline-variant/30 text-sm">
+                Back to home
+            </a>
+            <a href="/login"
+               class="bg-primary text-on-primary px-8 py-4 rounded-lg font-black uppercase tracking-widest hover:bg-primary-dim transition-all text-sm industrial-shadow">
+                Sign in
+            </a>
+        </div>
+    </div>
+</main>
+
+<!-- Footer -->
+<footer class="w-full border-t border-outline-variant/30 mt-20 bg-surface-container-lowest">
+    <div class="max-w-7xl mx-auto px-8 py-12 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div class="text-lg font-black text-on-surface-variant font-headline uppercase tracking-tighter">
+            IRONMONKEY
+        </div>
+        <div class="text-[10px] text-outline font-label uppercase tracking-[0.2em]">
+            &copy; 2026 IRONMONKEY CRM. KINETIC INDUSTRIALISM.
+        </div>
+    </div>
+</footer>

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.Data;
 
 namespace IronMonkey.ApiService.BackgroundJobs;
@@ -6,10 +7,14 @@ namespace IronMonkey.ApiService.BackgroundJobs;
 public class TenantRegistry : ITenantRegistry
 {
     private readonly CentralDbContext _centralDb;
+    private readonly ITenantConnectionStringResolver _connectionStringResolver;
 
-    public TenantRegistry(CentralDbContext centralDb)
+    public TenantRegistry(
+        CentralDbContext centralDb,
+        ITenantConnectionStringResolver connectionStringResolver)
     {
         _centralDb = centralDb;
+        _connectionStringResolver = connectionStringResolver;
     }
 
     public async Task<string> GetConnectionStringAsync(Guid tenantId, CancellationToken cancellationToken = default)
@@ -21,7 +26,7 @@ public class TenantRegistry : ITenantRegistry
         if (tenant?.DatabaseConnectionString is null)
             throw new InvalidOperationException($"Tenant {tenantId} is not provisioned or connection string is null.");
 
-        return tenant.DatabaseConnectionString;
+        return _connectionStringResolver.Resolve(tenant.DatabaseConnectionString);
     }
 
     public async Task<IReadOnlyList<(Guid TenantId, string ConnectionString)>> GetAllProvisionedTenantsAsync(CancellationToken cancellationToken = default)
@@ -33,7 +38,7 @@ public class TenantRegistry : ITenantRegistry
             .ToListAsync(cancellationToken);
 
         return tenants
-            .Select(t => (t.Id, t.DatabaseConnectionString!))
+            .Select(t => (t.Id, _connectionStringResolver.Resolve(t.DatabaseConnectionString!)))
             .ToList();
     }
 }

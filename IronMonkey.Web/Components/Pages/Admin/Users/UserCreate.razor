@@ -2,7 +2,7 @@
 @attribute [Authorize]
 @using IronMonkey.Web.Components.Pages.Admin.Users.Shared
 @using System.ComponentModel.DataAnnotations
-@inject IHttpClientFactory HttpClientFactory
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
 @inject NavigationManager Nav
 
 <PageTitle>Create User — IronMonkey Admin</PageTitle>
@@ -91,8 +91,7 @@
     {
         try
         {
-            var client = HttpClientFactory.CreateClient("AdminApi");
-            var roles = await client.GetFromJsonAsync<List<RoleItem>>("/api/user-management/roles");
+            var roles = await Api.GetFromJsonAsync<List<RoleItem>>("/users/roles");
             _roles = roles ?? [];
         }
         catch (Exception ex)
@@ -110,9 +109,8 @@
         _errorBanner = null;
         try
         {
-            var client = HttpClientFactory.CreateClient("AdminApi");
             var payload = new { _model.Name, _model.Email, RoleId = _selectedRoleId };
-            var response = await client.PostAsJsonAsync("/api/user-management/users", payload);
+            var response = await Api.PostAsJsonAsync("/users", payload);
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<CreateUserResponse>();

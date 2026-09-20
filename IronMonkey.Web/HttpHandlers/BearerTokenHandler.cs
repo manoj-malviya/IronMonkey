@@ -1,18 +1,18 @@
 using System.Net.Http.Headers;
-using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using IronMonkey.Web.Authentication;
 
 namespace IronMonkey.Web.HttpHandlers;
 
 public class BearerTokenHandler : DelegatingHandler
 {
-    private readonly ProtectedSessionStorage _sessionStorage;
+    private readonly AdminAuthenticationStateProvider _authStateProvider;
     private readonly ILogger<BearerTokenHandler> _logger;
 
     public BearerTokenHandler(
-        ProtectedSessionStorage sessionStorage,
+        AdminAuthenticationStateProvider authStateProvider,
         ILogger<BearerTokenHandler> logger)
     {
-        _sessionStorage = sessionStorage;
+        _authStateProvider = authStateProvider;
         _logger = logger;
     }
 
@@ -20,23 +20,23 @@ public class BearerTokenHandler : DelegatingHandler
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var tokenResult = await _sessionStorage.GetAsync<string>("auth_token");
+        // Read through the auth provider rather than session storage directly. It serves
+        // an in-memory copy of the token, so no JS interop happens here — the previous
+        // direct ProtectedSessionStorage call threw during prerendering and the request
+        // then went out with no Authorization header at all.
+        var token = await _authStateProvider.GetTokenAsync();
 
-            if (tokenResult.Success && !string.IsNullOrEmpty(tokenResult.Value))
-            {
-                request.Headers.Authorization =
-                    new AuthenticationHeaderValue("Bearer", tokenResult.Value);
-            }
-            else
-            {
-                _logger.LogWarning("No auth token in session storage for request to {Uri}", request.RequestUri);
-            }
-        }
-        catch (Exception ex)
+        if (!string.IsNullOrEmpty(token))
         {
-            _logger.LogError(ex, "Error attaching bearer token to request");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+        else
+        {
+            // Expected for callers that go through AdminApiClient: it attaches the header
+            // itself, because this handler runs in the HttpClientFactory's DI scope and
+            // cannot reach the circuit's auth provider. Debug, not warning — it fires on
+            // every successful admin request and would otherwise be pure noise.
+            _logger.LogDebug("No auth token available for request to {Uri}", request.RequestUri);
         }
 
         var response = await base.SendAsync(request, cancellationToken);

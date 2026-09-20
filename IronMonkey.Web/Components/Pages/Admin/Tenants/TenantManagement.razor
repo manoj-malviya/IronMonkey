@@ -1,7 +1,8 @@
 @page "/admin/tenants"
-@attribute [Authorize]
-@inject IHttpClientFactory HttpClientFactory
+@attribute [Authorize(Policy = AuthorizationPolicies.PlatformAdmin)]
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
 @inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Tenant Management — IronMonkey Admin</PageTitle>
 
@@ -69,6 +70,7 @@
                             <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Provisioned</th>
                             <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Applied Recipe</th>
                             <th class="px-6 py-3 text-left text-xs font-semibold text-slate-900 uppercase tracking-wide">Created</th>
+                            <th class="px-6 py-3 text-right text-xs font-semibold text-slate-900 uppercase tracking-wide">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -96,6 +98,20 @@
                                     @(tenant.AppliedRecipeId.HasValue ? tenant.AppliedRecipeId.Value.ToString("N").Substring(0, 8) + "..." : "—")
                                 </td>
                                 <td class="px-6 py-4 text-sm text-slate-500">@tenant.CreatedAt.ToString("yyyy-MM-dd")</td>
+                                <td class="px-6 py-4 text-right space-x-3 whitespace-nowrap">
+                                    <a href="@($"/admin/tenants/{tenant.Id}")"
+                                       class="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+                                        Details
+                                    </a>
+                                    @if (tenant.IsProvisioned)
+                                    {
+                                        <button type="button"
+                                                @onclick="() => OpenImpersonateModal(tenant)"
+                                                class="text-sm font-medium text-amber-700 hover:text-amber-800">
+                                            Impersonate
+                                        </button>
+                                    }
+                                </td>
                             </tr>
                         }
                     </tbody>
@@ -278,6 +294,42 @@
     </div>
 }
 
+<!-- Impersonate modal -->
+@if (_showImpersonateModal && _impersonateTarget is not null)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h2 class="text-lg font-semibold text-slate-900 mb-2">Impersonate Tenant</h2>
+            <p class="text-sm text-slate-600 mb-4">
+                You will act inside <span class="font-semibold">@_impersonateTarget.Name</span>
+                as its Admin user for 30 minutes. Everything you do is recorded against your
+                platform account.
+            </p>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1" for="impersonateReason">
+                    Reason <span class="text-slate-400 text-xs">(optional)</span>
+                </label>
+                <textarea id="impersonateReason" rows="2"
+                          @bind="_impersonateReason"
+                          placeholder="e.g. investigating a support ticket..."
+                          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </textarea>
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button type="button" @onclick="CancelImpersonateModal"
+                        class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    Cancel
+                </button>
+                <button type="button" @onclick="HandleImpersonateAsync"
+                        disabled="@_isImpersonating"
+                        class="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-50">
+                    @(_isImpersonating ? "Starting..." : "Start impersonation")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     // Tab state
     private string _activeTab = "Tenants";
@@ -285,6 +337,12 @@
 
     // Tenant list state
     private List<TenantListItem> _tenants = [];
+
+    // Impersonation state
+    private bool _showImpersonateModal = false;
+    private TenantListItem? _impersonateTarget = null;
+    private string _impersonateReason = string.Empty;
+    private bool _isImpersonating = false;
 
     // Signup list state
     private List<SignupListItem> _signups = [];
@@ -321,9 +379,24 @@
     private List<SignupListItem> DisplayedSignups =>
         _showAllSignups ? _signups : _signups.Where(s => s.Status == "Pending").ToList();
 
-    protected override async Task OnInitializedAsync()
+    private bool _loaded = false;
+
+    // Load after the first interactive render, not in OnInitializedAsync. The JWT lives in
+    // ProtectedSessionStorage and needs JS interop, which is unavailable during prerender —
+    // fetching there sends both requests with no Authorization header and the page renders
+    // permanently empty on a 401.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender || _loaded)
+            return;
+
+        _loaded = true;
+
+        if (AuthStateProvider is AdminAuthenticationStateProvider provider)
+            await provider.InitializeAsync();
+
         await LoadAllDataAsync();
+        StateHasChanged();
     }
 
     private async Task LoadAllDataAsync()
@@ -332,12 +405,14 @@
         _errorBanner = null;
         try
         {
-            var client = HttpClientFactory.CreateClient("AdminApi");
-            var tenantsTask = client.GetFromJsonAsync<List<TenantListItem>>("/admin/tenants");
-            var signupsTask = client.GetFromJsonAsync<List<SignupListItem>>("/admin/signup");
+            var tenantsTask = Api.GetAsync("/admin/tenants");
+            var signupsTask = Api.GetAsync("/admin/signup");
             await Task.WhenAll(tenantsTask, signupsTask);
-            _tenants = tenantsTask.Result ?? [];
-            _signups = signupsTask.Result ?? [];
+
+            _tenants = await tenantsTask.Result.Content
+                .ReadFromJsonAsync<List<TenantListItem>>() ?? [];
+            _signups = await signupsTask.Result.Content
+                .ReadFromJsonAsync<List<SignupListItem>>() ?? [];
         }
         catch (Exception ex)
         {
@@ -362,8 +437,8 @@
         _isLoadingDetail = true;
         try
         {
-            var client = HttpClientFactory.CreateClient("AdminApi");
-            _expandedDetail = await client.GetFromJsonAsync<SignupDetailItem>($"/admin/signup/{id}");
+            var detailResponse = await Api.GetAsync($"/admin/signup/{id}");
+            _expandedDetail = await detailResponse.Content.ReadFromJsonAsync<SignupDetailItem>();
         }
         catch (Exception ex)
         {
@@ -412,11 +487,10 @@
         _successMessage = null;
         try
         {
-            var client = HttpClientFactory.CreateClient("AdminApi");
             var signupId = _actionSignupId.Value;
 
             // Step 1: Approve signup request
-            var approveResponse = await client.PostAsJsonAsync(
+            var approveResponse = await Api.PostAsJsonAsync(
                 $"/admin/signup/{signupId}/approve",
                 new { ApprovalNote = string.IsNullOrWhiteSpace(_approvalNote) ? (string?)null : _approvalNote });
 
@@ -431,7 +505,7 @@
             if (signupItem is not null) signupItem.Status = "Approved";
 
             // Step 2: Provision tenant (D-14 chaining)
-            var provisionResponse = await client.PostAsJsonAsync(
+            var provisionResponse = await Api.PostAsJsonAsync(
                 $"/admin/tenants/{signupId}/provision", new { });
 
             if (provisionResponse.IsSuccessStatusCode)
@@ -478,10 +552,9 @@
         _successMessage = null;
         try
         {
-            var client = HttpClientFactory.CreateClient("AdminApi");
             var signupId = _actionSignupId.Value;
 
-            var response = await client.PostAsJsonAsync(
+            var response = await Api.PostAsJsonAsync(
                 $"/admin/signup/{signupId}/reject",
                 new { RejectionReason = _rejectionReason });
 
@@ -519,8 +592,7 @@
         _successMessage = null;
         try
         {
-            var client = HttpClientFactory.CreateClient("AdminApi");
-            var response = await client.PostAsJsonAsync($"/admin/tenants/{id}/provision", new { });
+            var response = await Api.PostAsJsonAsync($"/admin/tenants/{id}/provision", new { });
             if (response.IsSuccessStatusCode)
             {
                 var item = _signups.FirstOrDefault(s => s.Id == id);
@@ -565,6 +637,75 @@
         public Guid? AppliedRecipeId { get; set; }
         public DateTime CreatedAt { get; set; }
     }
+
+    private void OpenImpersonateModal(TenantListItem tenant)
+    {
+        _impersonateTarget = tenant;
+        _impersonateReason = string.Empty;
+        _showImpersonateModal = true;
+    }
+
+    private void CancelImpersonateModal()
+    {
+        _showImpersonateModal = false;
+        _impersonateTarget = null;
+        _impersonateReason = string.Empty;
+    }
+
+    private async Task HandleImpersonateAsync()
+    {
+        if (_impersonateTarget is null)
+            return;
+
+        _isImpersonating = true;
+        _errorBanner = null;
+
+        try
+        {
+            var response = await Api.PostAsJsonAsync(
+                $"/admin/tenants/{_impersonateTarget.Id}/impersonate",
+                new { Reason = string.IsNullOrWhiteSpace(_impersonateReason) ? null : _impersonateReason });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ImpersonateResponse>();
+
+                if (result?.Token is not null)
+                {
+                    var provider = (AdminAuthenticationStateProvider)AuthStateProvider;
+                    await provider.ImpersonateAsync(result.Token, result.TenantName);
+
+                    // Full reload: the sidebar and every page must re-render against the new
+                    // identity, and the platform-only nav has to disappear.
+                    Nav.NavigateTo("/admin", forceLoad: true);
+                    return;
+                }
+
+                _errorBanner = "Unexpected response from the impersonation endpoint.";
+            }
+            else
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                _errorBanner = $"Could not impersonate ({(int)response.StatusCode}). {body}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorBanner = $"Could not impersonate: {ex.Message}";
+        }
+        finally
+        {
+            _isImpersonating = false;
+            _showImpersonateModal = false;
+        }
+    }
+
+    private record ImpersonateResponse(
+        string Token,
+        Guid TenantId,
+        string TenantName,
+        string ImpersonatedUserEmail,
+        DateTime ExpiresAt);
 
     private class SignupListItem
     {

@@ -1,5 +1,19 @@
 # Milestones
 
+## v1.3 Public Landing & Tenant Signup (Shipped: 2026-04-03)
+
+**Phases completed:** 2 phases, 6 plans, 10 tasks
+
+**Key accomplishments:**
+
+- PublicLayout.razor and FeatureCard.razor created — clean public shell with sticky nav, dark footer, and reusable feature card component ready for Home.razor
+- Responsive public SaaS landing page replacing Blazor placeholder — dark gradient hero with tagline/CTAs plus 4-card feature grid using PublicLayout and FeatureCard components
+- Routes.razor updated with public path exclusion in NotAuthorized block; Login.razor adopts @layout PublicLayout — both public pages now accessible to unauthenticated visitors without AdminSidebar
+- Two self-contained Blazor recipe selection components — RecipePreviewCard (clickable card with selected-state indigo border) and RecipePreviewPanel (expandable content panel with inline RecipePreviewResponse record) — ready for use in Signup.razor
+- Public tenant signup form at /signup with 7 validated fields, recipe browser with toggle-select and preview panel, POST /auth/signup integration with loading/error states, and navigation to /signup/success on 201 success
+
+---
+
 ## v1.2 Admin UI (Shipped: 2026-04-02)
 
 **Phases completed:** 5 phases, 16 plans, 20 tasks

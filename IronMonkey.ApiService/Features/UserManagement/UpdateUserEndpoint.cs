@@ -6,6 +6,7 @@ using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Common.Extensions;
 using IronMonkey.ApiService.Common.Results;
 using IronMonkey.Data;
+using IronMonkey.Data.Entities;
 
 namespace IronMonkey.ApiService.Features.UserManagement;
 
@@ -35,10 +36,13 @@ public class UpdateUserEndpoint : IEndpoint
         Request request,
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
+        CentralDbContext centralDb,
         CancellationToken cancellationToken)
     {
         var tenantId = tenantService.GetCurrentTenantId();
         var connectionString = await tenantService.GetConnectionStringAsync(cancellationToken);
+
+        var email = request.Email.Trim().ToLowerInvariant();
 
         await using var db = dbContextFactory.CreateForTenant(connectionString, tenantId);
 
@@ -55,9 +59,35 @@ public class UpdateUserEndpoint : IEndpoint
         if (role is null)
             return TypedResults.NotFound();
 
-        user.Update(request.Name, request.Email);
+        // The central index is keyed on email, so an email change has to move with it —
+        // otherwise login keeps resolving the old address and the new one 401s.
+        var previousEmail = user.Email;
+        var emailChanged = !string.Equals(previousEmail, email, StringComparison.OrdinalIgnoreCase);
+
+        if (emailChanged)
+        {
+            var emailTaken = await centralDb.UserTenantIndex
+                .AsNoTracking()
+                .AnyAsync(x => x.Email == email, cancellationToken);
+
+            if (emailTaken)
+                return new ValidationError("A user with this email address already exists.");
+        }
+
+        user.Update(request.Name, email);
         user.UpdateRole(role);
         await db.SaveChangesAsync(cancellationToken);
+
+        if (emailChanged)
+        {
+            var indexRows = await centralDb.UserTenantIndex
+                .Where(x => x.Email == previousEmail && x.TenantId == tenantId)
+                .ToListAsync(cancellationToken);
+
+            centralDb.UserTenantIndex.RemoveRange(indexRows);
+            centralDb.UserTenantIndex.Add(UserTenantIndex.Create(email, tenantId));
+            await centralDb.SaveChangesAsync(cancellationToken);
+        }
 
         return TypedResults.Ok(new Response(user.Id, "User updated successfully."));
     }

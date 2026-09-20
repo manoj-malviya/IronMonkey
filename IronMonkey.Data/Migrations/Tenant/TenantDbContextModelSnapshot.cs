@@ -28,7 +28,7 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("ActorId")
+                    b.Property<Guid?>("ActorId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
@@ -52,7 +52,7 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("LeadId")
+                    b.Property<Guid?>("LeadId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("NewValues")
@@ -60,6 +60,16 @@ namespace IronMonkey.Data.Migrations.Tenant
 
                     b.Property<string>("OldValues")
                         .HasColumnType("jsonb");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SubjectType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("Lead");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
@@ -82,6 +92,9 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.HasIndex("TenantId", "LeadId")
                         .HasDatabaseName("IX_ActivityLogs_TenantId_LeadId");
 
+                    b.HasIndex("TenantId", "SubjectType", "SubjectId", "CreatedAt")
+                        .HasDatabaseName("IX_ActivityLogs_TenantId_Subject_CreatedAt");
+
                     b.ToTable("ActivityLogs");
                 });
 
@@ -93,6 +106,11 @@ namespace IronMonkey.Data.Migrations.Tenant
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CustomFields")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("custom_field_values");
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
@@ -136,11 +154,33 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AppliesTo")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("Lead");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DefaultValue")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DisplayOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("FieldKey")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasDefaultValue("");
 
                     b.Property<string>("FieldName")
                         .IsRequired()
@@ -150,6 +190,15 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.Property<string>("FieldType")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("HelpText")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsArchived")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -170,6 +219,12 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "AppliesTo", "DisplayOrder");
+
+                    b.HasIndex("TenantId", "AppliesTo", "FieldKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_custom_field_definitions_tenant_scope_key_unique");
 
                     b.ToTable("custom_field_definitions", (string)null);
                 });
@@ -513,6 +568,285 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.ToTable("lead_tasks", (string)null);
                 });
 
+            modelBuilder.Entity("IronMonkey.Data.Entities.Message", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid?>("ContactId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ErrorCategory")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(501)
+                        .HasColumnType("character varying(501)");
+
+                    b.Property<DateTime?>("FailedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FromAddress")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("IsBodyHtml")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("LeadId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("ProviderMessageId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("QueuedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("SentByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Subject")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ToAddress")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("WorkflowRuleId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Messages_TenantId_IdempotencyKey");
+
+                    b.HasIndex("TenantId", "ProviderMessageId")
+                        .HasDatabaseName("IX_Messages_TenantId_ProviderMessageId");
+
+                    b.HasIndex("TenantId", "Channel", "FromAddress")
+                        .HasDatabaseName("IX_Messages_TenantId_Channel_FromAddress");
+
+                    b.HasIndex("TenantId", "Channel", "ToAddress")
+                        .HasDatabaseName("IX_Messages_TenantId_Channel_ToAddress");
+
+                    b.HasIndex("TenantId", "ContactId", "QueuedAt")
+                        .IsDescending(false, false, true)
+                        .HasDatabaseName("IX_Messages_TenantId_ContactId_QueuedAt");
+
+                    b.HasIndex("TenantId", "LeadId", "QueuedAt")
+                        .IsDescending(false, false, true)
+                        .HasDatabaseName("IX_Messages_TenantId_LeadId_QueuedAt");
+
+                    b.ToTable("messages", (string)null);
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.MessageConsent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsOptedOut")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Channel", "Address")
+                        .IsUnique()
+                        .HasDatabaseName("IX_MessageConsents_TenantId_Channel_Address");
+
+                    b.ToTable("message_consents", (string)null);
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.MessageTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ProviderTemplateName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Subject")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Channel", "IsActive")
+                        .HasDatabaseName("IX_MessageTemplates_TenantId_Channel_IsActive");
+
+                    b.ToTable("message_templates", (string)null);
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.MessagingPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("MaxMessagesPerHour")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("QuietHoursChannels")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<TimeOnly?>("QuietHoursEnd")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<TimeOnly?>("QuietHoursStart")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_MessagingPolicies_TenantId");
+
+                    b.ToTable("messaging_policies", (string)null);
+                });
+
             modelBuilder.Entity("IronMonkey.Data.Entities.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -631,6 +965,101 @@ namespace IronMonkey.Data.Migrations.Tenant
                         {
                             Id = 1,
                             Name = "users:read"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "users:write"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "users:delete"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "leads:read"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Name = "leads:write"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Name = "leads:delete"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Name = "contacts:read"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Name = "contacts:write"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Name = "contacts:delete"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Name = "opportunities:read"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Name = "opportunities:write"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Name = "opportunities:delete"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            Name = "reports:read"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            Name = "reports:write"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            Name = "settings:read"
+                        },
+                        new
+                        {
+                            Id = 16,
+                            Name = "settings:write"
+                        },
+                        new
+                        {
+                            Id = 17,
+                            Name = "admin:access"
+                        },
+                        new
+                        {
+                            Id = 18,
+                            Name = "workflow:logs:read"
+                        },
+                        new
+                        {
+                            Id = 19,
+                            Name = "messages:send"
+                        },
+                        new
+                        {
+                            Id = 20,
+                            Name = "messages:read"
                         });
                 });
 
@@ -672,8 +1101,7 @@ namespace IronMonkey.Data.Migrations.Tenant
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId", "Order")
-                        .IsUnique();
+                    b.HasIndex("TenantId", "Order");
 
                     b.ToTable("pipeline_stages", (string)null);
                 });
@@ -732,6 +1160,171 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.ToTable("role_permissions", (string)null);
 
                     b.HasData(
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 1
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 2
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 3
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 4
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 5
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 6
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 7
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 8
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 9
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 10
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 11
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 12
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 13
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 14
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 15
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 16
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 17
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 18
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 19
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 20
+                        },
+                        new
+                        {
+                            RoleId = 201,
+                            PermissionId = 1
+                        },
+                        new
+                        {
+                            RoleId = 201,
+                            PermissionId = 2
+                        },
+                        new
+                        {
+                            RoleId = 201,
+                            PermissionId = 4
+                        },
+                        new
+                        {
+                            RoleId = 201,
+                            PermissionId = 5
+                        },
+                        new
+                        {
+                            RoleId = 201,
+                            PermissionId = 7
+                        },
+                        new
+                        {
+                            RoleId = 201,
+                            PermissionId = 8
+                        },
+                        new
+                        {
+                            RoleId = 201,
+                            PermissionId = 10
+                        },
+                        new
+                        {
+                            RoleId = 201,
+                            PermissionId = 11
+                        },
+                        new
+                        {
+                            RoleId = 201,
+                            PermissionId = 13
+                        },
+                        new
+                        {
+                            RoleId = 201,
+                            PermissionId = 15
+                        },
+                        new
+                        {
+                            RoleId = 201,
+                            PermissionId = 18
+                        },
+                        new
+                        {
+                            RoleId = 201,
+                            PermissionId = 19
+                        },
+                        new
+                        {
+                            RoleId = 201,
+                            PermissionId = 20
+                        },
                         new
                         {
                             RoleId = 301,
@@ -951,6 +1544,9 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("Presentation")
+                        .HasColumnType("jsonb");
+
                     b.Property<DateTime?>("ProvisionedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1026,6 +1622,202 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.HasKey("Id");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.WorkflowExecutionLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempt")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("ConditionEvaluated")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ConditionMatched")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("CorrelationId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DurationMs")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ErrorCategory")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(501)
+                        .HasColumnType("character varying(501)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("JobId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("LeadId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LeadName")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<string>("SkipReason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Trigger")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("WorkflowRuleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("WorkflowRuleName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status", "StartedAt")
+                        .HasDatabaseName("IX_WorkflowExecutionLogs_Status_StartedAt");
+
+                    b.HasIndex("TenantId", "StartedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("IX_WorkflowExecutionLogs_TenantId_StartedAt");
+
+                    b.HasIndex("TenantId", "LeadId", "StartedAt")
+                        .IsDescending(false, false, true)
+                        .HasDatabaseName("IX_WorkflowExecutionLogs_TenantId_LeadId_StartedAt");
+
+                    b.HasIndex("TenantId", "Status", "StartedAt")
+                        .IsDescending(false, false, true)
+                        .HasDatabaseName("IX_WorkflowExecutionLogs_TenantId_Status_StartedAt");
+
+                    b.HasIndex("TenantId", "WorkflowRuleId", "StartedAt")
+                        .IsDescending(false, false, true)
+                        .HasDatabaseName("IX_WorkflowExecutionLogs_TenantId_RuleId_StartedAt");
+
+                    b.HasIndex("TenantId", "CorrelationId", "WorkflowRuleId", "Attempt")
+                        .IsUnique()
+                        .HasDatabaseName("UX_WorkflowExecutionLogs_TenantId_Correlation_Rule_Attempt");
+
+                    b.ToTable("workflow_execution_logs", (string)null);
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.WorkflowExecutionStep", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActionType")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DurationMs")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ErrorCategory")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<int?>("HttpStatusCode")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Message")
+                        .HasMaxLength(501)
+                        .HasColumnType("character varying(501)");
+
+                    b.Property<string>("RecipientRedacted")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("TargetHost")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("WorkflowExecutionLogId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "ActionType")
+                        .HasDatabaseName("IX_WorkflowExecutionSteps_TenantId_ActionType");
+
+                    b.HasIndex("WorkflowExecutionLogId", "Sequence")
+                        .HasDatabaseName("IX_WorkflowExecutionSteps_LogId_Sequence");
+
+                    b.ToTable("workflow_execution_steps", (string)null);
                 });
 
             modelBuilder.Entity("IronMonkey.Data.Entities.WorkflowRule", b =>
@@ -1129,14 +1921,11 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.HasOne("IronMonkey.Data.Entities.User", "Actor")
                         .WithMany()
                         .HasForeignKey("ActorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("IronMonkey.Data.Entities.Lead", "Lead")
                         .WithMany()
-                        .HasForeignKey("LeadId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("LeadId");
 
                     b.Navigation("Actor");
 
@@ -1225,6 +2014,17 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.Navigation("ToStage");
                 });
 
+            modelBuilder.Entity("IronMonkey.Data.Entities.WorkflowExecutionStep", b =>
+                {
+                    b.HasOne("IronMonkey.Data.Entities.WorkflowExecutionLog", "ExecutionLog")
+                        .WithMany("Steps")
+                        .HasForeignKey("WorkflowExecutionLogId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ExecutionLog");
+                });
+
             modelBuilder.Entity("RoleUser", b =>
                 {
                     b.HasOne("IronMonkey.Data.Entities.Role", null)
@@ -1238,6 +2038,11 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .HasForeignKey("UsersId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.WorkflowExecutionLog", b =>
+                {
+                    b.Navigation("Steps");
                 });
 #pragma warning restore 612, 618
         }

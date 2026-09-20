@@ -1,9 +1,9 @@
 @page "/admin/recipes/create"
-@attribute [Authorize]
+@attribute [Authorize(Policy = AuthorizationPolicies.PlatformAdmin)]
 @using IronMonkey.Data.RecipeContent
 @using IronMonkey.Web.Components.Pages.Admin.Recipes.Shared
 @using System.ComponentModel.DataAnnotations
-@inject IHttpClientFactory HttpClientFactory
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
 @inject NavigationManager Nav
 
 <PageTitle>Create Recipe — IronMonkey Admin</PageTitle>
@@ -120,7 +120,6 @@
 
         try
         {
-            var client = HttpClientFactory.CreateClient("AdminApi");
             var payload = new
             {
                 _model.Name,
@@ -130,7 +129,7 @@
                 _model.IsBlank,
                 _model.Content
             };
-            var response = await client.PostAsJsonAsync("/api/recipes", payload);
+            var response = await Api.PostAsJsonAsync("/api/recipes", payload);
 
             if (response.IsSuccessStatusCode)
             {

@@ -42,8 +42,9 @@ public class AddLeadNoteEndpoint : IEndpoint
         var connectionString = await tenantService.GetConnectionStringAsync(cancellationToken);
         var actorId = userContext.UserId;
 
-        await activityService.AddNoteAsync(tenantId, connectionString, leadId, actorId, request.Content, cancellationToken);
+        var activityLogId = await activityService.AddNoteAsync(
+            tenantId, connectionString, leadId, actorId, request.Content, cancellationToken);
 
-        return TypedResults.Ok(new Response(Guid.NewGuid()));
+        return TypedResults.Ok(new Response(activityLogId));
     }
 }

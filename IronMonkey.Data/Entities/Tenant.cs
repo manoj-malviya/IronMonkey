@@ -1,4 +1,5 @@
 using IronMonkey.Data.Abstractions;
+using IronMonkey.Data.Presentation;
 
 namespace IronMonkey.Data.Entities;
 
@@ -23,6 +24,16 @@ public sealed class Tenant : BaseTenantEntity
     public string Status { get; private set; } = string.Empty;
     public string? DatabaseConnectionString { get; private set; }
     public string? ThemeSettings { get; private set; }
+
+    /// <summary>
+    /// What this tenant calls things, how it formats money and dates, and how its shell looks.
+    ///
+    /// Held on the central row rather than in the tenant database because the web shell needs
+    /// it on every render, before any tenant-scoped query has run. Null means the tenant has
+    /// configured nothing and every value falls back to the built-in default, so a tenant
+    /// provisioned before this existed behaves exactly as it did.
+    /// </summary>
+    public TenantPresentationSettings? Presentation { get; private set; }
     public string ApprovalStatus { get; private set; } = "Pending";
     public string? ApprovalNote { get; private set; }
     public bool IsProvisioned { get; private set; }
@@ -44,6 +55,16 @@ public sealed class Tenant : BaseTenantEntity
     public void UpdateThemeSettings(string? themeSettings)
     {
         ThemeSettings = themeSettings;
+    }
+
+    /// <summary>
+    /// Replaces the whole presentation block. Branding is validated by the caller before it
+    /// reaches here — these values are rendered into pages, so an unvalidated write would be
+    /// a stored-XSS vector across every user in the tenant.
+    /// </summary>
+    public void UpdatePresentation(TenantPresentationSettings? presentation)
+    {
+        Presentation = presentation;
     }
 
     public void UpdateSubscriptionPlan(string subscriptionPlan)

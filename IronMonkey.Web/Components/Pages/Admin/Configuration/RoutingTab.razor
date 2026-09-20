@@ -1,0 +1,514 @@
+@using System.Text.Json
+@using IronMonkey.Web.HttpHandlers
+@inject AdminApiClient Api
+
+@* Lead routing. Territory rules are authored as rows — name, matching values, assignee —
+   rather than hand-written JSON. The JSON view stays available as an escape hatch, but it is
+   parsed and validated before it can replace the rules. *@
+
+<div class="max-w-3xl space-y-6">
+
+    @if (_loading)
+    {
+        <p class="py-12 text-center text-sm text-slate-500">Loading routing configuration…</p>
+    }
+    else
+    {
+        <div>
+            <p class="mb-3 text-sm font-semibold text-slate-900">Lead assignment strategy</p>
+
+            <div class="flex flex-wrap gap-6">
+                <label class="flex cursor-pointer items-center gap-2">
+                    <input type="radio" name="routingMode" value="RoundRobin"
+                           checked="@(_strategy == "RoundRobin")"
+                           @onchange="@(() => SetStrategy("RoundRobin"))" class="border-slate-300" />
+                    <span class="text-sm text-slate-700">Round-robin</span>
+                </label>
+                <label class="flex cursor-pointer items-center gap-2">
+                    <input type="radio" name="routingMode" value="Territory"
+                           checked="@(_strategy == "Territory")"
+                           @onchange="@(() => SetStrategy("Territory"))" class="border-slate-300" />
+                    <span class="text-sm text-slate-700">Territory-based</span>
+                </label>
+            </div>
+        </div>
+
+        @if (_strategy == "Territory")
+        {
+            <div>
+                <label for="dimension" class="mb-1 block text-sm font-medium text-slate-700">
+                    Match leads on
+                </label>
+                <select id="dimension" value="@_dimension" @onchange="OnDimensionChanged"
+                        class="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                    <option value="LeadSource">Lead source</option>
+                    <option value="CustomField">A custom field</option>
+                </select>
+            </div>
+
+            @if (_dimension == "CustomField")
+            {
+                <div>
+                    <label for="cf-key" class="mb-1 block text-sm font-medium text-slate-700">
+                        Custom field
+                    </label>
+                    <select id="cf-key" @bind="_customFieldKey"
+                            class="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                        <option value="">— Choose a field —</option>
+                        @foreach (var field in _leadFields)
+                        {
+                            <option value="@field.Id">@field.FieldName</option>
+                        }
+                    </select>
+                    <p class="mt-1 text-xs text-slate-500">
+                        Only lead fields can drive routing, because routing happens as the lead is created.
+                    </p>
+                </div>
+            }
+
+            <div>
+                <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <p class="text-sm font-semibold text-slate-900">Territory rules</p>
+                    <button type="button" @onclick="ToggleAdvanced"
+                            class="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+                        @(_advanced ? "Back to rule editor" : "Advanced JSON")
+                    </button>
+                </div>
+
+                @if (_advanced)
+                {
+                    <textarea @bind="_json" @bind:event="oninput" rows="12" spellcheck="false"
+                              aria-label="Territory rules JSON"
+                              class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+
+                    <p class="mt-1 text-xs text-slate-500">
+                        An object of <code>rules</code>, each with a name, the values it matches and
+                        an assignee id. Applied to the rule editor when it parses.
+                    </p>
+
+                    @if (_jsonError is not null)
+                    {
+                        <p class="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                            @_jsonError
+                        </p>
+                    }
+
+                    <button type="button" @onclick="ApplyJson"
+                            class="mt-2 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                        Apply JSON
+                    </button>
+                }
+                else
+                {
+                    @if (_rules.Count == 0)
+                    {
+                        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-10 text-center">
+                            <p class="text-sm text-slate-600">
+                                No territory rules yet. Add one to route leads by @(_dimension == "LeadSource" ? "source" : "field value").
+                            </p>
+                        </div>
+                    }
+
+                    <div class="space-y-3">
+                        @for (var i = 0; i < _rules.Count; i++)
+                        {
+                            var index = i;
+                            var rule = _rules[index];
+
+                            <div class="rounded-xl border border-slate-200 bg-white p-4">
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <div>
+                                        <label class="mb-1 block text-xs font-medium text-slate-600">
+                                            Territory name
+                                        </label>
+                                        <input value="@rule.Name"
+                                               @oninput="e => rule.Name = e.Value?.ToString() ?? string.Empty"
+                                               aria-label="@($"Territory {index + 1} name")"
+                                               placeholder="West coast"
+                                               class="@Control" />
+                                    </div>
+
+                                    <div>
+                                        <label class="mb-1 block text-xs font-medium text-slate-600">
+                                            Assign to
+                                        </label>
+                                        <select value="@rule.AssigneeId"
+                                                @onchange="e => rule.AssigneeId = e.Value?.ToString() ?? string.Empty"
+                                                aria-label="@($"Territory {index + 1} assignee")"
+                                                class="@Control">
+                                            <option value="">— Choose a user —</option>
+                                            @foreach (var user in _users)
+                                            {
+                                                <option value="@user.Id">@user.DisplayName</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3">
+                                    <label class="mb-1 block text-xs font-medium text-slate-600">
+                                        @(_dimension == "LeadSource" ? "Lead sources" : "Field values") this territory covers
+                                    </label>
+
+                                    @if (_dimension == "LeadSource")
+                                    {
+                                        <div class="flex flex-wrap gap-3">
+                                            @foreach (var source in LeadSources)
+                                            {
+                                                <label class="flex items-center gap-1.5 text-sm text-slate-700">
+                                                    <input type="checkbox" checked="@rule.Values.Contains(source)"
+                                                           @onchange="e => ToggleValue(rule, source, (bool)(e.Value ?? false))"
+                                                           class="rounded border-slate-300" />
+                                                    <span>@source</span>
+                                                </label>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <input value="@string.Join(", ", rule.Values)"
+                                               @onchange="e => SetValues(rule, e.Value?.ToString())"
+                                               aria-label="@($"Territory {index + 1} values")"
+                                               placeholder="CA, OR, WA"
+                                               class="@Control" />
+                                        <p class="mt-1 text-xs text-slate-500">
+                                            Separate values with commas.
+                                        </p>
+                                    }
+                                </div>
+
+                                <div class="mt-3 flex justify-end">
+                                    <button type="button" @onclick="() => RemoveRule(index)"
+                                            aria-label="@($"Remove territory {index + 1}")"
+                                            class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50">
+                                        Remove rule
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <button type="button" @onclick="AddRule"
+                            class="mt-3 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                        Add rule
+                    </button>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                Leads are handed to each active user in turn. No further configuration needed.
+            </p>
+        }
+
+        @if (_errors.Count > 0)
+        {
+            <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                <p class="text-sm font-semibold text-red-800">Routing could not be saved</p>
+                <ul class="mt-1 list-inside list-disc space-y-0.5 text-sm text-red-700">
+                    @foreach (var error in _errors)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="flex items-center justify-end gap-3">
+            @if (_saved)
+            {
+                <span role="status" class="text-sm font-medium text-green-700">Saved</span>
+            }
+            <button type="button" @onclick="SaveAsync" disabled="@_saving"
+                    class="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                @(_saving ? "Saving…" : "Save configuration")
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback<string> OnSuccess { get; set; }
+    [Parameter] public EventCallback<string> OnError { get; set; }
+
+    private const string Control =
+        "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500";
+
+    /// <summary>Mirrors the LeadSource enum — the values a territory can match on.</summary>
+    private static readonly string[] LeadSources =
+        ["Manual", "Api", "WebForm", "Import", "Referral"];
+
+    private bool _loading = true;
+    private bool _saving;
+    private bool _saved;
+
+    private string _strategy = "RoundRobin";
+    private string _dimension = "LeadSource";
+    private string _customFieldKey = string.Empty;
+
+    private List<RuleRow> _rules = [];
+    private List<TenantUserItem> _users = [];
+    private List<FieldItem> _leadFields = [];
+
+    private bool _advanced;
+    private string _json = string.Empty;
+    private string? _jsonError;
+
+    private List<string> _errors = [];
+
+    private sealed class RuleRow
+    {
+        public string Name { get; set; } = string.Empty;
+        public List<string> Values { get; set; } = [];
+        public string AssigneeId { get; set; } = string.Empty;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // The assignee picker and the field picker are both needed before the rules can be
+        // rendered meaningfully, so they load alongside the config.
+        _users = await Api.GetFromJsonAsync<List<TenantUserItem>>("/users") ?? [];
+        _leadFields = await Api.GetFromJsonAsync<List<FieldItem>>("/api/custom-fields?appliesTo=Lead") ?? [];
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var response = await Api.GetAsync("/api/routing-config");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var config = await response.Content.ReadFromJsonAsync<RoutingConfigResponse>();
+                if (config is not null)
+                {
+                    _strategy = config.Strategy;
+                    _dimension = config.Dimension;
+                    _customFieldKey = config.CustomFieldKey ?? string.Empty;
+                    _rules = ParseRules(config.TerritoryMapJson);
+                    _json = Serialise();
+                }
+            }
+            else if (response.StatusCode != System.Net.HttpStatusCode.NotFound)
+            {
+                await OnError.InvokeAsync("Failed to load routing configuration.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await OnError.InvokeAsync($"Failed to load routing configuration: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void SetStrategy(string strategy)
+    {
+        _strategy = strategy;
+        _saved = false;
+        _errors = [];
+    }
+
+    private void OnDimensionChanged(ChangeEventArgs e)
+    {
+        _dimension = e.Value?.ToString() ?? "LeadSource";
+
+        // The values a rule matches mean something different per dimension — a lead source is
+        // not a field value — so carrying them across would produce rules that match nothing.
+        foreach (var rule in _rules) rule.Values.Clear();
+
+        _saved = false;
+    }
+
+    private void AddRule()
+    {
+        _rules.Add(new RuleRow());
+        _saved = false;
+    }
+
+    private void RemoveRule(int index)
+    {
+        if (index >= 0 && index < _rules.Count) _rules.RemoveAt(index);
+        _saved = false;
+    }
+
+    private void ToggleValue(RuleRow rule, string value, bool selected)
+    {
+        if (selected && !rule.Values.Contains(value)) rule.Values.Add(value);
+        if (!selected) rule.Values.Remove(value);
+        _saved = false;
+    }
+
+    private void SetValues(RuleRow rule, string? raw)
+    {
+        rule.Values = string.IsNullOrWhiteSpace(raw)
+            ? []
+            : [.. raw.Split(',').Select(v => v.Trim()).Where(v => v.Length > 0)];
+
+        _saved = false;
+    }
+
+    // ── Advanced JSON ───────────────────────────────────────────────────────
+
+    private void ToggleAdvanced()
+    {
+        if (!_advanced) _json = Serialise();
+        _advanced = !_advanced;
+        _jsonError = null;
+    }
+
+    /// <summary>
+    /// Parses the JSON view back into rules. Refuses to apply anything malformed, so the
+    /// escape hatch cannot put the editor into a state that would not save.
+    /// </summary>
+    private void ApplyJson()
+    {
+        _jsonError = null;
+
+        if (string.IsNullOrWhiteSpace(_json))
+        {
+            _rules = [];
+            _advanced = false;
+            return;
+        }
+
+        try
+        {
+            var parsed = ParseRules(_json);
+            _rules = parsed;
+            _advanced = false;
+            _saved = false;
+        }
+        catch (JsonException ex)
+        {
+            _jsonError = $"That is not valid JSON: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            _jsonError = ex.Message;
+        }
+    }
+
+    /// <summary>
+    /// Reads the structured rule set, falling back to the original flat map so a tenant
+    /// configured before the editor existed still opens correctly.
+    /// </summary>
+    private static List<RuleRow> ParseRules(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return [];
+
+        using var doc = JsonDocument.Parse(json);
+
+        if (doc.RootElement.ValueKind != JsonValueKind.Object)
+            throw new InvalidOperationException("Territory rules must be a JSON object.");
+
+        if (doc.RootElement.TryGetProperty("rules", out var rules))
+        {
+            if (rules.ValueKind != JsonValueKind.Array)
+                throw new InvalidOperationException("'rules' must be an array.");
+
+            var parsed = new List<RuleRow>();
+
+            foreach (var element in rules.EnumerateArray())
+            {
+                var row = new RuleRow();
+
+                if (element.TryGetProperty("name", out var name) && name.ValueKind == JsonValueKind.String)
+                    row.Name = name.GetString() ?? string.Empty;
+
+                if (element.TryGetProperty("assigneeId", out var assignee) && assignee.ValueKind == JsonValueKind.String)
+                    row.AssigneeId = assignee.GetString() ?? string.Empty;
+
+                if (element.TryGetProperty("values", out var values) && values.ValueKind == JsonValueKind.Array)
+                    row.Values = [.. values.EnumerateArray()
+                        .Where(v => v.ValueKind == JsonValueKind.String)
+                        .Select(v => v.GetString() ?? string.Empty)
+                        .Where(v => v.Length > 0)];
+
+                parsed.Add(row);
+            }
+
+            return parsed;
+        }
+
+        // Legacy flat map: {"Web": "guid"}
+        return [.. doc.RootElement.EnumerateObject()
+            .Where(p => p.Value.ValueKind == JsonValueKind.String)
+            .Select(p => new RuleRow
+            {
+                Name = p.Name,
+                Values = [p.Name],
+                AssigneeId = p.Value.GetString() ?? string.Empty
+            })];
+    }
+
+    private string Serialise()
+        => JsonSerializer.Serialize(
+            new
+            {
+                rules = _rules.Select(r => new
+                {
+                    name = r.Name,
+                    values = r.Values,
+                    assigneeId = r.AssigneeId
+                })
+            },
+            new JsonSerializerOptions { WriteIndented = true });
+
+    // ── Save ────────────────────────────────────────────────────────────────
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        _saved = false;
+        _errors = [];
+
+        try
+        {
+            // The advanced editor may hold edits that were never applied; saving them
+            // silently would contradict the "Apply JSON" button.
+            if (_advanced && _strategy == "Territory")
+            {
+                _errors = ["Apply or discard the advanced JSON before saving."];
+                return;
+            }
+
+            var response = await Api.PostAsJsonAsync("/api/routing-config", new
+            {
+                Strategy = _strategy,
+                Dimension = _strategy == "Territory" ? _dimension : "LeadSource",
+                TerritoryMapJson = _strategy == "Territory" ? Serialise() : null,
+                CustomFieldKey = _strategy == "Territory" && _dimension == "CustomField"
+                    ? _customFieldKey
+                    : null
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                _saved = true;
+                await OnSuccess.InvokeAsync("Routing configuration saved.");
+                return;
+            }
+
+            var problem = await response.Content.ReadFromJsonAsync<RoutingValidationProblem>();
+
+            _errors = problem is null
+                ? ["Routing configuration could not be saved."]
+                : problem.Errors.Count > 0 ? problem.Errors : [problem.Message];
+        }
+        catch (Exception ex)
+        {
+            _errors = [ex.Message];
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

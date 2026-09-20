@@ -31,4 +31,10 @@ internal sealed class UserContext : IUserContext
             .User
             .GetTenantId() ??
         throw new ApplicationException("Tenant context is unavailable");
+
+    public string? ActAs =>
+        _httpContextAccessor
+            .HttpContext?
+            .User
+            .GetActAs();
 }

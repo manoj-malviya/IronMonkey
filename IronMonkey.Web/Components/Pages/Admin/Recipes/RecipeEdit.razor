@@ -1,8 +1,8 @@
 @page "/admin/recipes/{Id:guid}/edit"
-@attribute [Authorize]
+@attribute [Authorize(Policy = AuthorizationPolicies.PlatformAdmin)]
 @using IronMonkey.Data.RecipeContent
 @using IronMonkey.Web.Components.Pages.Admin.Recipes.Shared
-@inject IHttpClientFactory HttpClientFactory
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
 @inject NavigationManager Nav
 
 <PageTitle>Edit Recipe — IronMonkey Admin</PageTitle>
@@ -111,16 +111,15 @@
         _isLoading = true;
         try
         {
-            var client = HttpClientFactory.CreateClient("AdminApi");
 
             // Fetch full recipe content
-            var preview = await client.GetFromJsonAsync<RecipePreviewDto>($"/api/recipes/{Id}");
+            var preview = await Api.GetFromJsonAsync<RecipePreviewDto>($"/api/recipes/{Id}");
             _recipe = preview;
             if (preview is not null)
                 _content = preview.Content ?? new RecipeContentModel();
 
             // Fetch metadata (IndustrySlug, IconIdentifier, IsBlank, Version) from list endpoint
-            var list = await client.GetFromJsonAsync<List<RecipeListItem>>("/api/recipes");
+            var list = await Api.GetFromJsonAsync<List<RecipeListItem>>("/api/recipes");
             _listItem = list?.FirstOrDefault(r => r.Id == Id);
         }
         catch (Exception ex)
@@ -141,9 +140,8 @@
 
         try
         {
-            var client = HttpClientFactory.CreateClient("AdminApi");
             var payload = new { Content = _content };
-            var response = await client.PutAsJsonAsync($"/api/recipes/{Id}", payload);
+            var response = await Api.PutAsJsonAsync($"/api/recipes/{Id}", payload);
 
             if (response.IsSuccessStatusCode)
             {

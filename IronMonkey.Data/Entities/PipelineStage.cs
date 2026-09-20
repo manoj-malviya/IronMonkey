@@ -20,7 +20,20 @@ public sealed class PipelineStage : BaseTenantEntity
 
     public void Update(string name, int order) { Name = name; Order = order; }
 
+    /// <summary>
+    /// Moves the stage to a new position. Separate from <see cref="Update"/> so a bulk
+    /// reorder does not have to restate the name it is not changing.
+    /// </summary>
+    public void SetOrder(int order) => Order = order;
+
+    public void Rename(string name) => Name = name;
+
     public void Deactivate() => IsActive = false;
+
+    public void Activate() => IsActive = true;
+
+    /// <summary>Sets active state directly, for a form that edits it as a toggle.</summary>
+    public void SetActive(bool isActive) => IsActive = isActive;
 
     public void SetStageType(StageType type) => StageType = type;
 }

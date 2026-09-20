@@ -26,7 +26,11 @@ public static class ConfigureDatabase
 #pragma warning restore CS0618
         });
 
-        // Register factory for creating per-tenant DbContexts on demand
-        services.AddSingleton<ITenantDbContextFactory, TenantDbContextFactory>();
+        // Register factory for creating per-tenant DbContexts on demand.
+        // Interceptors registered as IInterceptor are attached to every context the factory
+        // creates — see TenantDbContextFactory. Without this the activity interceptor is
+        // resolvable but never attached, which is how it silently logged nothing.
+        services.AddSingleton<ITenantDbContextFactory>(sp =>
+            new TenantDbContextFactory(sp.GetServices<Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor>()));
     }
 }

@@ -1,0 +1,103 @@
+@using IronMonkey.Web.Components.Pages.Admin.Dashboard
+@inject NavigationManager Nav
+
+@*
+    Leads by pipeline stage, drawn as proportional bars rather than a chart library: the
+    comparison is between a handful of stages, which a bar row conveys directly and which
+    stays readable at phone width and in print.
+*@
+<DashboardWidget Title="Leads by stage"
+                 Subtitle="@Subtitle"
+                 IsLoading="State.IsLoading"
+                 HasData="State.HasData"
+                 HasError="State.HasError"
+                 ErrorMessage="@State.ErrorMessage"
+                 IsStale="State.IsStale"
+                 OnRetry="OnRetry">
+    @if (State.Data is { } data)
+    {
+        @if (!data.HasAnyStages)
+        {
+            @* No pipeline configured at all — the fix is setup, not creating a lead. *@
+            <div class="py-6 text-center">
+                <p class="text-sm text-slate-600">No pipeline stages are configured yet.</p>
+                <p class="mt-1 text-xs text-slate-500">Stages define how a lead moves from new to won.</p>
+                <a href="/admin/configuration?tab=stages"
+                   class="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                    Set up pipeline stages
+                </a>
+            </div>
+        }
+        else if (data.TotalLeads == 0)
+        {
+            @* Stages exist but this window is empty — could be a real gap or too narrow a
+               range, so offer both readings rather than implying the tenant is empty. *@
+            <div class="py-6 text-center">
+                <p class="text-sm text-slate-600">No leads created in this date range.</p>
+                <div class="mt-4 flex flex-wrap justify-center gap-2">
+                    <a href="/admin/leads/create"
+                       class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                        Create a lead
+                    </a>
+                    <button type="button" @onclick="OnWidenRange"
+                            class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                        Show all time
+                    </button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <ul class="space-y-3">
+                @foreach (var stage in data.ByStage)
+                {
+                    var share = data.TotalLeads > 0 ? (double)stage.LeadCount / data.TotalLeads : 0;
+                    <li>
+                        <a href="@($"/admin/leads?stageId={stage.StageId}")"
+                           class="group block rounded-lg px-1 py-1 hover:bg-slate-50"
+                           title="@($"View the {stage.LeadCount} lead(s) in {stage.StageName}")">
+                            <div class="flex items-baseline justify-between gap-3">
+                                <span class="truncate text-sm text-slate-700 group-hover:text-indigo-700">
+                                    @stage.StageName
+                                    @if (stage.IsTerminal)
+                                    {
+                                        <span class="ml-1 text-[10px] uppercase tracking-wide text-slate-400">closed</span>
+                                    }
+                                </span>
+                                <span class="shrink-0 text-sm font-semibold tabular-nums text-slate-900">@stage.LeadCount</span>
+                            </div>
+                            <div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                                @* The bar repeats the number beside it, so it carries no
+                                   information of its own and is hidden from screen readers. *@
+                                <div class="h-full rounded-full @BarColor(stage)"
+                                     style="width: @(FormatWidth(share))"
+                                     aria-hidden="true"></div>
+                            </div>
+                        </a>
+                    </li>
+                }
+            </ul>
+        }
+    }
+</DashboardWidget>
+
+@code {
+    [Parameter, EditorRequired] public WidgetState<DashboardSummary> State { get; set; } = new();
+    [Parameter] public EventCallback OnRetry { get; set; }
+    [Parameter] public EventCallback OnWidenRange { get; set; }
+    [Parameter] public string? Subtitle { get; set; }
+
+    private static string BarColor(StageBreakdownItem stage) => stage.StageType switch
+    {
+        "ClosedWon" => "bg-emerald-500",
+        "ClosedLost" => "bg-slate-400",
+        _ => "bg-indigo-500",
+    };
+
+    // InvariantCulture: a comma decimal separator from a localized format would make the
+    // CSS width declaration invalid and collapse every bar to zero.
+    private static string FormatWidth(double share) =>
+        // A non-zero count always renders a visible sliver, so "few but not none" never
+        // reads as an empty row.
+        $"{Math.Max(share * 100, share > 0 ? 2 : 0).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}%";
+}

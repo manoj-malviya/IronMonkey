@@ -1,0 +1,771 @@
+@using IronMonkey.Web.HttpHandlers
+@inject AdminApiClient Api
+
+@* Custom fields. The editor is a real form in a side panel: repeatable option rows rather
+   than comma-separated text, and a live preview of the control the field will actually
+   render on a lead or contact form. *@
+
+<div class="space-y-4">
+
+    <div class="flex flex-wrap items-center justify-end gap-3">
+        <button type="button" @onclick="StartAdd"
+                class="shrink-0 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+            Add field
+        </button>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-4">
+        <div class="flex items-center gap-2">
+            <label for="scope-filter" class="text-sm text-slate-600">Show</label>
+            <select id="scope-filter" @bind="_scopeFilter"
+                    class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm">
+                <option value="All">All fields</option>
+                <option value="Lead">Lead fields</option>
+                <option value="Contact">Contact fields</option>
+            </select>
+        </div>
+
+        <label class="flex items-center gap-2 text-sm text-slate-600">
+            <input type="checkbox" checked="@_showArchived"
+                   @onchange="OnShowArchivedChanged" class="rounded border-slate-300" />
+            <span>Include archived</span>
+        </label>
+    </div>
+
+    @if (_loading)
+    {
+        <p class="py-12 text-center text-sm text-slate-500">Loading fields…</p>
+    }
+    else if (Visible.Count == 0)
+    {
+        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
+            <p class="text-slate-600">No custom fields to show.</p>
+        </div>
+    }
+    else
+    {
+        @* Card list, not a table: on a phone each field stacks instead of scrolling sideways,
+           and the actions stay on screen. *@
+        <ul class="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
+            @foreach (var field in Visible)
+            {
+                <li @key="field.Id" class="px-4 py-3">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="text-sm font-medium text-slate-900">@field.FieldName</span>
+
+                                @if (field.IsRequired)
+                                {
+                                    <span class="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">Required</span>
+                                }
+                                @if (field.IsArchived)
+                                {
+                                    <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">Archived</span>
+                                }
+                            </div>
+
+                            <p class="mt-1 text-xs text-slate-500">
+                                @field.FieldType · @field.AppliesTo ·
+                                <code class="rounded bg-slate-100 px-1 py-0.5">@field.FieldKey</code>
+                            </p>
+
+                            @if (field.Options.Count > 0)
+                            {
+                                @* Long option lists are truncated behind a disclosure so one
+                                   field cannot push the row off a narrow screen. *@
+                                <details class="mt-1.5">
+                                    <summary class="cursor-pointer text-xs text-slate-500 hover:text-slate-700">
+                                        @field.Options.Count option@(field.Options.Count == 1 ? "" : "s")
+                                        — @string.Join(", ", field.Options.Take(3))@(field.Options.Count > 3 ? "…" : "")
+                                    </summary>
+                                    <div class="mt-1.5 flex flex-wrap gap-1">
+                                        @foreach (var option in field.Options)
+                                        {
+                                            <span class="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-700">@option</span>
+                                        }
+                                    </div>
+                                </details>
+                            }
+                        </div>
+
+                        <div class="flex shrink-0 items-center gap-1">
+                            @if (field.IsArchived)
+                            {
+                                <button type="button" @onclick="() => RestoreAsync(field)"
+                                        class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                    Restore
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="button" @onclick="() => StartEdit(field)"
+                                        aria-label="@($"Edit {field.FieldName}")"
+                                        class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                    Edit
+                                </button>
+                                <button type="button" @onclick="() => OpenRemoveAsync(field)"
+                                        aria-label="@($"Remove {field.FieldName}")"
+                                        class="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50">
+                                    Remove
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@* ── Field editor ───────────────────────────────────────────────────────────── *@
+@if (_panelOpen)
+{
+    <div class="fixed inset-0 z-40 bg-slate-900/30" @onclick="ClosePanel"></div>
+
+    <aside role="dialog" aria-modal="true" aria-label="@(_editing is null ? "Add field" : "Edit field")"
+           class="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col bg-white shadow-xl">
+
+        <header class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+            <h2 class="text-lg font-semibold text-slate-900">
+                @(_editing is null ? "Add custom field" : "Edit custom field")
+            </h2>
+            <button type="button" @onclick="ClosePanel" aria-label="Close"
+                    class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">✕</button>
+        </header>
+
+        <div class="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+
+            @if (_panelError is not null)
+            {
+                <p class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">@_panelError</p>
+            }
+
+            <div>
+                <label for="f-label" class="mb-1 block text-sm font-medium text-slate-700">Field label</label>
+                <input id="f-label" @bind="_draft.FieldName" @bind:event="oninput" maxlength="100"
+                       class="@Control" />
+                <p class="mt-1 text-xs text-slate-500">Shown next to the input on the form.</p>
+            </div>
+
+            <div>
+                <label for="f-key" class="mb-1 block text-sm font-medium text-slate-700">
+                    Internal key
+                </label>
+                <input id="f-key" @bind="_draft.FieldKey" @bind:event="oninput" maxlength="100"
+                       placeholder="@AutoKey" class="@Control font-mono" />
+                <p class="mt-1 text-xs text-slate-500">
+                    Used by integrations. Letters, digits and underscores.
+                    @(_editing is null ? " Derived from the label when left blank." : "")
+                </p>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label for="f-scope" class="mb-1 block text-sm font-medium text-slate-700">Applies to</label>
+                    <select id="f-scope" @bind="_draft.AppliesTo" class="@Control">
+                        <option value="Lead">Lead</option>
+                        <option value="Contact">Contact</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="f-type" class="mb-1 block text-sm font-medium text-slate-700">Type</label>
+                    <select id="f-type" value="@_draft.FieldType" @onchange="OnTypeChanged" class="@Control">
+                        @foreach (var type in FieldTypes)
+                        {
+                            <option value="@type">@type</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            @if (NeedsOptions)
+            {
+                <div>
+                    <span class="mb-1 block text-sm font-medium text-slate-700">Options</span>
+
+                    <div class="space-y-2">
+                        @for (var i = 0; i < _draftOptions.Count; i++)
+                        {
+                            var index = i;
+                            <div class="flex items-center gap-2">
+                                <input value="@_draftOptions[index]"
+                                       @oninput="e => _draftOptions[index] = e.Value?.ToString() ?? string.Empty"
+                                       aria-label="@($"Option {index + 1}")"
+                                       class="@Control" />
+                                <button type="button" @onclick="() => RemoveOption(index)"
+                                        aria-label="@($"Remove option {index + 1}")"
+                                        class="shrink-0 rounded-lg border border-slate-300 px-2.5 py-2 text-sm text-slate-600 hover:bg-slate-50">
+                                    ✕
+                                </button>
+                            </div>
+                        }
+                    </div>
+
+                    <button type="button" @onclick="AddOption"
+                            class="mt-2 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                        Add option
+                    </button>
+                </div>
+            }
+
+            <div>
+                <label for="f-help" class="mb-1 block text-sm font-medium text-slate-700">Help text</label>
+                <input id="f-help" @bind="_draft.HelpText" @bind:event="oninput" maxlength="500" class="@Control" />
+                <p class="mt-1 text-xs text-slate-500">Optional guidance shown under the input.</p>
+            </div>
+
+            <div>
+                <label for="f-default" class="mb-1 block text-sm font-medium text-slate-700">Default value</label>
+                <input id="f-default" @bind="_draft.DefaultValue" @bind:event="oninput" maxlength="500" class="@Control" />
+                <p class="mt-1 text-xs text-slate-500">Pre-filled on new records when nothing is entered.</p>
+            </div>
+
+            <label class="flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" checked="@_draft.IsRequired"
+                       @onchange="e => _draft.IsRequired = (bool)(e.Value ?? false)"
+                       class="rounded border-slate-300" />
+                <span>Required</span>
+            </label>
+
+            @* Preview — the same control shape the form components render, so the Admin can
+               see what they are configuring before saving it. *@
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Preview</p>
+
+                <label class="mb-1 block text-sm font-medium text-slate-700">
+                    @(string.IsNullOrWhiteSpace(_draft.FieldName) ? "Field label" : _draft.FieldName)
+                    @if (_draft.IsRequired)
+                    {
+                        <span class="text-red-600">*</span>
+                    }
+                </label>
+
+                @switch (_draft.FieldType)
+                {
+                    case "Dropdown":
+                        <select disabled class="@PreviewControl">
+                            <option>— Select —</option>
+                            @foreach (var option in CleanOptions)
+                            {
+                                <option>@option</option>
+                            }
+                        </select>
+                        break;
+
+                    case "MultiSelect":
+                        <div class="flex flex-wrap gap-3 pt-1">
+                            @if (CleanOptions.Count == 0)
+                            {
+                                <span class="text-xs text-slate-400">Add options to preview this field.</span>
+                            }
+                            @foreach (var option in CleanOptions)
+                            {
+                                <label class="flex items-center gap-1.5 text-sm text-slate-700">
+                                    <input type="checkbox" disabled class="rounded border-slate-300" />
+                                    <span>@option</span>
+                                </label>
+                            }
+                        </div>
+                        break;
+
+                    case "Boolean":
+                        <label class="flex items-center gap-2 pt-1 text-sm text-slate-700">
+                            <input type="checkbox" disabled class="rounded border-slate-300" />
+                            <span>Yes</span>
+                        </label>
+                        break;
+
+                    case "Date":
+                        <input type="date" disabled value="@_draft.DefaultValue" class="@PreviewControl" />
+                        break;
+
+                    case "Number":
+                    case "Currency":
+                        <input type="number" disabled value="@_draft.DefaultValue" class="@PreviewControl" />
+                        break;
+
+                    default:
+                        <input type="text" disabled value="@_draft.DefaultValue" class="@PreviewControl" />
+                        break;
+                }
+
+                @if (!string.IsNullOrWhiteSpace(_draft.HelpText))
+                {
+                    <p class="mt-1 text-xs text-slate-500">@_draft.HelpText</p>
+                }
+            </div>
+
+            @* Shown when the server reports the change would invalidate stored values. *@
+            @if (_migration is not null)
+            {
+                <div class="rounded-lg border border-amber-300 bg-amber-50 p-4">
+                    <p class="text-sm font-semibold text-amber-900">This change affects existing data</p>
+                    <p class="mt-1 text-sm text-amber-800">@_migration.Message</p>
+
+                    @if (_migration.ValuesOutsideOptions.Count > 0)
+                    {
+                        <p class="mt-2 text-xs text-amber-800">
+                            Values that would no longer be valid:
+                            @string.Join(", ", _migration.ValuesOutsideOptions.Take(10))@(_migration.ValuesOutsideOptions.Count > 10 ? "…" : "")
+                        </p>
+                    }
+
+                    <fieldset class="mt-3 space-y-2">
+                        <legend class="text-xs font-semibold uppercase tracking-wider text-amber-900">
+                            How should they be handled?
+                        </legend>
+
+                        <label class="flex items-start gap-2 text-sm text-amber-900">
+                            <input type="radio" name="migration" value="Keep" checked="@(_strategy == "Keep")"
+                                   @onchange="@(() => _strategy = "Keep")" class="mt-1 border-amber-300" />
+                            <span>
+                                <strong>Keep them.</strong> Records hold on to their current values;
+                                the next person to edit one re-enters the field.
+                            </span>
+                        </label>
+
+                        <label class="flex items-start gap-2 text-sm text-amber-900">
+                            <input type="radio" name="migration" value="Clear" checked="@(_strategy == "Clear")"
+                                   @onchange="@(() => _strategy = "Clear")" class="mt-1 border-amber-300" />
+                            <span>
+                                <strong>Clear them.</strong> Removes this field's value from
+                                @_migration.AffectedRecords record@(_migration.AffectedRecords == 1 ? "" : "s").
+                                This cannot be undone.
+                            </span>
+                        </label>
+                    </fieldset>
+                </div>
+            }
+        </div>
+
+        <footer class="flex justify-end gap-2 border-t border-slate-200 px-6 py-4">
+            <button type="button" @onclick="ClosePanel"
+                    class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                Cancel
+            </button>
+            <button type="button" @onclick="SavePanelAsync"
+                    disabled="@(_panelSaving || (_migration is not null && _strategy is null))"
+                    class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                @(_panelSaving ? "Saving…" : _migration is not null ? "Apply change" : "Save")
+            </button>
+        </footer>
+    </aside>
+}
+
+@* ── Remove / archive confirmation ──────────────────────────────────────────── *@
+@if (_removing is not null)
+{
+    <div class="fixed inset-0 z-40 bg-slate-900/40" @onclick="CancelRemove"></div>
+
+    <div role="dialog" aria-modal="true" aria-labelledby="remove-field-title"
+         class="fixed left-1/2 top-1/2 z-50 w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-xl">
+
+        <h2 id="remove-field-title" class="text-lg font-semibold text-slate-900">
+            Remove “@_removing.FieldName”?
+        </h2>
+
+        @if (_fieldImpact is null)
+        {
+            <p class="mt-3 text-sm text-slate-600">Checking what this affects…</p>
+        }
+        else if (_fieldImpact.CanDelete)
+        {
+            <p class="mt-3 text-sm text-slate-600">
+                No records hold a value for this field, so it can be deleted outright.
+            </p>
+        }
+        else
+        {
+            <div class="mt-3 space-y-2 text-sm text-slate-600">
+                <p>
+                    <strong>@_fieldImpact.RecordCount @(_fieldImpact.AppliesTo.ToLowerInvariant())
+                    record@(_fieldImpact.RecordCount == 1 ? "" : "s")</strong>
+                    @(_fieldImpact.RecordCount == 1 ? "holds" : "hold") a value for this field.
+                </p>
+                <p>
+                    It will be <strong>archived</strong> instead of deleted: the field stops
+                    appearing on forms, and the captured values are kept. You can restore it later.
+                </p>
+            </div>
+        }
+
+        @if (_removeError is not null)
+        {
+            <p class="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">@_removeError</p>
+        }
+
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" @onclick="CancelRemove"
+                    class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                Cancel
+            </button>
+            <button type="button" @onclick="ConfirmRemoveAsync" disabled="@(_removeBusy || _fieldImpact is null)"
+                    class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+                @(_removeBusy ? "Working…" : _fieldImpact?.CanDelete == false ? "Archive field" : "Delete field")
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public EventCallback<string> OnSuccess { get; set; }
+    [Parameter] public EventCallback<string> OnError { get; set; }
+
+    private static readonly string[] FieldTypes =
+        ["Text", "Number", "Date", "Dropdown", "MultiSelect", "Currency", "Boolean"];
+
+    private const string Control =
+        "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500";
+
+    private const string PreviewControl =
+        "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-500";
+
+    private List<FieldItem> _fields = [];
+    private bool _loading = true;
+    private string _scopeFilter = "All";
+    private bool _showArchived;
+
+    // Panel state
+    private bool _panelOpen;
+    private FieldItem? _editing;
+    private FieldItem _draft = new();
+    private List<string> _draftOptions = [];
+    private bool _panelSaving;
+    private string? _panelError;
+
+    private MigrationRequired? _migration;
+    private string? _strategy;
+
+    // Remove state
+    private FieldItem? _removing;
+    private FieldImpact? _fieldImpact;
+    private bool _removeBusy;
+    private string? _removeError;
+
+    private List<FieldItem> Visible =>
+        [.. _fields.Where(f => _scopeFilter == "All" || f.AppliesTo == _scopeFilter)];
+
+    private bool NeedsOptions => _draft.FieldType is "Dropdown" or "MultiSelect";
+
+    private List<string> CleanOptions =>
+        [.. _draftOptions.Select(o => o.Trim()).Where(o => o.Length > 0)];
+
+    private string AutoKey =>
+        string.IsNullOrWhiteSpace(_draft.FieldName) ? "auto_generated" : Derive(_draft.FieldName);
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var url = _showArchived ? "/api/custom-fields?includeArchived=true" : "/api/custom-fields";
+            _fields = await Api.GetFromJsonAsync<List<FieldItem>>(url) ?? [];
+        }
+        catch (Exception ex)
+        {
+            await OnError.InvokeAsync($"Failed to load custom fields: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OnShowArchivedChanged(ChangeEventArgs e)
+    {
+        _showArchived = (bool)(e.Value ?? false);
+        await LoadAsync();
+    }
+
+    // ── Editor ──────────────────────────────────────────────────────────────
+
+    private void StartAdd()
+    {
+        _editing = null;
+        _draft = new FieldItem { AppliesTo = _scopeFilter == "Contact" ? "Contact" : "Lead" };
+        _draftOptions = [];
+        _migration = null;
+        _strategy = null;
+        _panelError = null;
+        _panelOpen = true;
+    }
+
+    private void StartEdit(FieldItem field)
+    {
+        _editing = field;
+
+        // Edit a copy: abandoning the panel must not leave the list showing a half-typed name.
+        _draft = new FieldItem
+        {
+            Id = field.Id,
+            FieldName = field.FieldName,
+            FieldKey = field.FieldKey,
+            FieldType = field.FieldType,
+            AppliesTo = field.AppliesTo,
+            DisplayOrder = field.DisplayOrder,
+            IsRequired = field.IsRequired,
+            HelpText = field.HelpText,
+            DefaultValue = field.DefaultValue,
+            IsArchived = field.IsArchived
+        };
+
+        _draftOptions = [.. field.Options];
+        _migration = null;
+        _strategy = null;
+        _panelError = null;
+        _panelOpen = true;
+    }
+
+    private void ClosePanel()
+    {
+        _panelOpen = false;
+        _editing = null;
+        _migration = null;
+        _strategy = null;
+        _panelError = null;
+    }
+
+    private void OnTypeChanged(ChangeEventArgs e)
+    {
+        _draft.FieldType = e.Value?.ToString() ?? "Text";
+
+        // Moving to a type that takes options should offer a row to type into rather than an
+        // empty area with no obvious next step.
+        if (NeedsOptions && _draftOptions.Count == 0) _draftOptions = ["", ""];
+
+        // The change may have altered whether the edit is lossy, so any prior answer no
+        // longer applies.
+        _migration = null;
+        _strategy = null;
+    }
+
+    private void AddOption() => _draftOptions.Add(string.Empty);
+
+    private void RemoveOption(int index)
+    {
+        if (index >= 0 && index < _draftOptions.Count) _draftOptions.RemoveAt(index);
+    }
+
+    private async Task SavePanelAsync()
+    {
+        var name = _draft.FieldName?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            _panelError = "Enter a field label.";
+            return;
+        }
+
+        var options = CleanOptions;
+
+        if (NeedsOptions)
+        {
+            if (options.Count == 0)
+            {
+                _panelError = $"{_draft.FieldType} fields need at least one option.";
+                return;
+            }
+
+            if (options.Distinct(StringComparer.OrdinalIgnoreCase).Count() != options.Count)
+            {
+                _panelError = "Options must be unique.";
+                return;
+            }
+        }
+
+        var key = string.IsNullOrWhiteSpace(_draft.FieldKey) ? Derive(name) : _draft.FieldKey.Trim();
+
+        if (!key.All(c => char.IsLetterOrDigit(c) || c == '_'))
+        {
+            _panelError = "Internal key may contain only letters, digits and underscores.";
+            return;
+        }
+
+        var clash = _fields.Any(f =>
+            (_editing is null || f.Id != _editing.Id)
+            && f.AppliesTo == _draft.AppliesTo
+            && string.Equals(f.FieldName, name, StringComparison.OrdinalIgnoreCase));
+
+        if (clash)
+        {
+            _panelError = $"A {_draft.AppliesTo} field named '{name}' already exists.";
+            return;
+        }
+
+        _panelSaving = true;
+        _panelError = null;
+
+        try
+        {
+            var payload = new
+            {
+                FieldName = name,
+                FieldKey = key,
+                _draft.FieldType,
+                _draft.IsRequired,
+                Options = options,
+                _draft.AppliesTo,
+                HelpText = string.IsNullOrWhiteSpace(_draft.HelpText) ? null : _draft.HelpText.Trim(),
+                DefaultValue = string.IsNullOrWhiteSpace(_draft.DefaultValue) ? null : _draft.DefaultValue.Trim(),
+                MigrationStrategy = _strategy
+            };
+
+            var response = _editing is null
+                ? await Api.PostAsJsonAsync("/api/custom-fields", payload)
+                : await Api.PutAsJsonAsync($"/api/custom-fields/{_editing.Id}", payload);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var verb = _editing is null ? "created" : "updated";
+                ClosePanel();
+                await LoadAsync();
+                await OnSuccess.InvokeAsync($"Field '{name}' {verb}.");
+                return;
+            }
+
+            // 409 carries the migration prompt: the change is legal but lossy, and the server
+            // is asking which way to resolve it.
+            if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                _migration = await response.Content.ReadFromJsonAsync<MigrationRequired>();
+                _strategy ??= "Keep";
+                _panelError = null;
+                return;
+            }
+
+            _panelError = await ReadProblemAsync(response);
+        }
+        catch (Exception ex)
+        {
+            _panelError = ex.Message;
+        }
+        finally
+        {
+            _panelSaving = false;
+        }
+    }
+
+    // ── Remove / archive / restore ──────────────────────────────────────────
+
+    private async Task OpenRemoveAsync(FieldItem field)
+    {
+        _removing = field;
+        _fieldImpact = null;
+        _removeError = null;
+
+        try
+        {
+            _fieldImpact = await Api.GetFromJsonAsync<FieldImpact>($"/api/custom-fields/{field.Id}/impact");
+
+            if (_fieldImpact is null)
+                _removeError = "Could not check what this field affects. Try again.";
+        }
+        catch (Exception ex)
+        {
+            _removeError = ex.Message;
+        }
+    }
+
+    private void CancelRemove()
+    {
+        _removing = null;
+        _fieldImpact = null;
+        _removeError = null;
+    }
+
+    private async Task ConfirmRemoveAsync()
+    {
+        if (_removing is null || _fieldImpact is null) return;
+
+        _removeBusy = true;
+        _removeError = null;
+
+        try
+        {
+            var url = $"/api/custom-fields/{_removing.Id}";
+            if (!_fieldImpact.CanDelete) url += "?archive=true";
+
+            var response = await Api.DeleteAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var name = _removing.FieldName;
+                var archived = !_fieldImpact.CanDelete;
+                CancelRemove();
+                await LoadAsync();
+                await OnSuccess.InvokeAsync($"Field '{name}' {(archived ? "archived" : "deleted")}.");
+            }
+            else
+            {
+                _removeError = await ReadProblemAsync(response);
+            }
+        }
+        catch (Exception ex)
+        {
+            _removeError = ex.Message;
+        }
+        finally
+        {
+            _removeBusy = false;
+        }
+    }
+
+    private async Task RestoreAsync(FieldItem field)
+    {
+        try
+        {
+            var response = await Api.PostAsync($"/api/custom-fields/{field.Id}/restore");
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadAsync();
+                await OnSuccess.InvokeAsync($"Field '{field.FieldName}' restored.");
+            }
+            else
+            {
+                await OnError.InvokeAsync(await ReadProblemAsync(response));
+            }
+        }
+        catch (Exception ex)
+        {
+            await OnError.InvokeAsync($"Failed to restore field: {ex.Message}");
+        }
+    }
+
+    /// <summary>Mirrors CustomFieldDefinition.DeriveKey so the placeholder matches the server.</summary>
+    private static string Derive(string fieldName)
+    {
+        var chars = fieldName.Trim().ToLowerInvariant()
+            .Select(c => char.IsLetterOrDigit(c) ? c : '_')
+            .ToArray();
+
+        var key = new string(chars);
+        while (key.Contains("__")) key = key.Replace("__", "_");
+        key = key.Trim('_');
+
+        return key.Length == 0 ? "field" : key;
+    }
+
+    private static async Task<string> ReadProblemAsync(HttpResponseMessage response)
+    {
+        var body = await response.Content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(body)) return $"Request failed ({(int)response.StatusCode}).";
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(body);
+            if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.String)
+                return doc.RootElement.GetString() ?? body;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            // Not JSON — show it as-is.
+        }
+
+        return body;
+    }
+}

@@ -1,0 +1,126 @@
+@page "/admin/opportunities/{Id:guid}"
+@attribute [Authorize]
+@using IronMonkey.Web.Components.Shared
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>Opportunity — IronMonkey</PageTitle>
+
+<div class="space-y-6">
+
+    <button type="button" @onclick='() => Nav.NavigateTo("/admin/opportunities")'
+            class="text-sm text-indigo-600 hover:text-indigo-700">
+        &larr; Back to Opportunities
+    </button>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">@_error</div>
+    }
+
+    @if (_isLoading)
+    {
+        <p class="text-sm text-slate-500">Loading...</p>
+    }
+    else if (_opportunity is not null)
+    {
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">@_opportunity.Title</h1>
+                <p class="mt-1 text-sm text-slate-500">
+                    <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold @StageClass(_opportunity.Stage)">@_opportunity.Stage</span>
+                    <span class="ml-2">@_opportunity.Amount.ToString("N0")</span>
+                </p>
+            </div>
+            <button @onclick='() => Nav.NavigateTo($"/admin/opportunities/{Id}/edit")'
+                    class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                Edit
+            </button>
+        </div>
+
+        <div class="grid gap-6 lg:grid-cols-3">
+
+            <div class="lg:col-span-1">
+                <div class="rounded-xl border border-slate-200 bg-white p-5">
+                    <h2 class="mb-3 text-sm font-semibold text-slate-900">Details</h2>
+                    <dl class="space-y-2 text-sm">
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-slate-500">Contact</dt>
+                            <dd class="text-right">
+                                <button type="button" @onclick='() => Nav.NavigateTo($"/admin/contacts/{_opportunity.ContactId}")'
+                                        class="text-indigo-600 hover:text-indigo-700">@_opportunity.ContactName</button>
+                            </dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-slate-500">Stage</dt>
+                            <dd class="text-slate-900">@_opportunity.Stage</dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-slate-500">Amount</dt>
+                            <dd class="text-slate-900">@_opportunity.Amount.ToString("N0")</dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-slate-500">Expected close</dt>
+                            <dd class="text-slate-900">@_opportunity.ExpectedCloseDate.ToString("MMM d, yyyy")</dd>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(_opportunity.LossReason))
+                        {
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-slate-500">Loss reason</dt>
+                                <dd class="text-right text-slate-900">@_opportunity.LossReason</dd>
+                            </div>
+                        }
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-slate-500">Created</dt>
+                            <dd class="text-slate-900">@_opportunity.CreatedAt.ToString("MMM d, yyyy")</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2">
+                <ActivityTimeline SubjectType="Opportunity" SubjectId="@Id" />
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private OpportunityViewModel? _opportunity;
+    private bool _isLoading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _opportunity = await Api.GetFromJsonAsync<OpportunityViewModel>($"/api/opportunities/{Id}");
+            if (_opportunity is null) _error = "Opportunity not found.";
+        }
+        catch (Exception ex) { _error = $"Failed to load opportunity: {ex.Message}"; }
+        finally { _isLoading = false; }
+    }
+
+    private static string StageClass(string stage) => stage switch
+    {
+        "Won" => "bg-emerald-100 text-emerald-800",
+        "Lost" => "bg-red-100 text-red-800",
+        "Negotiation" => "bg-amber-100 text-amber-800",
+        "Proposal" => "bg-indigo-100 text-indigo-800",
+        _ => "bg-slate-100 text-slate-700"
+    };
+
+    private class OpportunityViewModel
+    {
+        public string Title { get; set; } = "";
+        public Guid ContactId { get; set; }
+        public string ContactName { get; set; } = "";
+        public string Stage { get; set; } = "";
+        public decimal Amount { get; set; }
+        public DateTime ExpectedCloseDate { get; set; }
+        public string? LossReason { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+}

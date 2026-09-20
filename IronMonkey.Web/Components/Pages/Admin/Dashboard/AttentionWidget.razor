@@ -1,0 +1,120 @@
+@using IronMonkey.Web.Components.Pages.Admin.Dashboard
+
+@*
+    The dashboard's one genuinely actionable panel: work that is already late, and work
+    that has been forgotten. Every row links straight to the record so the next action is
+    one click away.
+*@
+<DashboardWidget Title="Needs attention"
+                 Subtitle="Not affected by the date filter — overdue is overdue."
+                 IsLoading="State.IsLoading"
+                 HasData="State.HasData"
+                 HasError="State.HasError"
+                 ErrorMessage="@State.ErrorMessage"
+                 IsStale="State.IsStale"
+                 OnRetry="OnRetry">
+    @if (State.Data is { } data)
+    {
+        @if (data.OverdueTaskCount == 0 && data.StaleLeadCount == 0)
+        {
+            <div class="py-6 text-center">
+                <p class="text-sm font-medium text-emerald-700">Nothing is overdue.</p>
+                <p class="mt-1 text-xs text-slate-500">
+                    No follow-ups past their due date and no open lead untouched for
+                    @data.StaleAfterDays days.
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="space-y-5">
+                @if (data.OverdueTaskCount > 0)
+                {
+                    <div>
+                        <div class="mb-2 flex items-baseline justify-between gap-2">
+                            <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Overdue follow-ups
+                            </h3>
+                            <span class="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-800">
+                                @data.OverdueTaskCount
+                            </span>
+                        </div>
+                        <ul class="space-y-1.5">
+                            @foreach (var task in data.OverdueTasks)
+                            {
+                                <li>
+                                    <a href="@($"/admin/leads/{task.LeadId}")"
+                                       class="block rounded-lg px-2 py-1.5 hover:bg-slate-50"
+                                       title="@($"Open {task.LeadName}")">
+                                        <div class="flex items-baseline justify-between gap-3">
+                                            <span class="truncate text-sm text-slate-800">@task.Title</span>
+                                            <span class="shrink-0 text-xs font-semibold text-red-700">
+                                                @OverdueLabel(task.DaysOverdue)
+                                            </span>
+                                        </div>
+                                        <p class="truncate text-xs text-slate-500">@task.LeadName · due @task.DueDate.ToLocalTime().ToString("MMM d")</p>
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                        @if (data.OverdueTaskCount > data.OverdueTasks.Count)
+                        {
+                            <p class="mt-1.5 px-2 text-xs text-slate-500">
+                                Showing @data.OverdueTasks.Count of @data.OverdueTaskCount.
+                            </p>
+                        }
+                    </div>
+                }
+
+                @if (data.StaleLeadCount > 0)
+                {
+                    <div>
+                        <div class="mb-2 flex items-baseline justify-between gap-2">
+                            <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Going cold
+                            </h3>
+                            <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                                @data.StaleLeadCount
+                            </span>
+                        </div>
+                        <ul class="space-y-1.5">
+                            @foreach (var lead in data.StaleLeads)
+                            {
+                                <li>
+                                    <a href="@($"/admin/leads/{lead.LeadId}")"
+                                       class="block rounded-lg px-2 py-1.5 hover:bg-slate-50"
+                                       title="@($"Open {lead.LeadName}")">
+                                        <div class="flex items-baseline justify-between gap-3">
+                                            <span class="truncate text-sm text-slate-800">@lead.LeadName</span>
+                                            <span class="shrink-0 text-xs text-amber-700">@lead.DaysSinceActivity d idle</span>
+                                        </div>
+                                        <p class="truncate text-xs text-slate-500">@lead.StageName</p>
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                        @if (data.StaleLeadCount > data.StaleLeads.Count)
+                        {
+                            <p class="mt-1.5 px-2 text-xs text-slate-500">
+                                Showing @data.StaleLeads.Count of @data.StaleLeadCount.
+                            </p>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    }
+</DashboardWidget>
+
+@code {
+    [Parameter, EditorRequired] public WidgetState<DashboardAttention> State { get; set; } = new();
+    [Parameter] public EventCallback OnRetry { get; set; }
+
+    // Sub-day lateness reads as "today" rather than "0 days", which looks like a bug.
+    private static string OverdueLabel(int days) => days switch
+    {
+        0 => "due today",
+        1 => "1 day late",
+        _ => $"{days} days late",
+    };
+}

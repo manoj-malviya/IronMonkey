@@ -19,7 +19,7 @@ public class GetLeadActivityTimelineEndpoint : IEndpoint
         string EventType,
         string EntityType,
         string EntityId,
-        Guid ActorId,
+        Guid? ActorId,
         string? ActorName,
         DateTime OccurredAt,
         Dictionary<string, object?>? OldValues,
@@ -37,7 +37,7 @@ public class GetLeadActivityTimelineEndpoint : IEndpoint
 
     private static async Task<Results<Ok<TimelineResponse>, NotFound>> Handle(
         Guid leadId,
-        int page,
+        int? page,
         string? eventTypes,  // Comma-separated: "Note,Updated,Created"
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
@@ -65,23 +65,35 @@ public class GetLeadActivityTimelineEndpoint : IEndpoint
         var totalCount = await query.CountAsync(cancellationToken);
 
         // Per D-04: newest first. Per D-06: 20 per page.
+        var pageNumber = page.GetValueOrDefault();
         const int pageSize = 20;
-        var events = await query
+        var rows = await query
             .OrderByDescending(a => a.CreatedAt)
-            .Skip(page * pageSize)
+            .Skip(pageNumber * pageSize)
             .Take(pageSize)
-            .Select(a => new ActivityEventDto(
-                a.Id,
-                a.EventType,
-                a.EntityType,
-                a.EntityId,
-                a.ActorId,
-                a.Actor != null ? a.Actor.Name : null,
-                a.CreatedAt,
-                a.OldValues,
-                a.NewValues))
+            .Select(a => new
+            {
+                a.Id, a.EventType, a.EntityType, a.EntityId, a.ActorId,
+                a.CreatedAt, a.OldValues, a.NewValues
+            })
             .ToListAsync(cancellationToken);
 
-        return TypedResults.Ok(new TimelineResponse(events, totalCount > (page + 1) * pageSize, totalCount, page));
+        // Actor names are looked up separately: User has a soft-delete query filter, and
+        // composing that filtered principal into the projection above makes EF throw.
+        // IgnoreQueryFilters so a deactivated user's past actions still show their name.
+        var actorIds = rows.Where(r => r.ActorId.HasValue).Select(r => r.ActorId!.Value).Distinct().ToList();
+        var actorNames = actorIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await db.Users
+                .IgnoreQueryFilters()
+                .Where(u => u.TenantId == tenantId && actorIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.Name, cancellationToken);
+
+        var events = rows.Select(r => new ActivityEventDto(
+            r.Id, r.EventType, r.EntityType, r.EntityId, r.ActorId,
+            r.ActorId.HasValue && actorNames.TryGetValue(r.ActorId.Value, out var name) ? name : null,
+            r.CreatedAt, r.OldValues, r.NewValues)).ToList();
+
+        return TypedResults.Ok(new TimelineResponse(events, totalCount > (pageNumber + 1) * pageSize, totalCount, pageNumber));
     }
 }

@@ -1,0 +1,239 @@
+@* Renders a tenant's custom fields as typed inputs and round-trips their values.
+
+   Values are keyed by the field definition's Id, never its name, so renaming a field in
+   System Configuration keeps every value already captured under it.
+
+   Required fields are validated here as well as on the server: the API rejects a missing
+   value, but by then the user has lost the page, so the same rule is applied before submit
+   and surfaced next to the field. *@
+
+@if (Fields.Count > 0)
+{
+    <div class="mt-6 rounded-lg border border-slate-200 bg-white p-4">
+        <h2 class="mb-1 text-sm font-semibold text-slate-900">@Heading</h2>
+        <p class="mb-4 text-xs text-slate-500">Defined for your organisation in System Configuration.</p>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+            @foreach (var field in Fields)
+            {
+                <div class="@(field.FieldType == "MultiSelect" ? "sm:col-span-2" : "")">
+                    <label class="mb-1 block text-sm font-medium text-slate-700">
+                        @field.FieldName
+                        @if (field.IsRequired)
+                        {
+                            <span class="text-red-600">*</span>
+                        }
+                    </label>
+
+                    @switch (field.FieldType)
+                    {
+                        case "Dropdown":
+                            <select value="@GetString(field)"
+                                    @onchange="e => Set(field, e.Value?.ToString())"
+                                    class="@ControlClass(field)">
+                                <option value="">— Select —</option>
+                                @foreach (var opt in field.Options)
+                                {
+                                    <option value="@opt">@opt</option>
+                                }
+                            </select>
+                            break;
+
+                        case "MultiSelect":
+                            <div class="flex flex-wrap gap-3 pt-1">
+                                @foreach (var opt in field.Options)
+                                {
+                                    <label class="flex items-center gap-1.5 text-sm text-slate-700">
+                                        <input type="checkbox"
+                                               checked="@IsSelected(field, opt)"
+                                               @onchange="e => ToggleOption(field, opt, (bool)(e.Value ?? false))"
+                                               class="rounded border-slate-300" />
+                                        <span>@opt</span>
+                                    </label>
+                                }
+                            </div>
+                            break;
+
+                        case "Boolean":
+                            <label class="flex items-center gap-2 pt-1 text-sm text-slate-700">
+                                <input type="checkbox"
+                                       checked="@IsChecked(field)"
+                                       @onchange="e => Set(field, e.Value)"
+                                       class="rounded border-slate-300" />
+                                <span>Yes</span>
+                            </label>
+                            break;
+
+                        case "Date":
+                            <input type="date" value="@GetString(field)"
+                                   @onchange="e => Set(field, e.Value?.ToString())"
+                                   class="@ControlClass(field)" />
+                            break;
+
+                        case "Number":
+                        case "Currency":
+                            <input type="number" step="any" value="@GetString(field)"
+                                   @onchange="e => Set(field, e.Value?.ToString())"
+                                   class="@ControlClass(field)" />
+                            break;
+
+                        default:
+                            <input type="text" value="@GetString(field)"
+                                   @onchange="e => Set(field, e.Value?.ToString())"
+                                   class="@ControlClass(field)" />
+                            break;
+                    }
+
+                    @if (_errors.TryGetValue(field.Id.ToString(), out var error))
+                    {
+                        <p class="mt-1 text-xs text-red-600">@error</p>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(field.HelpText))
+                    {
+                        <p class="mt-1 text-xs text-slate-500">@field.HelpText</p>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>Definitions to render, already scoped to one record type.</summary>
+    [Parameter, EditorRequired] public List<CustomFieldItem> Fields { get; set; } = [];
+
+    /// <summary>Values keyed by definition Id. Mutated in place and bound back out.</summary>
+    [Parameter, EditorRequired] public Dictionary<string, object?> Values { get; set; } = new();
+
+    [Parameter] public EventCallback<Dictionary<string, object?>> ValuesChanged { get; set; }
+
+    [Parameter] public string Heading { get; set; } = "Additional Details";
+
+    /// <summary>
+    /// True on a create form, where a field's configured default should be pre-filled. An
+    /// edit form leaves a blank value blank — the record may have been saved before the
+    /// default existed, and quietly filling it in would be an unrequested change.
+    /// </summary>
+    [Parameter] public bool ApplyDefaults { get; set; }
+
+    private const string BaseControl =
+        "w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2";
+
+    private readonly Dictionary<string, string> _errors = [];
+
+    private string ControlClass(CustomFieldItem field)
+        => _errors.ContainsKey(field.Id.ToString())
+            ? $"{BaseControl} border border-red-400 focus:ring-red-500"
+            : $"{BaseControl} border border-slate-300 focus:ring-indigo-500";
+
+    protected override void OnParametersSet()
+    {
+        if (!ApplyDefaults) return;
+
+        // Seed defaults once, and only where the user has not already supplied something.
+        foreach (var field in Fields)
+        {
+            if (string.IsNullOrWhiteSpace(field.DefaultValue)) continue;
+
+            var key = field.Id.ToString();
+            if (Values.TryGetValue(key, out var existing) && existing is not null) continue;
+
+            Values[key] = field.FieldType switch
+            {
+                "Boolean" => bool.TryParse(field.DefaultValue, out var b) && b,
+                "MultiSelect" => new List<string> { field.DefaultValue },
+                _ => field.DefaultValue
+            };
+        }
+    }
+
+    /// <summary>
+    /// Checks every required field has a value. Call before submitting; returns false and
+    /// renders the messages in place when something is missing.
+    /// </summary>
+    public bool Validate()
+    {
+        _errors.Clear();
+
+        foreach (var field in Fields.Where(f => f.IsRequired))
+        {
+            var key = field.Id.ToString();
+            Values.TryGetValue(key, out var value);
+
+            var missing = field.FieldType switch
+            {
+                // An unticked checkbox is a real answer, not a missing one, so a required
+                // Boolean is satisfied either way.
+                "Boolean" => false,
+                "MultiSelect" => GetList(field).Count == 0,
+                _ => value is null || string.IsNullOrWhiteSpace(value.ToString())
+            };
+
+            if (missing) _errors[key] = $"{field.FieldName} is required.";
+        }
+
+        StateHasChanged();
+        return _errors.Count == 0;
+    }
+
+    private string GetString(CustomFieldItem field)
+        => Values.TryGetValue(field.Id.ToString(), out var v) && v is not null ? v.ToString() ?? "" : "";
+
+    private bool IsChecked(CustomFieldItem field)
+        => Values.TryGetValue(field.Id.ToString(), out var v)
+           && v is not null
+           && bool.TryParse(v.ToString(), out var b) && b;
+
+    private List<string> GetList(CustomFieldItem field)
+    {
+        if (!Values.TryGetValue(field.Id.ToString(), out var v) || v is null) return [];
+
+        // A freshly-edited value is already a List; one loaded from the API arrives as a
+        // JsonElement array.
+        if (v is List<string> list) return list;
+        if (v is System.Text.Json.JsonElement el && el.ValueKind == System.Text.Json.JsonValueKind.Array)
+            return el.EnumerateArray().Select(x => x.GetString() ?? "").Where(x => x.Length > 0).ToList();
+
+        return [];
+    }
+
+    private bool IsSelected(CustomFieldItem field, string option) => GetList(field).Contains(option);
+
+    private async Task Set(CustomFieldItem field, object? value)
+    {
+        Values[field.Id.ToString()] = value;
+
+        // Clear the message as soon as the field is filled in, rather than making the user
+        // submit again to find out they fixed it.
+        _errors.Remove(field.Id.ToString());
+
+        await ValuesChanged.InvokeAsync(Values);
+    }
+
+    private async Task ToggleOption(CustomFieldItem field, string option, bool selected)
+    {
+        var list = GetList(field);
+        if (selected && !list.Contains(option)) list.Add(option);
+        if (!selected) list.Remove(option);
+
+        Values[field.Id.ToString()] = list;
+        _errors.Remove(field.Id.ToString());
+
+        await ValuesChanged.InvokeAsync(Values);
+    }
+
+    public class CustomFieldItem
+    {
+        public Guid Id { get; set; }
+        public string FieldName { get; set; } = "";
+        public string FieldKey { get; set; } = "";
+        public string FieldType { get; set; } = "Text";
+        public bool IsRequired { get; set; }
+        public List<string> Options { get; set; } = [];
+        public string AppliesTo { get; set; } = "Lead";
+        public int DisplayOrder { get; set; }
+        public string? HelpText { get; set; }
+        public string? DefaultValue { get; set; }
+        public bool IsArchived { get; set; }
+    }
+}

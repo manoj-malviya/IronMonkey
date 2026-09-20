@@ -1,0 +1,118 @@
+@* RecipePreviewPanel — expanded recipe content below selected recipe card *@
+@* Displays pipeline stages, custom fields, workflow rules, and roles *@
+
+@if (Recipe is not null)
+{
+    <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-6">
+
+        @* Pipeline Stages *@
+        @if (Recipe.Content?.PipelineStages?.Count > 0)
+        {
+            <div class="mb-5">
+                <h4 class="text-sm font-medium text-slate-700 mb-2">Pipeline Stages</h4>
+                <ol class="space-y-1">
+                    @foreach (var stage in Recipe.Content.PipelineStages.OrderBy(s => s.Order))
+                    {
+                        <li class="text-sm text-slate-600 flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs flex items-center justify-center font-medium flex-shrink-0">
+                                @(stage.Order + 1)
+                            </span>
+                            @stage.Name
+                            <span class="text-xs text-slate-400">(@stage.StageType)</span>
+                        </li>
+                    }
+                </ol>
+            </div>
+        }
+
+        @* Custom Fields *@
+        @if (Recipe.Content?.CustomFields?.Count > 0)
+        {
+            <div class="mb-5">
+                <h4 class="text-sm font-medium text-slate-700 mb-2">Custom Fields</h4>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-xs text-slate-500 border-b border-slate-200">
+                                <th class="text-left pb-1 font-medium">Field</th>
+                                <th class="text-left pb-1 font-medium">Type</th>
+                                <th class="text-left pb-1 font-medium">Required</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            @foreach (var field in Recipe.Content.CustomFields)
+                            {
+                                <tr>
+                                    <td class="py-1 text-slate-700">@field.FieldName</td>
+                                    <td class="py-1 text-slate-500">@field.FieldType</td>
+                                    <td class="py-1 text-slate-500">@(field.IsRequired ? "Yes" : "No")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        @* Workflow Rules *@
+        @if (Recipe.Content?.WorkflowRules?.Count > 0)
+        {
+            <div class="mb-5">
+                <h4 class="text-sm font-medium text-slate-700 mb-2">Workflow Rules</h4>
+                <ul class="space-y-1">
+                    @foreach (var rule in Recipe.Content.WorkflowRules)
+                    {
+                        <li class="text-sm text-slate-600">
+                            @rule.Name
+                            <span class="text-xs text-slate-400 ml-1">(on @rule.Trigger)</span>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+
+        @* Roles *@
+        @if (Recipe.Content?.Roles?.Count > 0)
+        {
+            <div>
+                <h4 class="text-sm font-medium text-slate-700 mb-2">Roles</h4>
+                <ul class="space-y-1">
+                    @foreach (var role in Recipe.Content.Roles)
+                    {
+                        <li class="text-sm text-slate-600">
+                            <span class="font-medium text-slate-700">@role.Name</span>
+                            @if (!string.IsNullOrEmpty(role.Description))
+                            {
+                                <span class="text-slate-500 ml-1">— @role.Description</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+
+    </div>
+}
+
+@code {
+    [Parameter] public RecipePreviewResponse? Recipe { get; set; }
+
+    // Mirrors RecipePreviewEndpoint.Response + RecipeContentModel
+    // Defined here so this component is self-contained
+    public record RecipePreviewResponse(
+        Guid Id,
+        string Name,
+        string Description,
+        RecipeContent? Content);
+
+    public record RecipeContent(
+        List<PipelineStage>? PipelineStages,
+        List<CustomField>? CustomFields,
+        List<WorkflowRule>? WorkflowRules,
+        List<Role>? Roles);
+
+    public record PipelineStage(string Name, int Order, string StageType);
+    public record CustomField(string FieldName, string FieldType, bool IsRequired, List<string>? Options);
+    public record WorkflowRule(string Name, string Trigger, string ConditionJson, string ActionJson);
+    public record Role(string Name, string Description);
+}

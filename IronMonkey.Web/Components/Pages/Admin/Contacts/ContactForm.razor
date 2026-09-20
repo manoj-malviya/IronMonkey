@@ -1,0 +1,166 @@
+@page "/admin/contacts/create"
+@page "/admin/contacts/{Id:guid}/edit"
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>@(IsEdit ? "Edit Contact" : "New Contact") — IronMonkey</PageTitle>
+
+<div class="max-w-3xl">
+
+    <button type="button" @onclick='() => Nav.NavigateTo("/admin/contacts")'
+            class="mb-4 text-sm text-indigo-600 hover:text-indigo-700">
+        &larr; Back to Contacts
+    </button>
+
+    <h1 class="mb-6 text-2xl font-bold text-slate-900">@(IsEdit ? "Edit Contact" : "New Contact")</h1>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">@_error</div>
+    }
+
+    @if (_isLoading)
+    {
+        <p class="text-sm text-slate-500">Loading...</p>
+    }
+    else
+    {
+        <EditForm Model="_model" OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
+
+            <div class="mb-4">
+                <label class="mb-1 block text-sm font-medium text-slate-700">Name</label>
+                <InputText @bind-Value="_model.Name"
+                           class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <ValidationMessage For="() => _model.Name" class="mt-1 text-xs text-red-600" />
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700">Email</label>
+                    <InputText @bind-Value="_model.Email"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <ValidationMessage For="() => _model.Email" class="mt-1 text-xs text-red-600" />
+                </div>
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700">Phone</label>
+                    <InputText @bind-Value="_model.Mobile"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+            </div>
+
+            <CustomFieldsEditor @ref="_customFieldsEditor" Fields="_customFields"
+                                @bind-Values="_customValues" ApplyDefaults="@(!IsEdit)" />
+
+            @if (IsEdit && _opportunities.Count > 0)
+            {
+                <div class="mt-6 rounded-lg border border-slate-200 bg-white p-4">
+                    <h2 class="mb-3 text-sm font-semibold text-slate-900">Opportunities</h2>
+                    <ul class="space-y-2">
+                        @foreach (var o in _opportunities)
+                        {
+                            <li class="flex items-center justify-between text-sm">
+                                <span class="text-slate-700">@o.Title</span>
+                                <span class="text-slate-500">@o.Stage · @o.Amount.ToString("N0")</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            <div class="mt-6 flex justify-end">
+                <button type="submit" disabled="@_isSaving"
+                        class="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60">
+                    @(_isSaving ? "Saving..." : IsEdit ? "Save Changes" : "Create Contact")
+                </button>
+            </div>
+        </EditForm>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private bool IsEdit => Id.HasValue;
+
+    private ContactModel _model = new();
+    private List<OpportunitySummary> _opportunities = [];
+    private List<CustomFieldsEditor.CustomFieldItem> _customFields = [];
+    private CustomFieldsEditor? _customFieldsEditor;
+    private Dictionary<string, object?> _customValues = new();
+    private bool _isLoading = true;
+    private bool _isSaving;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _customFields = await Api.GetFromJsonAsync<List<CustomFieldsEditor.CustomFieldItem>>(
+            "/api/custom-fields?appliesTo=Contact") ?? [];
+
+        if (IsEdit)
+        {
+            var c = await Api.GetFromJsonAsync<ContactDetail>($"/api/contacts/{Id}");
+            if (c is not null)
+            {
+                _model = new ContactModel { Name = c.Name, Email = c.Email, Mobile = c.Mobile };
+                _opportunities = c.Opportunities ?? [];
+                _customValues = c.CustomFields ?? new();
+            }
+            else _error = "Contact not found.";
+        }
+        _isLoading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        // Required custom fields are enforced here as well as by the API, so a missing one is
+        // shown against the field rather than as a sentence at the top of a re-rendered form.
+        if (_customFieldsEditor?.Validate() == false) return;
+
+        _isSaving = true;
+        _error = null;
+        try
+        {
+            var payload = new { _model.Name, _model.Email, _model.Mobile, CustomFields = _customValues };
+            var res = IsEdit
+                ? await Api.PutAsJsonAsync($"/api/contacts/{Id}", payload)
+                : await Api.PostAsJsonAsync("/api/contacts", payload);
+
+            if (res.IsSuccessStatusCode) { Nav.NavigateTo("/admin/contacts"); return; }
+            if (res.StatusCode == System.Net.HttpStatusCode.Unauthorized) { Nav.NavigateTo("/login"); return; }
+            _error = await res.Content.ReadAsStringAsync();
+        }
+        catch (Exception ex) { _error = $"Unable to save: {ex.Message}"; }
+        finally { _isSaving = false; }
+    }
+
+    private class ContactModel
+    {
+        [Required(ErrorMessage = "Name is required.")]
+        public string Name { get; set; } = "";
+
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Email must be valid.")]
+        public string Email { get; set; } = "";
+
+        public string Mobile { get; set; } = "";
+    }
+
+    private class ContactDetail
+    {
+        public string Name { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Mobile { get; set; } = "";
+        public List<OpportunitySummary>? Opportunities { get; set; }
+        public Dictionary<string, object?>? CustomFields { get; set; }
+    }
+
+    private class OpportunitySummary
+    {
+        public string Title { get; set; } = "";
+        public string Stage { get; set; } = "";
+        public decimal Amount { get; set; }
+    }
+}

@@ -1,0 +1,37 @@
+@*
+    A column header that sorts. The arrow shows both that the column is sortable and which
+    way it is currently ordered; aria-sort tells assistive tech the same thing, since the
+    glyph alone is invisible to it.
+*@
+<th scope="col" aria-sort="@AriaSort"
+    class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-900">
+    <button type="button" @onclick="() => OnSort.InvokeAsync(SortKey)"
+            title="@ButtonTitle"
+            class="group inline-flex items-center gap-1 hover:text-indigo-700">
+        <span>@Label</span>
+        <span class="@(IsActive ? "text-indigo-600" : "text-slate-300 group-hover:text-slate-400")" aria-hidden="true">
+            @(IsActive ? (IsDescending ? "▾" : "▴") : "↕")
+        </span>
+    </button>
+</th>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+
+    /// <summary>Ascending sort key. The descending form is this plus "_desc".</summary>
+    [Parameter, EditorRequired] public string SortKey { get; set; } = string.Empty;
+
+    /// <summary>The list's active sort, which may belong to a different column.</summary>
+    [Parameter] public string? Current { get; set; }
+
+    [Parameter] public EventCallback<string> OnSort { get; set; }
+
+    private bool IsActive => Current == SortKey || Current == $"{SortKey}_desc";
+    private bool IsDescending => Current == $"{SortKey}_desc";
+
+    private string AriaSort => !IsActive ? "none" : IsDescending ? "descending" : "ascending";
+
+    private string ButtonTitle => IsActive && !IsDescending
+        ? $"Sort by {Label} descending"
+        : $"Sort by {Label} ascending";
+}

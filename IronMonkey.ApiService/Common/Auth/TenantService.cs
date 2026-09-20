@@ -8,11 +8,21 @@ internal sealed class TenantService : ITenantService
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly CentralDbContext _centralDb;
+    private readonly ITenantConnectionStringResolver? _connectionStringResolver;
 
-    public TenantService(IHttpContextAccessor httpContextAccessor, CentralDbContext centralDb)
+    /// <param name="connectionStringResolver">
+    /// Rebases the stored tenant connection string onto the live central server. Optional so
+    /// tests can construct this directly; when absent the stored string is used as-is, which
+    /// is correct there because the test fixture's string is already current.
+    /// </param>
+    public TenantService(
+        IHttpContextAccessor httpContextAccessor,
+        CentralDbContext centralDb,
+        ITenantConnectionStringResolver? connectionStringResolver = null)
     {
         _httpContextAccessor = httpContextAccessor;
         _centralDb = centralDb;
+        _connectionStringResolver = connectionStringResolver;
     }
 
     public Guid GetCurrentTenantId()
@@ -37,6 +47,10 @@ internal sealed class TenantService : ITenantService
         if (!tenant.IsProvisioned || tenant.DatabaseConnectionString is null)
             throw new ApplicationException($"Tenant {tenantId} is not yet provisioned.");
 
-        return tenant.DatabaseConnectionString;
+        // Rebased onto the live central server: the stored string pins the host/port that
+        // existed at provisioning time, which Aspire changes on every restart.
+        return _connectionStringResolver is null
+            ? tenant.DatabaseConnectionString
+            : _connectionStringResolver.Resolve(tenant.DatabaseConnectionString);
     }
 }

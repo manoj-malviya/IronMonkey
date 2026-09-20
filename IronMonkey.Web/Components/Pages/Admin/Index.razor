@@ -1,29 +1,364 @@
 @page "/admin"
 @attribute [Authorize]
+@using IronMonkey.Web.Components.Pages.Admin.Dashboard
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+@inject TenantPresentationService Presentation
 
-<PageTitle>Dashboard — IronMonkey Admin</PageTitle>
+<PageTitle>Dashboard — IronMonkey</PageTitle>
 
-<div>
-    <h1 class="text-2xl font-bold text-slate-900">Dashboard</h1>
-    <p class="mt-2 text-slate-500">Welcome to the IronMonkey Admin Console.</p>
+<div class="space-y-6">
 
-    <div class="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <!-- Placeholder stat cards — Phase 10-13 will replace these with real data -->
-        <div class="rounded-xl border border-slate-200 bg-white p-5">
-            <p class="text-sm font-medium text-slate-500">Recipes</p>
-            <p class="mt-1 text-2xl font-bold text-slate-900">—</p>
+    <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900">Dashboard</h1>
+            <p class="mt-1 text-sm text-slate-500">@RangeCaption</p>
         </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-5">
-            <p class="text-sm font-medium text-slate-500">Tenants</p>
-            <p class="mt-1 text-2xl font-bold text-slate-900">—</p>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-5">
-            <p class="text-sm font-medium text-slate-500">Pending Signups</p>
-            <p class="mt-1 text-2xl font-bold text-slate-900">—</p>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-5">
-            <p class="text-sm font-medium text-slate-500">Active Users</p>
-            <p class="mt-1 text-2xl font-bold text-slate-900">—</p>
+
+        <div class="flex flex-wrap items-center gap-2">
+            <label for="range-preset" class="sr-only">Date range</label>
+            <select id="range-preset" value="@_preset" @onchange="OnPresetChanged"
+                    class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="today">Today</option>
+                <option value="last7days">Last 7 days</option>
+                <option value="last30days">Last 30 days</option>
+                <option value="thismonth">This month</option>
+                <option value="thisquarter">This quarter</option>
+                <option value="thisyear">This year</option>
+                <option value="alltime">All time</option>
+                <option value="custom">Custom range…</option>
+            </select>
+
+            <button type="button" @onclick="() => RefreshAllAsync()" disabled="@IsAnyLoading"
+                    title="Refresh all dashboard data"
+                    aria-label="Refresh all dashboard data"
+                    class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                     stroke="currentColor" class="h-4 w-4 @(IsAnyLoading ? "animate-spin" : "")" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356M2.985 19.644v-4.992h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                <span>@(IsAnyLoading ? "Refreshing…" : "Refresh")</span>
+            </button>
         </div>
     </div>
+
+    @if (_preset == "custom")
+    {
+        <div class="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <div>
+                <label for="range-from" class="block text-xs font-medium text-slate-600">From</label>
+                <input id="range-from" type="date" value="@_customFrom?.ToString("yyyy-MM-dd")"
+                       @onchange="OnCustomFromChanged"
+                       class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+                <label for="range-to" class="block text-xs font-medium text-slate-600">To</label>
+                <input id="range-to" type="date" value="@_customTo?.ToString("yyyy-MM-dd")"
+                       @onchange="OnCustomToChanged"
+                       class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <button type="button" @onclick="() => RefreshAllAsync()" disabled="@IsAnyLoading"
+                    class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60">
+                Apply
+            </button>
+        </div>
+    }
+
+    @* Partial-failure notice. Each widget already shows its own error; this only says how
+       many panels are affected, so the state of the page is clear without reading all of it. *@
+    @if (FailedWidgetCount > 0)
+    {
+        <div role="status"
+             class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <p class="text-sm text-amber-900">
+                @FailedWidgetCount of @TotalWidgetCount panels could not be loaded. The rest are up to date.
+            </p>
+            <button type="button" @onclick="RetryFailedAsync" disabled="@IsAnyLoading"
+                    class="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-50 disabled:opacity-60">
+                Retry failed panels
+            </button>
+        </div>
+    }
+
+    <!-- Headline metrics -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard Label="Open leads"
+                    Value="@Metric(_summary.Data?.OpenLeads)"
+                    Caption="Not converted or closed"
+                    Href="/admin/leads"
+                    IsLoading="@(_summary.IsLoading && !_summary.HasData)"
+                    IsStale="_summary.IsStale" />
+        <MetricCard Label="New leads"
+                    Value="@Metric(_summary.Data?.TotalLeads)"
+                    Caption="Created in this range"
+                    Href="/admin/leads"
+                    IsLoading="@(_summary.IsLoading && !_summary.HasData)"
+                    IsStale="_summary.IsStale" />
+        <MetricCard Label="Conversion rate"
+                    Value="@ConversionDisplay"
+                    Caption="@ConversionCaption"
+                    Href="/admin/leads"
+                    IsLoading="@(_summary.IsLoading && !_summary.HasData)"
+                    IsStale="_summary.IsStale" />
+        <MetricCard Label="Open pipeline value"
+                    Value="@MoneyMetric(_opportunities.Data?.OpenValue)"
+                    Caption="@OpenDealsCaption"
+                    Href="/admin/opportunities"
+                    IsLoading="@(_opportunities.IsLoading && !_opportunities.HasData)"
+                    IsStale="_opportunities.IsStale" />
+    </div>
+
+    <!-- Quick actions: the next thing to do, not decoration -->
+    <div class="rounded-xl border border-slate-200 bg-white px-5 py-4">
+        <h2 class="text-sm font-semibold text-slate-900">Quick actions</h2>
+        <div class="mt-3 flex flex-wrap gap-2">
+            <a href="/admin/leads/create"
+               class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                + New lead
+            </a>
+            <a href="/admin/contacts/create"
+               class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                + New contact
+            </a>
+            <a href="/admin/opportunities/create"
+               class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                + New opportunity
+            </a>
+            <a href="/admin/leads/board"
+               class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                Pipeline board
+            </a>
+            <a href="/admin/configuration"
+               class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                Configure pipeline
+            </a>
+        </div>
+    </div>
+
+    <!-- Widgets. Each fetches and fails independently. -->
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <PipelineWidget State="_summary"
+                        Subtitle="@RangeCaption"
+                        OnRetry="LoadSummaryAsync"
+                        OnWidenRange="ShowAllTimeAsync" />
+
+        <OpportunitiesWidget State="_opportunities"
+                             Subtitle="@RangeCaption"
+                             OnRetry="LoadOpportunitiesAsync" />
+
+        <AttentionWidget State="_attention"
+                         OnRetry="LoadAttentionAsync" />
+
+        <ActivityWidget State="_activity"
+                        Subtitle="@RangeCaption"
+                        OnRetry="LoadActivityAsync" />
+    </div>
+
+    @* Platform operators keep their own counters, below the tenant view. A SuperAdmin
+       reaching /admin directly has no tenant of their own, so the widgets above will be
+       empty for them — these cards are what that account actually acts on. *@
+    <AuthorizeView Policy="@AuthorizationPolicies.PlatformAdmin">
+        <Authorized>
+            <div class="rounded-xl border border-slate-200 bg-white px-5 py-4">
+                <h2 class="text-sm font-semibold text-slate-900">Platform</h2>
+                <p class="mt-0.5 text-xs text-slate-500">
+                    You are signed in as a platform operator. The figures above cover your own
+                    tenant context only — open a tenant to see its pipeline.
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <a href="/admin/tenants"
+                       class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                        Tenants &amp; signups
+                    </a>
+                    <a href="/admin/migrations"
+                       class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                        Tenant migrations
+                    </a>
+                </div>
+            </div>
+        </Authorized>
+    </AuthorizeView>
 </div>
+
+@code {
+    private readonly WidgetState<DashboardSummary> _summary = new();
+    private readonly WidgetState<DashboardOpportunities> _opportunities = new();
+    private readonly WidgetState<DashboardAttention> _attention = new();
+    private readonly WidgetState<DashboardActivity> _activity = new();
+
+    private string _preset = "last30days";
+    private DateOnly? _customFrom;
+    private DateOnly? _customTo;
+
+    private bool _initialized;
+
+    private const int TotalWidgetCount = 4;
+
+    private bool IsAnyLoading =>
+        _summary.IsLoading || _opportunities.IsLoading || _attention.IsLoading || _activity.IsLoading;
+
+    private int FailedWidgetCount =>
+        (_summary.HasError ? 1 : 0) + (_opportunities.HasError ? 1 : 0)
+        + (_attention.HasError ? 1 : 0) + (_activity.HasError ? 1 : 0);
+
+    // The JWT lives in ProtectedSessionStorage, which needs JS interop. During prerender
+    // interop is unavailable, so a fetch here would go out with no Authorization header and
+    // come back 401. Wait for the first interactive render before loading anything.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _initialized)
+            return;
+
+        _initialized = true;
+
+        if (AuthStateProvider is AdminAuthenticationStateProvider provider)
+            await provider.InitializeAsync();
+
+        await RefreshAllAsync();
+    }
+
+    private async Task RefreshAllAsync()
+    {
+        // Started together and awaited together: four sequential round-trips would make the
+        // dashboard as slow as the sum of its panels rather than its slowest one. Each task
+        // records its own outcome, so one failure cannot cancel or blank the others.
+        var tasks = new[]
+        {
+            LoadSummaryAsync(),
+            LoadOpportunitiesAsync(),
+            LoadAttentionAsync(),
+            LoadActivityAsync(),
+        };
+
+        // Re-render as soon as the skeletons should appear, rather than only at the end.
+        StateHasChanged();
+
+        await Task.WhenAll(tasks);
+        StateHasChanged();
+    }
+
+    private async Task RetryFailedAsync()
+    {
+        var tasks = new List<Task>();
+        if (_summary.HasError) tasks.Add(LoadSummaryAsync());
+        if (_opportunities.HasError) tasks.Add(LoadOpportunitiesAsync());
+        if (_attention.HasError) tasks.Add(LoadAttentionAsync());
+        if (_activity.HasError) tasks.Add(LoadActivityAsync());
+
+        StateHasChanged();
+        await Task.WhenAll(tasks);
+        StateHasChanged();
+    }
+
+    private async Task LoadSummaryAsync()
+    {
+        await _summary.LoadAsync(
+            () => Api.GetFromJsonAsync<DashboardSummary>($"/api/dashboard/summary{RangeQuery}"),
+            "Could not load pipeline metrics.");
+        StateHasChanged();
+    }
+
+    private async Task LoadOpportunitiesAsync()
+    {
+        await _opportunities.LoadAsync(
+            () => Api.GetFromJsonAsync<DashboardOpportunities>($"/api/dashboard/opportunities{RangeQuery}"),
+            "Could not load opportunity figures.");
+        StateHasChanged();
+    }
+
+    private async Task LoadAttentionAsync()
+    {
+        await _attention.LoadAsync(
+            () => Api.GetFromJsonAsync<DashboardAttention>("/api/dashboard/attention"),
+            "Could not load outstanding work.");
+        StateHasChanged();
+    }
+
+    private async Task LoadActivityAsync()
+    {
+        await _activity.LoadAsync(
+            () => Api.GetFromJsonAsync<DashboardActivity>($"/api/dashboard/activity{RangeQuery}"),
+            "Could not load recent activity.");
+        StateHasChanged();
+    }
+
+    private async Task OnPresetChanged(ChangeEventArgs e)
+    {
+        _preset = e.Value?.ToString() ?? "last30days";
+
+        // Seed the custom inputs from the range currently on screen, so switching to
+        // "Custom" starts from what the user was already looking at rather than blank.
+        if (_preset == "custom")
+        {
+            _customFrom ??= DateOnly.FromDateTime((_summary.Data?.RangeFrom ?? DateTime.UtcNow.AddDays(-29)));
+            _customTo ??= DateOnly.FromDateTime((_summary.Data?.RangeTo ?? DateTime.UtcNow));
+
+            // Wait for Apply rather than firing on an incomplete range.
+            return;
+        }
+
+        await RefreshAllAsync();
+    }
+
+    private void OnCustomFromChanged(ChangeEventArgs e) => _customFrom = ParseDate(e.Value);
+    private void OnCustomToChanged(ChangeEventArgs e) => _customTo = ParseDate(e.Value);
+
+    private static DateOnly? ParseDate(object? value) =>
+        DateOnly.TryParse(value?.ToString(), out var parsed) ? parsed : null;
+
+    private async Task ShowAllTimeAsync()
+    {
+        _preset = "alltime";
+        await RefreshAllAsync();
+    }
+
+    private string RangeQuery
+    {
+        get
+        {
+            if (_preset != "custom")
+                return $"?preset={_preset}";
+
+            var parts = new List<string> { "preset=custom" };
+            if (_customFrom is { } f) parts.Add($"from={f:yyyy-MM-dd}");
+            if (_customTo is { } t) parts.Add($"to={t:yyyy-MM-dd}");
+            return "?" + string.Join("&", parts);
+        }
+    }
+
+    // Echoed from the server's resolved range rather than recomputed here, so the caption
+    // always describes the window the figures actually came from.
+    private string RangeCaption
+    {
+        get
+        {
+            if (_summary.Data is not { } data)
+                return "Loading your pipeline…";
+
+            if (data.Preset == "alltime")
+                return "All time";
+
+            return $"{data.RangeFrom.ToLocalTime():MMM d, yyyy} – {data.RangeTo.ToLocalTime():MMM d, yyyy}";
+        }
+    }
+
+    private string ConversionDisplay =>
+        _summary.Data is { } data ? data.ConversionRate.ToString("P0") : "—";
+
+    private string ConversionCaption =>
+        _summary.Data is { } data
+            ? $"{data.ConvertedLeads} of {data.TotalLeads} converted"
+            : "Converted vs. created";
+
+    private string OpenDealsCaption =>
+        _opportunities.Data is { } data
+            ? $"{data.OpenCount} open deal{(data.OpenCount == 1 ? "" : "s")}"
+            : "Excludes won and lost";
+
+    private static string Metric(int? value) => value?.ToString("N0") ?? "—";
+
+    // Formatted with the tenant's own currency symbol; falls back to a bare grouped
+    // number when the tenant has not configured one, rather than asserting a currency.
+    private string MoneyMetric(decimal? value) => Presentation.Money(value);
+}

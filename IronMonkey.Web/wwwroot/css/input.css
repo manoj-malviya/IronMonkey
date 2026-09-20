@@ -1,1 +1,97 @@
 @import "tailwindcss";
+
+@theme {
+  /* Primary */
+  --color-primary: #ff5d2b;
+  --color-primary-dim: #e44a1b;
+  --color-primary-container: #ff5d2b;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #ffffff;
+
+  /* Secondary */
+  --color-secondary: #445362;
+  --color-secondary-dim: #31414f;
+  --color-secondary-container: #e0e2e5;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-container: #131313;
+
+  /* Tertiary */
+  --color-tertiary: #8d3ba1;
+  --color-tertiary-dim: #77288a;
+  --color-tertiary-container: #8d3ba1;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-container: #ffffff;
+
+  /* Error */
+  --color-error: #ba1a1a;
+  --color-error-dim: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #ffffff;
+
+  /* Surface */
+  --color-surface: #fcfcfc;
+  --color-surface-bright: #ffffff;
+  --color-surface-dim: #e0e0e0;
+  --color-surface-variant: #eeeeee;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f7f7f7;
+  --color-surface-container: #f0f0f0;
+  --color-surface-container-high: #ebebeb;
+  --color-surface-container-highest: #e6e6e6;
+  --color-on-surface: #131313;
+  --color-on-surface-variant: #484847;
+
+  /* Background */
+  --color-background: #fcfcfc;
+  --color-on-background: #131313;
+
+  /* Outline */
+  --color-outline: #767575;
+  --color-outline-variant: #c4c4c4;
+
+  /* Inverse */
+  --color-inverse-surface: #2c2c2c;
+  --color-inverse-on-surface: #ffffff;
+  --color-inverse-primary: #ffb4a0;
+
+  /* Fonts */
+  --font-headline: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-label: "Inter", sans-serif;
+
+  /* Border radius */
+  --radius: 0.125rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.5rem;
+  --radius-full: 0.75rem;
+}
+
+/* Base styles */
+body {
+  font-family: "Inter", sans-serif;
+}
+
+h1, h2, h3 {
+  font-family: "Space Grotesk", sans-serif;
+}
+
+/* Material Icons */
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+/* Custom utilities */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.industrial-shadow {
+  box-shadow: 10px 10px 0px 0px rgba(0, 0, 0, 0.05);
+}
+
+.orange-glow-light {
+  box-shadow: 0 10px 30px rgba(255, 93, 43, 0.08);
+}

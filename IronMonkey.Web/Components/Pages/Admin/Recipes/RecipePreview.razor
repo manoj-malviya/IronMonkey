@@ -1,7 +1,7 @@
 @page "/admin/recipes/{Id:guid}/preview"
-@attribute [Authorize]
+@attribute [Authorize(Policy = AuthorizationPolicies.PlatformAdmin)]
 @using IronMonkey.Data.RecipeContent
-@inject IHttpClientFactory HttpClientFactory
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
 @inject NavigationManager Nav
 
 <PageTitle>Preview Recipe — IronMonkey Admin</PageTitle>
@@ -230,8 +230,7 @@
     {
         try
         {
-            var client = HttpClientFactory.CreateClient("AdminApi");
-            _recipe = await client.GetFromJsonAsync<RecipePreviewDto>($"/api/recipes/{Id}");
+            _recipe = await Api.GetFromJsonAsync<RecipePreviewDto>($"/api/recipes/{Id}");
         }
         catch (Exception)
         {

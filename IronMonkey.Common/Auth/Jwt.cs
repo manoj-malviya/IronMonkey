@@ -13,23 +13,40 @@ public class JwtOptions
 
 public class Jwt(IOptions<JwtOptions> options)
 {
-    public string GenerateToken(LoggedInUser user)
+    /// <summary>The claim naming the platform user behind an impersonation token.</summary>
+    public const string ActAsClaim = "act_as";
+
+    /// <param name="lifetime">
+    /// How long the token stays valid. Defaults to the standard login lifetime; impersonation
+    /// tokens pass a short span so a borrowed tenant identity expires on its own.
+    /// </param>
+    /// <param name="actAs">
+    /// The platform user's id when this token was minted by impersonation. Purely a marker:
+    /// it records who is really acting, and blocks an impersonation token from minting another.
+    /// </param>
+    public string GenerateToken(LoggedInUser user, TimeSpan? lifetime = null, string? actAs = null)
     {
         var key = SecurityKey(options.Value.Key);
         var signingCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature);
-        
+
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, user.IdentityId),
+            new(JwtRegisteredClaimNames.Sub, user.IdentityId),
+            new(ClaimTypes.Email, user.Email),
+            new(ClaimTypes.Name, user.Name),
+            new(ClaimTypes.Role, user.Role),
+            new("tenant_id", user.TenantId.ToString())
+        };
+
+        if (!string.IsNullOrEmpty(actAs))
+            claims.Add(new Claim(ActAsClaim, actAs));
+
         var token = new JwtSecurityToken
         (
-            claims: [
-                new Claim(ClaimTypes.NameIdentifier, user.IdentityId),
-                new Claim(JwtRegisteredClaimNames.Sub, user.IdentityId),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Name, user.Name),
-                new Claim(ClaimTypes.Role, user.Role),
-                new Claim("tenant_id", user.TenantId.ToString())
-            ],
+            claims: claims,
             signingCredentials: new(key, SecurityAlgorithms.HmacSha256Signature),
-            expires: DateTime.UtcNow.AddYears(1)
+            expires: DateTime.UtcNow.Add(lifetime ?? TimeSpan.FromDays(365))
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);

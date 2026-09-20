@@ -1,0 +1,397 @@
+@page "/signup"
+@layout IronMonkey.Web.Components.Layout.PublicLayout
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+
+<PageTitle>Sign Up — IronMonkey</PageTitle>
+
+<!-- Header -->
+<header class="w-full px-8 py-8 flex justify-between items-center max-w-7xl mx-auto">
+    <a href="/" class="text-2xl font-bold tracking-tighter text-primary uppercase font-headline">
+        IronMonkey
+    </a>
+    <div class="hidden md:block">
+        <a class="text-on-surface-variant hover:text-primary transition-colors font-label text-sm uppercase tracking-widest" href="/login">
+            Already have an account? <span class="text-primary font-bold">Log In</span>
+        </a>
+    </div>
+</header>
+
+<main class="flex-grow flex flex-col items-center justify-center px-4 py-12">
+    <div class="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+
+        <!-- Left Column: Branding & Value Prop -->
+        <div class="lg:col-span-5 space-y-8 lg:sticky lg:top-12">
+            <h1 class="text-5xl lg:text-7xl font-headline font-bold leading-none tracking-tighter uppercase italic text-on-background">
+                Ignite Your <span class="text-primary">Growth.</span>
+            </h1>
+            <p class="text-lg text-on-surface-variant leading-relaxed font-body max-w-md">
+                Precision-engineered CRM for industrial-scale operations. High-contrast visibility into your pipeline. Zero friction, maximum power.
+            </p>
+            <div class="space-y-4 pt-4">
+                <div class="flex items-center gap-4 text-on-background">
+                    <span class="material-symbols-outlined text-primary">check_circle</span>
+                    <span class="font-label text-sm uppercase tracking-widest font-semibold">Automated Lead Routing</span>
+                </div>
+                <div class="flex items-center gap-4 text-on-background">
+                    <span class="material-symbols-outlined text-primary">check_circle</span>
+                    <span class="font-label text-sm uppercase tracking-widest font-semibold">Real-time Heatmap Analytics</span>
+                </div>
+                <div class="flex items-center gap-4 text-on-background">
+                    <span class="material-symbols-outlined text-primary">check_circle</span>
+                    <span class="font-label text-sm uppercase tracking-widest font-semibold">Enterprise-Grade Security</span>
+                </div>
+            </div>
+            <div class="relative rounded-xl overflow-hidden group border border-outline-variant/30">
+                <img class="w-full h-48 object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500"
+                     src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8kh61tUs2aPw97kI6UkYUm20tA2Dbmd5ItOmDyqqtBZHSc8wANaFq7edfBFHQk_tNdYN9q5GGaWXGr3psiBHCPSYPu_0mIS9QFfkUZnbprCFAcWdem7XvavTyWsS5g_sln0dUDol_cdqMMoxH-pd4JK-tIRmW1CXIkM5eow4QUEDuK5ma3gLevoiw1yc1XrFcsjg-oJI-10eAuwo2qd2qUMu1fDc9FNoN0BkvTH7c3373WTPaBJgbvUCVLeOGMd2Lh5FXvs2hfA"
+                     alt="Industrial abstract" />
+                <div class="absolute inset-0 bg-gradient-to-t from-surface/80 to-transparent"></div>
+            </div>
+        </div>
+
+        <!-- Right Column: Signup Form -->
+        <div class="lg:col-span-7 space-y-8">
+            <div class="bg-white rounded-xl p-8 lg:p-10 orange-glow-light border border-outline-variant/30 border-l-4 border-l-primary">
+                <h2 class="text-2xl font-headline font-bold uppercase tracking-tight mb-8 text-on-background">Account Configuration</h2>
+
+                @if (!string.IsNullOrEmpty(_errorBanner))
+                {
+                    <div class="mb-6 rounded-lg bg-error-container border border-error/20 px-4 py-3 text-sm text-error font-medium">
+                        @_errorBanner
+                    </div>
+                }
+
+                <EditForm Model="_model" FormName="signup-form" OnValidSubmit="HandleSignupAsync">
+                    <DataAnnotationsValidator />
+
+                    <div class="space-y-6">
+                        <!-- Name + Email row -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant px-1 font-bold">Billing Contact</label>
+                                <InputText @bind-Value="_model.BillingContact" placeholder="John Doe"
+                                           class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-on-surface placeholder:text-outline p-4 transition-all" />
+                                <ValidationMessage For="() => _model.BillingContact" class="text-xs text-error font-medium" />
+                            </div>
+                            <div class="space-y-2">
+                                <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant px-1 font-bold">Business Email</label>
+                                <InputText @bind-Value="_model.AdminEmail" type="email" placeholder="john@company.com"
+                                           class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-on-surface placeholder:text-outline p-4 transition-all" />
+                                <ValidationMessage For="() => _model.AdminEmail" class="text-xs text-error font-medium" />
+                            </div>
+                        </div>
+
+                        <!-- Company Name -->
+                        <div class="space-y-2">
+                            <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant px-1 font-bold">Company Name</label>
+                            <InputText @bind-Value="_model.CompanyName" placeholder="IronMonkey Industrial Ltd."
+                                       class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-on-surface placeholder:text-outline p-4 transition-all" />
+                            <ValidationMessage For="() => _model.CompanyName" class="text-xs text-error font-medium" />
+                        </div>
+
+                        <!-- Phone + Company Size row -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant px-1 font-bold">Phone Number</label>
+                                <InputText @bind-Value="_model.Phone" placeholder="+1 (555) 123-4567"
+                                           class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-on-surface placeholder:text-outline p-4 transition-all" />
+                                <ValidationMessage For="() => _model.Phone" class="text-xs text-error font-medium" />
+                            </div>
+                            <div class="space-y-2">
+                                <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant px-1 font-bold">Company Size</label>
+                                <InputSelect @bind-Value="_model.CompanySize"
+                                             class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-on-surface p-4 transition-all">
+                                    <option value="">Select size</option>
+                                    <option value="1-10">1-10</option>
+                                    <option value="11-50">11-50</option>
+                                    <option value="51-200">51-200</option>
+                                    <option value="201-500">201-500</option>
+                                    <option value="500+">500+</option>
+                                </InputSelect>
+                                <ValidationMessage For="() => _model.CompanySize" class="text-xs text-error font-medium" />
+                            </div>
+                        </div>
+
+                        <!-- Address -->
+                        <div class="space-y-2">
+                            <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant px-1 font-bold">Company Address</label>
+                            <InputText @bind-Value="_model.Address" placeholder="123 Main Street, San Francisco, CA 94102"
+                                       class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-on-surface placeholder:text-outline p-4 transition-all" />
+                            <ValidationMessage For="() => _model.Address" class="text-xs text-error font-medium" />
+                        </div>
+
+                        <!-- Password -->
+                        <div class="space-y-2">
+                            <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant px-1 font-bold">Password</label>
+                            <InputText @bind-Value="_model.AdminPassword" type="password" placeholder="••••••••••••"
+                                       class="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-on-surface placeholder:text-outline p-4 transition-all" />
+                            <p class="text-xs text-on-surface-variant px-1">Minimum 8 characters</p>
+                            <ValidationMessage For="() => _model.AdminPassword" class="text-xs text-error font-medium" />
+                        </div>
+
+                        <!-- Plan Selection -->
+                        <div class="pt-6 space-y-4">
+                            <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant px-1 block mb-2 font-bold">Select Your Plan</label>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <button type="button" @onclick="SelectStarter"
+                                        class="@PlanCardClass("starter") h-full p-4 rounded-lg text-left transition-all">
+                                    <div class="font-headline font-bold uppercase text-sm mb-1 text-on-background">Starter</div>
+                                    <div class="text-xl font-headline font-black text-primary">$29<span class="text-xs text-on-surface-variant font-normal">/mo</span></div>
+                                </button>
+                                <button type="button" @onclick="SelectPro"
+                                        class="@PlanCardClass("pro") h-full p-4 rounded-lg text-left transition-all relative">
+                                    <div class="flex justify-between items-start mb-1">
+                                        <div class="font-headline font-bold uppercase text-sm text-on-background">Pro</div>
+                                        <span class="text-[10px] bg-primary text-white px-2 py-0.5 font-bold uppercase rounded-full">Best</span>
+                                    </div>
+                                    <div class="text-xl font-headline font-black text-primary">$99<span class="text-xs text-on-surface-variant font-normal">/mo</span></div>
+                                </button>
+                                <button type="button" @onclick="SelectEnterprise"
+                                        class="@PlanCardClass("enterprise") h-full p-4 rounded-lg text-left transition-all">
+                                    <div class="font-headline font-bold uppercase text-sm mb-1 text-on-background">Enterprise</div>
+                                    <div class="text-xl font-headline font-black text-primary">Custom</div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Submit -->
+                        <button type="submit"
+                                disabled="@_isLoading"
+                                class="w-full bg-primary text-white py-5 rounded-lg font-headline font-black uppercase tracking-widest text-lg hover:bg-primary-dim hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex justify-center items-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed">
+                            @if (_isLoading)
+                            {
+                                <span>Submitting...</span>
+                            }
+                            else
+                            {
+                                <span>Create Your Account</span>
+                                <span class="material-symbols-outlined font-black">bolt</span>
+                            }
+                        </button>
+
+                        <p class="text-center text-xs text-on-surface-variant font-label uppercase tracking-widest">
+                            @* Terms and Privacy have no route yet; left as text so the
+                               statement still stands without underlined links to "#". *@
+                            By signing up, you agree to our Terms of Service &amp; Privacy Policy.
+                        </p>
+                    </div>
+                </EditForm>
+            </div>
+
+            <!-- Mobile login link -->
+            <div class="md:hidden text-center pb-8">
+                <a class="text-on-surface-variant hover:text-primary transition-colors font-label text-sm uppercase tracking-widest" href="/login">
+                    Already have an account? <span class="text-primary font-bold">Log In</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Recipe browser section -->
+<div class="max-w-2xl mx-auto mt-10 pb-12 px-4">
+    <h3 class="text-base font-headline font-bold text-on-surface uppercase tracking-widest mb-4">Choose an industry recipe (optional)</h3>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <button type="button" @onclick="() => HandleRecipeClick(Guid.Empty)"
+                class="@BlankCardClass w-full text-left rounded-lg bg-surface px-4 py-6 shadow-sm cursor-pointer hover:opacity-95 transition-all">
+            <h3 class="text-base font-semibold text-on-surface">Start blank</h3>
+            <p class="mt-1 text-sm text-on-surface-variant">Configure everything yourself</p>
+        </button>
+
+        @foreach (var recipe in _recipes)
+        {
+            <RecipePreviewCard Id="@recipe.Id"
+                               Name="@recipe.Name"
+                               Description="@recipe.Description"
+                               IndustrySlug="@recipe.IndustrySlug"
+                               StageCount="@recipe.StageCount"
+                               FieldCount="@recipe.FieldCount"
+                               RuleCount="@recipe.RuleCount"
+                               IsSelected="@(recipe.Id == _selectedRecipeId && _selectedRecipeId != Guid.Empty)"
+                               OnClick="HandleRecipeClick" />
+        }
+    </div>
+
+    @if (_selectedRecipeId != Guid.Empty && _selectedRecipePreview is not null)
+    {
+        <RecipePreviewPanel Recipe="_selectedRecipePreview" />
+    }
+    @if (_isLoadingPreview)
+    {
+        <p class="mt-4 text-sm text-on-surface-variant">Loading preview...</p>
+    }
+</div>
+
+<!-- Footer -->
+<footer class="w-full border-t border-outline-variant/30 mt-20 bg-surface-container-lowest">
+    <div class="max-w-7xl mx-auto px-8 py-12 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div class="text-lg font-black text-on-surface-variant font-headline uppercase tracking-tighter">
+            IRONMONKEY
+        </div>
+        @* Resources / Company / Legal were inert "#" links. Removed until those pages
+           exist rather than shipping navigation that goes nowhere. *@
+        <div class="text-[10px] text-outline font-label uppercase tracking-[0.2em]">
+            &copy; 2026 IRONMONKEY CRM. KINETIC INDUSTRIALISM.
+        </div>
+    </div>
+</footer>
+
+@code {
+    private readonly SignupModel _model = new();
+    private bool _isLoading = false;
+    private string? _errorBanner = null;
+    private string _selectedPlan = "pro";
+
+    // Recipe browser state
+    private List<RecipeListItem> _recipes = [];
+    private Guid _selectedRecipeId = Guid.Empty;
+    private RecipePreviewPanel.RecipePreviewResponse? _selectedRecipePreview = null;
+    private bool _isLoadingPreview = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var recipes = await client.GetFromJsonAsync<List<RecipeListItem>>("/api/recipes");
+            _recipes = recipes?.Where(r => !r.IsBlank).ToList() ?? [];
+        }
+        catch
+        {
+            // Silently fail — recipe browser is optional
+        }
+    }
+
+    private async Task HandleRecipeClick(Guid id)
+    {
+        if (_selectedRecipeId == id)
+        {
+            _selectedRecipeId = Guid.Empty;
+            _selectedRecipePreview = null;
+            return;
+        }
+
+        _selectedRecipeId = id;
+        _selectedRecipePreview = null;
+
+        if (id == Guid.Empty) return;
+
+        _isLoadingPreview = true;
+        StateHasChanged();
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            _selectedRecipePreview = await client.GetFromJsonAsync<RecipePreviewPanel.RecipePreviewResponse>($"/api/recipes/{id}");
+        }
+        catch
+        {
+            // Preview failed — recipe is still selected, just no content shown
+        }
+        finally
+        {
+            _isLoadingPreview = false;
+        }
+    }
+
+    private string BlankCardClass => _selectedRecipeId == Guid.Empty
+        ? "border-2 border-primary"
+        : "border border-outline-variant/30";
+
+    private void SelectStarter() => _selectedPlan = "starter";
+    private void SelectPro() => _selectedPlan = "pro";
+    private void SelectEnterprise() => _selectedPlan = "enterprise";
+
+    private string PlanCardClass(string plan) =>
+        _selectedPlan == plan
+            ? "bg-surface-container border-2 border-primary bg-primary/5"
+            : "bg-surface-container border border-transparent";
+
+    private async Task HandleSignupAsync()
+    {
+        _isLoading = true;
+        _errorBanner = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("AdminApi");
+            var response = await client.PostAsJsonAsync("/auth/signup", new
+            {
+                _model.CompanyName,
+                _model.AdminEmail,
+                _model.AdminPassword,
+                _model.Phone,
+                RecipeId = _selectedRecipeId == Guid.Empty ? (Guid?)null : _selectedRecipeId,
+                _model.CompanySize,
+                _model.Address,
+                _model.BillingContact
+            });
+
+            if (response.StatusCode == System.Net.HttpStatusCode.Created)
+            {
+                Nav.NavigateTo("/signup/success");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            {
+                _errorBanner = "Unable to create account. Please check your details and try again.";
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Conflict ||
+                     (int)response.StatusCode == 422)
+            {
+                _errorBanner = "An account with this email already exists.";
+            }
+            else
+            {
+                _errorBanner = "Unable to create account. Please try again.";
+            }
+        }
+        catch
+        {
+            _errorBanner = "Unable to reach the server. Please try again.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private record RecipeListItem(
+        Guid Id,
+        string Name,
+        string Description,
+        string IconIdentifier,
+        string IndustrySlug,
+        bool IsBlank,
+        int Version,
+        int StageCount,
+        int FieldCount,
+        int RuleCount,
+        int RoleCount);
+
+    private class SignupModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Company name is required")]
+        public string CompanyName { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "A valid admin email is required")]
+        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "Enter a valid email address")]
+        public string AdminEmail { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Password must be at least 8 characters")]
+        [System.ComponentModel.DataAnnotations.MinLength(8, ErrorMessage = "Password must be at least 8 characters")]
+        public string AdminPassword { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Phone is required")]
+        public string Phone { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Company size is required")]
+        public string CompanySize { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Address is required")]
+        public string Address { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Billing contact is required")]
+        public string BillingContact { get; set; } = string.Empty;
+    }
+}

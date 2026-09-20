@@ -2,7 +2,7 @@
 @attribute [Authorize]
 @using IronMonkey.Web.Components.Pages.Admin.Users.Shared
 @using System.ComponentModel.DataAnnotations
-@inject IHttpClientFactory HttpClientFactory
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
 @inject NavigationManager Nav
 
 <PageTitle>Edit User — IronMonkey Admin</PageTitle>
@@ -114,8 +114,7 @@
     {
         try
         {
-            var client = HttpClientFactory.CreateClient("AdminApi");
-            var user = await client.GetFromJsonAsync<UserDetail>($"/api/user-management/users/{Id}");
+            var user = await Api.GetFromJsonAsync<UserDetail>($"/users/{Id}");
             if (user is not null)
             {
                 _model.Name = user.Name;
@@ -132,8 +131,7 @@
     {
         try
         {
-            var client = HttpClientFactory.CreateClient("AdminApi");
-            var roles = await client.GetFromJsonAsync<List<RoleItem>>("/api/user-management/roles");
+            var roles = await Api.GetFromJsonAsync<List<RoleItem>>("/users/roles");
             _roles = roles ?? [];
         }
         catch (Exception ex) { _errorBanner = $"Failed to load roles: {ex.Message}"; }
@@ -148,9 +146,8 @@
         _errorBanner = null;
         try
         {
-            var client = HttpClientFactory.CreateClient("AdminApi");
             var payload = new { _model.Name, _model.Email, RoleId = _selectedRoleId };
-            var response = await client.PutAsJsonAsync($"/api/user-management/users/{Id}", payload);
+            var response = await Api.PutAsJsonAsync($"/users/{Id}", payload);
             if (response.IsSuccessStatusCode)
             {
                 _userName = _model.Name; // update title
@@ -173,8 +170,7 @@
         _errorBanner = null;
         try
         {
-            var client = HttpClientFactory.CreateClient("AdminApi");
-            var response = await client.PostAsync($"/api/user-management/users/{Id}/reset-password", null);
+            var response = await Api.PostAsync($"/users/{Id}/reset-password", null);
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<ResetPasswordResponse>();
