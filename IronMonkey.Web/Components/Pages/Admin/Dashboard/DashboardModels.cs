@@ -61,6 +61,13 @@ public sealed class DashboardOpportunities
     public bool IsMultiPipeline { get; set; }
 
     public DateTime GeneratedAt { get; set; }
+
+    /// <summary>
+    /// Deals in another currency with no recorded exchange rate. Counted, but left out of
+    /// every value above rather than added at face value — the widget says so.
+    /// </summary>
+    public int UnconvertedCount { get; set; }
+    public Dictionary<string, decimal>? UnconvertedAmounts { get; set; }
 }
 
 public sealed class PipelineBreakdownItem
@@ -148,5 +155,6 @@ public sealed class RecentConversionItem
     public Guid? OpportunityId { get; set; }
     public string? OpportunityTitle { get; set; }
     public decimal? Amount { get; set; }
+    public string? CurrencyCode { get; set; }
     public DateTime ConvertedAt { get; set; }
 }

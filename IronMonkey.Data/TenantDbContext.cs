@@ -54,6 +54,15 @@ public class TenantDbContext : DbContext
     public DbSet<TeamInvitation> TeamInvitations => Set<TeamInvitation>();
     public DbSet<UserAuditLog> UserAuditLogs => Set<UserAuditLog>();
     public DbSet<TenantOnboardingDismissal> TenantOnboardingDismissals => Set<TenantOnboardingDismissal>();
+    public DbSet<Product> Products => Set<Product>();
+    public DbSet<PriceList> PriceLists => Set<PriceList>();
+    public DbSet<ProductPrice> ProductPrices => Set<ProductPrice>();
+    public DbSet<OpportunityLineItem> OpportunityLineItems => Set<OpportunityLineItem>();
+    public DbSet<Quote> Quotes => Set<Quote>();
+    public DbSet<QuoteLine> QuoteLines => Set<QuoteLine>();
+    public DbSet<QuoteStatusChange> QuoteStatusChanges => Set<QuoteStatusChange>();
+    public DbSet<QuoteShareLink> QuoteShareLinks => Set<QuoteShareLink>();
+    public DbSet<QuoteSettings> QuoteSettings => Set<QuoteSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -111,6 +120,19 @@ public class TenantDbContext : DbContext
         // clears DismissedAt on the same row — so the filter is TenantId only. Without it a
         // tenant could read (and toggle) another tenant's dismissal rows.
         modelBuilder.Entity<TenantOnboardingDismissal>().HasQueryFilter(d => d.TenantId == _tenantId);
+
+        // Catalog, line items and quotes. Lines, status changes and share links carry the
+        // TenantId filter too: they are reachable by id from public and report queries, and
+        // a filter on the parent alone does not protect a query that starts at the child.
+        modelBuilder.Entity<Product>().HasQueryFilter(p => p.TenantId == _tenantId && !p.IsDeleted);
+        modelBuilder.Entity<PriceList>().HasQueryFilter(p => p.TenantId == _tenantId && !p.IsDeleted);
+        modelBuilder.Entity<ProductPrice>().HasQueryFilter(p => p.TenantId == _tenantId);
+        modelBuilder.Entity<OpportunityLineItem>().HasQueryFilter(l => l.TenantId == _tenantId);
+        modelBuilder.Entity<Quote>().HasQueryFilter(q => q.TenantId == _tenantId && !q.IsDeleted);
+        modelBuilder.Entity<QuoteLine>().HasQueryFilter(l => l.TenantId == _tenantId);
+        modelBuilder.Entity<QuoteStatusChange>().HasQueryFilter(c => c.TenantId == _tenantId);
+        modelBuilder.Entity<QuoteShareLink>().HasQueryFilter(l => l.TenantId == _tenantId);
+        modelBuilder.Entity<QuoteSettings>().HasQueryFilter(s => s.TenantId == _tenantId);
 
         // ActivityLog JSONB columns and dashboard indexes
         modelBuilder.Entity<ActivityLog>(entity =>

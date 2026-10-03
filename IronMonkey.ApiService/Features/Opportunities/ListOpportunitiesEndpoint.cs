@@ -26,7 +26,12 @@ public class ListOpportunitiesEndpoint : IEndpoint
         Guid StageId, string Stage, string StageType, bool IsTerminal, int StageOrder,
         Guid PipelineId, string PipelineName,
         decimal Amount, DateTime ExpectedCloseDate,
-        string? LossReason, DateTime CreatedAt);
+        string? LossReason, DateTime CreatedAt,
+        /// <summary>Null = the tenant's own currency. A client must not sum Amount across
+        /// rows with different currencies; see ExchangeRate.</summary>
+        string? CurrencyCode = null,
+        decimal? ExchangeRate = null,
+        decimal RecurringAmount = 0);
 
     /// <param name="ScopeLabel">
     /// What the returned set covers — a pipeline's name, or "All pipelines". Echoed so a UI
@@ -109,7 +114,8 @@ public class ListOpportunitiesEndpoint : IEndpoint
             o.Stage?.Order ?? int.MaxValue,
             o.PipelineId,
             o.Pipeline?.Name ?? "—",
-            o.Amount, o.ExpectedCloseDate, o.LossReason, o.CreatedAt)).ToList();
+            o.Amount, o.ExpectedCloseDate, o.LossReason, o.CreatedAt,
+            o.CurrencyCode, o.ExchangeRate, o.RecurringAmount)).ToList();
 
         return TypedResults.Ok(new OpportunityList(
             result,

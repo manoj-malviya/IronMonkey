@@ -3,6 +3,7 @@
 @using IronMonkey.Web.Components.Shared
 @inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
 @inject NavigationManager Nav
+@inject TenantPresentationService Presentation
 
 <PageTitle>Opportunity — IronMonkey</PageTitle>
 
@@ -29,7 +30,7 @@
                 <h1 class="text-2xl font-bold text-slate-900">@_opportunity.Title</h1>
                 <p class="mt-1 text-sm text-slate-500">
                     <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold @StageClass(_opportunity.StageType)">@_opportunity.Stage</span>
-                    <span class="ml-2">@_opportunity.Amount.ToString("N0")</span>
+                    <span class="ml-2">@Presentation.MoneyExact(_opportunity.Amount, _opportunity.CurrencyCode)</span>
                 </p>
             </div>
             <button @onclick='() => Nav.NavigateTo($"/admin/opportunities/{Id}/edit")'
@@ -56,8 +57,8 @@
                             <dd class="text-slate-900">@_opportunity.Stage</dd>
                         </div>
                         <div class="flex justify-between gap-3">
-                            <dt class="text-slate-500">Amount</dt>
-                            <dd class="text-slate-900">@_opportunity.Amount.ToString("N0")</dd>
+                            <dt class="text-slate-500">Value</dt>
+                            <dd class="text-slate-900">@Presentation.MoneyExact(_opportunity.Amount, _opportunity.CurrencyCode)</dd>
                         </div>
                         <div class="flex justify-between gap-3">
                             <dt class="text-slate-500">Expected close</dt>
@@ -78,7 +79,9 @@
                 </div>
             </div>
 
-            <div class="lg:col-span-2">
+            <div class="space-y-6 lg:col-span-2">
+                <LineItemsPanel OpportunityId="@Id" OnChanged="OnLinesChanged" />
+                <QuotesPanel OpportunityId="@Id" />
                 <ActivityTimeline SubjectType="Opportunity" SubjectId="@Id" />
             </div>
         </div>
@@ -92,15 +95,27 @@
     private bool _isLoading = true;
     private string? _error;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // After the first interactive render: the JWT is in ProtectedSessionStorage and
+        // unreadable during prerender, so an earlier fetch would go out unauthenticated.
+        if (!firstRender) return;
         try
         {
+            await Presentation.EnsureLoadedAsync();
             _opportunity = await Api.GetFromJsonAsync<OpportunityViewModel>($"/api/opportunities/{Id}");
             if (_opportunity is null) _error = "Opportunity not found.";
         }
         catch (Exception ex) { _error = $"Failed to load opportunity: {ex.Message}"; }
-        finally { _isLoading = false; }
+        finally { _isLoading = false; StateHasChanged(); }
+    }
+
+    // The header total is the deal's computed value; refresh it when the lines change.
+    private void OnLinesChanged(DealEconomics deal)
+    {
+        if (_opportunity is null) return;
+        _opportunity.Amount = deal.Totals.Total;
+        _opportunity.CurrencyCode = deal.CurrencyCode;
     }
 
     // Keyed on the stage TYPE, not the name: a tenant owns its stage names and may change
@@ -123,6 +138,7 @@
         public string StageType { get; set; } = "";
         public bool IsTerminal { get; set; }
         public decimal Amount { get; set; }
+        public string? CurrencyCode { get; set; }
         public DateTime ExpectedCloseDate { get; set; }
         public string? LossReason { get; set; }
         public DateTime CreatedAt { get; set; }

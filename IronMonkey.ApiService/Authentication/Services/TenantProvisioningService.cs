@@ -1,6 +1,7 @@
 using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using IronMonkey.Data;
+using IronMonkey.Data.Commerce;
 using IronMonkey.Data.Entities;
 using IronMonkey.Data.Presentation;
 using IronMonkey.Common;
@@ -211,9 +212,15 @@ public class TenantProvisioningService : ITenantProvisioningService
             var fieldType = Enum.TryParse<CustomFieldType>(fieldDef.FieldType, out var parsedType)
                 ? parsedType
                 : CustomFieldType.Text;
-            var field = CustomFieldDefinition.Create(tenant.Id, fieldDef.FieldName, fieldType, fieldDef.IsRequired, fieldDef.Options);
+            // Absent AppliesTo (every recipe stored before it existed) is a lead field, as before.
+            var appliesTo = Enum.TryParse<CustomFieldEntity>(fieldDef.AppliesTo, ignoreCase: true, out var parsedScope)
+                ? parsedScope
+                : CustomFieldEntity.Lead;
+            var field = CustomFieldDefinition.Create(tenant.Id, fieldDef.FieldName, fieldType, fieldDef.IsRequired, fieldDef.Options, appliesTo);
             db.CustomFieldDefinitions.Add(field);
         }
+
+        SeedCatalog(db, tenant.Id, content?.Catalog);
 
         // Apply workflow rules (D-07: rules after fields)
         var rules = content?.WorkflowRules ?? [];
@@ -271,6 +278,48 @@ public class TenantProvisioningService : ITenantProvisioningService
         db.Users.Add(adminUser);
 
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Copies the recipe's starter catalog and quote template into the tenant. A recipe with
+    /// no catalog (every one stored before catalogs existed) seeds nothing, and the tenant
+    /// starts with an empty catalog — the first price anyone sets creates the default list.
+    /// </summary>
+    internal static void SeedCatalog(TenantDbContext db, Guid tenantId, RecipeCatalogDefinition? catalog)
+    {
+        if (catalog is null) return;
+
+        if (catalog.Products.Count > 0)
+        {
+            var list = PriceList.Create(tenantId, "Standard", currencyCode: null, isDefault: true,
+                "Fallback prices used when a deal has no price list of its own.");
+            db.PriceLists.Add(list);
+
+            var now = DateTime.UtcNow;
+            foreach (var def in catalog.Products)
+            {
+                var chargeType = Enum.TryParse<ChargeType>(def.ChargeType, true, out var c) ? c : ChargeType.OneOff;
+                var frequency = Enum.TryParse<BillingFrequency>(def.BillingFrequency, true, out var f) ? f : BillingFrequency.None;
+
+                var product = Product.Create(tenantId, def.Code, def.Name, chargeType, frequency, def.DefaultPeriods);
+                product.Update(def.Code, def.Name, def.Description, def.Category, chargeType, frequency,
+                    def.DefaultPeriods, def.UnitOfMeasure, def.DefaultTaxRatePercent);
+                db.Products.Add(product);
+
+                if (def.ListPrice is { } price)
+                    db.ProductPrices.Add(ProductPrice.Create(tenantId, product.Id, list.Id, price, def.ListCost, now));
+            }
+        }
+
+        if (catalog.QuoteTemplate is { } template)
+        {
+            var settings = QuoteSettings.CreateDefault(tenantId);
+            settings.Update(template.NumberPrefix ?? QuoteSettings.DefaultPrefix,
+                template.ValidityDays ?? QuoteSettings.DefaultValidityDaysValue,
+                template.Terms, template.ApprovalDiscountThresholdPercent,
+                QuoteSettings.DefaultShareLinkDaysValue);
+            db.QuoteSettings.Add(settings);
+        }
     }
 
     /// <summary>

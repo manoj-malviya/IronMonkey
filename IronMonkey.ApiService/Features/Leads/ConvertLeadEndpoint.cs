@@ -120,7 +120,9 @@ public class ConvertLeadEndpoint : IEndpoint
                     request.ExpectedCloseDate ?? DateTime.UtcNow.AddDays(30),
                     DateTimeKind.Utc),
                 opportunityStage!.Id);
-            opportunity.SetAmount(request.Amount);
+            // A lump-sum figure becomes one free-text line: deal value is computed from lines.
+            if (request.Amount > 0m)
+                opportunity.SetAmount(request.Amount);
             db.Opportunities.Add(opportunity);
 
             // The deal's first placement, recorded like any other move so its time in the

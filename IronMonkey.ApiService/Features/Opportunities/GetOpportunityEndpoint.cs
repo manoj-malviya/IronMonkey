@@ -23,7 +23,11 @@ public class GetOpportunityEndpoint : IEndpoint
         Guid Id, string Title, Guid ContactId, string ContactName,
         Guid StageId, string Stage, string StageType, bool IsTerminal,
         decimal Amount, DateTime ExpectedCloseDate,
-        string? LossReason, DateTime CreatedAt);
+        string? LossReason, DateTime CreatedAt,
+        // Amount is computed from line items; these split it and say what currency it is in
+        // (null = the tenant's own). See /api/opportunities/{id}/lines for the lines.
+        decimal OneOffAmount = 0, decimal RecurringAmount = 0, string? CurrencyCode = null,
+        decimal? ExchangeRate = null, int LineCount = 0);
 
     private static async Task<Results<Ok<Response>, NotFound>> Handle(
         Guid id,
@@ -39,6 +43,7 @@ public class GetOpportunityEndpoint : IEndpoint
         var opportunity = await db.Opportunities
             .Include(o => o.Contact)
             .Include(o => o.Stage)
+            .Include(o => o.LineItems)
             .SingleOrDefaultAsync(o => o.Id == id, cancellationToken);
 
         if (opportunity is null)
@@ -52,6 +57,8 @@ public class GetOpportunityEndpoint : IEndpoint
             (opportunity.Stage?.StageType ?? StageType.Active).ToString(),
             opportunity.Stage?.IsTerminal ?? false,
             opportunity.Amount,
-            opportunity.ExpectedCloseDate, opportunity.LossReason, opportunity.CreatedAt));
+            opportunity.ExpectedCloseDate, opportunity.LossReason, opportunity.CreatedAt,
+            opportunity.OneOffAmount, opportunity.RecurringAmount, opportunity.CurrencyCode,
+            opportunity.ExchangeRate, opportunity.LineItems.Count));
     }
 }

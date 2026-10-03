@@ -123,7 +123,7 @@ public sealed class ConfigurationUsageService : IConfigurationUsageService
         var key = field.Id.ToString();
 
         // The table is chosen from an enum, never from caller input, so it cannot be injected.
-        var table = field.AppliesTo == CustomFieldEntity.Lead ? "leads" : "contacts";
+        var table = field.AppliesTo.TableName();
 
         // A non-null value under this key means the record actually captured something — an
         // absent key or an explicit null is not usage. jsonb_exists() rather than the `?`

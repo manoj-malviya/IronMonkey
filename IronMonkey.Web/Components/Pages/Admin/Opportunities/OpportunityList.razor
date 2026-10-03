@@ -22,11 +22,11 @@
         <div class="grid gap-4 sm:grid-cols-3">
             <div class="rounded-xl border border-slate-200 bg-white p-4">
                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Open pipeline</p>
-                <p class="mt-1 text-2xl font-bold text-slate-900">@OpenValue.ToString("N0")</p>
+                <p class="mt-1 text-2xl font-bold text-slate-900">@Presentation.Money(OpenValue)</p>
             </div>
             <div class="rounded-xl border border-slate-200 bg-white p-4">
                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Won</p>
-                <p class="mt-1 text-2xl font-bold text-emerald-700">@WonValue.ToString("N0")</p>
+                <p class="mt-1 text-2xl font-bold text-emerald-700">@Presentation.Money(WonValue)</p>
             </div>
             <div class="rounded-xl border border-slate-200 bg-white p-4">
                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Open deals</p>
@@ -119,7 +119,7 @@
                                     <span class="ml-2 text-xs text-slate-500">@o.LossReason</span>
                                 }
                             </td>
-                            <td class="px-6 py-4 text-right text-sm text-slate-900">@o.Amount.ToString("N0")</td>
+                            <td class="px-6 py-4 text-right text-sm text-slate-900">@Presentation.MoneyExact(o.Amount, o.CurrencyCode)</td>
                             <td class="px-6 py-4 text-sm text-slate-500">@o.ExpectedCloseDate.ToString("MMM d, yyyy")</td>
                             <td class="px-6 py-4 text-right space-x-2 whitespace-nowrap">
                                 <button @onclick='() => Nav.NavigateTo($"/admin/opportunities/{o.Id}/edit")'
@@ -186,10 +186,17 @@
 
     // Open/won are decided by the stage's configured type, never by its name: a tenant is
     // free to rename "Won" to anything, and these tiles must keep meaning the same thing.
-    private decimal OpenValue => _opportunities.Where(o => !o.IsTerminal).Sum(o => o.Amount);
+    //
+    // Summed in the tenant's currency only: a deal in another currency counts through its
+    // recorded rate, or not at all — never at face value. Same rule as MoneyAggregator.
+    private decimal OpenValue => TenantValue(_opportunities.Where(o => !o.IsTerminal));
 
-    private decimal WonValue => _opportunities
-        .Where(o => o.StageType == "ClosedWon").Sum(o => o.Amount);
+    private decimal WonValue => TenantValue(_opportunities.Where(o => o.StageType == "ClosedWon"));
+
+    private decimal TenantValue(IEnumerable<OpportunityItem> items) =>
+        IronMonkey.Data.Commerce.MoneyAggregator.Sum(
+            items.Select(o => new IronMonkey.Data.Commerce.MoneyValue(o.Amount, o.CurrencyCode, o.ExchangeRate)),
+            Presentation.Formatting.CurrencyCode).Total;
 
     private int OpenCount => _opportunities.Count(o => !o.IsTerminal);
 
@@ -346,6 +353,8 @@
         public Guid PipelineId { get; set; }
         public string PipelineName { get; set; } = "";
         public decimal Amount { get; set; }
+        public string? CurrencyCode { get; set; }
+        public decimal? ExchangeRate { get; set; }
         public DateTime ExpectedCloseDate { get; set; }
         public string? LossReason { get; set; }
     }

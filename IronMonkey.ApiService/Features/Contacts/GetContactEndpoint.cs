@@ -17,7 +17,7 @@ public class GetContactEndpoint : IEndpoint
 
     public record OpportunitySummary(
         Guid Id, string Title, Guid StageId, string Stage, string StageType, bool IsTerminal,
-        decimal Amount, DateTime ExpectedCloseDate);
+        decimal Amount, DateTime ExpectedCloseDate, string? CurrencyCode = null);
     public record Response(
         Guid Id, string Name, string Email, string Mobile, DateTime CreatedAt,
         List<OpportunitySummary> Opportunities,
@@ -45,7 +45,7 @@ public class GetContactEndpoint : IEndpoint
                 o.Id, o.Title, o.PipelineStageId, o.Stage.Name,
                 o.Stage.StageType.ToString(),
                 o.Stage.StageType == StageType.ClosedWon || o.Stage.StageType == StageType.ClosedLost,
-                o.Amount, o.ExpectedCloseDate))
+                o.Amount, o.ExpectedCloseDate, o.CurrencyCode))
             .ToListAsync(cancellationToken);
 
         return TypedResults.Ok(new Response(

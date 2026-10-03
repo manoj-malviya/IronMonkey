@@ -12,6 +12,11 @@ public class RecipeContentValidator : AbstractValidator<RecipeContentModel>
     /// entities, so the value travels as a string exactly as StageType already does.</summary>
     private static readonly string[] ValidRecordTypes = ["Lead", "Opportunity"];
 
+    // Mirror ChargeType, BillingFrequency and CustomFieldEntity by name, for the same reason.
+    private static readonly string[] ValidChargeTypes = ["OneOff", "Recurring"];
+    private static readonly string[] ValidFrequencies = ["None", "Monthly", "Quarterly", "PerTerm", "Annually"];
+    private static readonly string[] ValidFieldScopes = ["Lead", "Contact", "Product"];
+
     public RecipeContentValidator()
     {
         RuleFor(x => x.PipelineStages)
@@ -79,6 +84,36 @@ public class RecipeContentValidator : AbstractValidator<RecipeContentModel>
                 .Must(ft => ValidFieldTypes.Contains(ft))
                 .WithMessage($"FieldType must be one of: {string.Join(", ", ValidFieldTypes)}.");
         });
+
+        RuleForEach(x => x.CustomFields).ChildRules(f =>
+        {
+            f.RuleFor(x => x.AppliesTo)
+                .Must(a => a is null || ValidFieldScopes.Contains(a, StringComparer.OrdinalIgnoreCase))
+                .WithMessage($"AppliesTo must be one of: {string.Join(", ", ValidFieldScopes)}.");
+        });
+
+        // Catalog, validated only when present — a null section is a legacy recipe.
+        RuleForEach(x => x.Catalog!.Products).ChildRules(p =>
+        {
+            p.RuleFor(x => x.Code).NotEmpty().MaximumLength(64).WithMessage("Product code is required (64 characters max).");
+            p.RuleFor(x => x.Name).NotEmpty().WithMessage("Product name is required.");
+            p.RuleFor(x => x.ChargeType)
+                .Must(c => ValidChargeTypes.Contains(c, StringComparer.OrdinalIgnoreCase))
+                .WithMessage($"ChargeType must be one of: {string.Join(", ", ValidChargeTypes)}.");
+            p.RuleFor(x => x.BillingFrequency)
+                .Must(f => ValidFrequencies.Contains(f, StringComparer.OrdinalIgnoreCase))
+                .WithMessage($"BillingFrequency must be one of: {string.Join(", ", ValidFrequencies)}.");
+            p.RuleFor(x => x.DefaultPeriods).InclusiveBetween(1, 1200);
+            p.RuleFor(x => x.DefaultTaxRatePercent).InclusiveBetween(0, 100);
+            p.RuleFor(x => x.ListPrice).GreaterThanOrEqualTo(0).When(x => x.ListPrice is not null);
+        }).When(x => x.Catalog is not null);
+
+        // Codes are unique per tenant case-insensitively; a recipe with a duplicate would
+        // fail mid-provisioning on the tenant's unique index.
+        RuleFor(x => x.Catalog)
+            .Must(c => c!.Products.GroupBy(p => p.Code.Trim().ToLowerInvariant()).All(g => g.Count() == 1))
+            .WithMessage("Two catalog products cannot share a code.")
+            .When(x => x.Catalog is not null);
 
         RuleForEach(x => x.WorkflowRules).ChildRules(r =>
         {

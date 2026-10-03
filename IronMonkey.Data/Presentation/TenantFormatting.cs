@@ -41,7 +41,9 @@ public sealed class TenantFormatting
             ? null
             : locale!.CurrencySymbol!.Trim();
 
-        return new TenantFormatting(culture, symbol, zone, label);
+        Commerce.MoneyMath.TryNormalizeCurrency(locale?.CurrencyCode, out var code);
+
+        return new TenantFormatting(culture, symbol, zone, label) { CurrencyCode = code };
     }
 
     /// <summary>
@@ -56,6 +58,40 @@ public sealed class TenantFormatting
     }
 
     public string Nullable(decimal? value) => value is { } v ? Amount(v) : "—";
+
+    /// <summary>The tenant's ISO currency code, or null when unconfigured.</summary>
+    public string? CurrencyCode { get; private init; }
+
+    /// <summary>
+    /// An exact monetary figure in a named currency — a quote line, a deal total — to the
+    /// currency's minor unit: <c>£1,234.50</c>, <c>EUR 1,234.50</c>, <c>¥1,235</c>-style
+    /// zero-decimal currencies included.
+    ///
+    /// <para>The value is passed through <see cref="Commerce.MoneyMath.Round"/> before
+    /// formatting. Figures produced by <see cref="Commerce.LineCalculator"/> are already
+    /// rounded, so this is idempotent for them; it exists so that no caller can format an
+    /// unrounded intermediate and display a number that disagrees with the stored total.
+    /// This is the formatter the API's quote document and the web UI both use.</para>
+    ///
+    /// <para>A null <paramref name="currencyCode"/> means "the tenant's own currency" and gets
+    /// the tenant's symbol (or none, if unconfigured). Any other currency is labelled with its
+    /// ISO code, never the tenant's symbol — a euro figure must not read as pounds.</para>
+    /// </summary>
+    public string Money(decimal value, string? currencyCode)
+    {
+        var effective = currencyCode ?? CurrencyCode;
+        var places = Commerce.MoneyMath.MinorUnits(effective);
+        var rounded = Commerce.MoneyMath.Round(value, effective);
+        var number = rounded.ToString("N" + places, _culture);
+
+        var isTenantCurrency = currencyCode is null
+            || string.Equals(currencyCode, CurrencyCode, StringComparison.OrdinalIgnoreCase);
+
+        if (isTenantCurrency)
+            return _currencySymbol is null ? number : _currencySymbol + number;
+
+        return currencyCode!.ToUpperInvariant() + " " + number;
+    }
 
     /// <summary>
     /// Shortened for headline figures where width is tight: <c>£308K</c>, <c>£1.2M</c>.

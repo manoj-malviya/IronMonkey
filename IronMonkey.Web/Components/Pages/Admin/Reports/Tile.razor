@@ -1,0 +1,14 @@
+<div class="rounded-xl border border-slate-200 bg-white p-4">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">@Label</p>
+    <p class="mt-1 text-2xl font-bold text-slate-900">@Value</p>
+    @if (!string.IsNullOrEmpty(Sub))
+    {
+        <p class="text-xs text-slate-500">@Sub</p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter, EditorRequired] public string Value { get; set; } = "";
+    [Parameter] public string? Sub { get; set; }
+}

@@ -27,6 +27,23 @@ internal sealed class OpportunityConfiguration : IEntityTypeConfiguration<Opport
 
         builder.Property(opportunity => opportunity.PipelineId).IsRequired();
 
+        // Derived totals. Amount keeps its original unconstrained numeric type so the
+        // migration does not have to rewrite a column every existing deal's value lives in.
+        builder.Property(opportunity => opportunity.OneOffAmount).HasPrecision(18, 4);
+        builder.Property(opportunity => opportunity.RecurringAmount).HasPrecision(18, 4);
+        builder.Property(opportunity => opportunity.DiscountAmount).HasPrecision(18, 4);
+        builder.Property(opportunity => opportunity.TaxAmount).HasPrecision(18, 4);
+        builder.Property(opportunity => opportunity.CurrencyCode).HasMaxLength(3);
+        builder.Property(opportunity => opportunity.ExchangeRate).HasPrecision(18, 8);
+
+        builder.HasOne<PriceList>()
+            .WithMany()
+            .HasForeignKey(opportunity => opportunity.PriceListId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Navigation(opportunity => opportunity.LineItems)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+
         // Restrict: a pipeline must never be removed out from under the records in it.
         builder.HasOne(opportunity => opportunity.Pipeline)
             .WithMany()

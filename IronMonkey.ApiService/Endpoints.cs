@@ -36,6 +36,9 @@ using IronMonkey.ApiService.Features.Communications.Endpoints;
 using IronMonkey.ApiService.Features.Communications.Webhooks;
 using IronMonkey.ApiService.Features.Presentation;
 using IronMonkey.ApiService.Features.Onboarding;
+using IronMonkey.ApiService.Features.Commerce;
+using IronMonkey.ApiService.Features.Quotes;
+using IronMonkey.ApiService.Features.Reports.Revenue;
 
 namespace IronMonkey.ApiService;
 
@@ -69,6 +72,7 @@ public static class Endpoints
         endpoints.MapPresentationEndpoints();
         endpoints.MapOnboardingEndpoints();
         endpoints.MapCommunicationEndpoints();
+        endpoints.MapCommerceEndpoints();
     }
 
     extension(IEndpointRouteBuilder app)
@@ -367,6 +371,44 @@ public static class Endpoints
             GetWorkflowExecutionEndpoint.Map(app);
         }
 
+        /// <summary>
+        /// Product catalog, price lists, opportunity line items and quotes. Catalog, price and quote
+        /// settings writes need catalog:write; quote approval needs quotes:approve. The /q/* customer
+        /// page is anonymous by design and secured by its share token — see
+        /// <see cref="PublicQuoteEndpoints"/>.
+        /// </summary>
+        private void MapCommerceEndpoints()
+        {
+            ListProductsEndpoint.Map(app);
+            GetProductEndpoint.Map(app);
+            CreateProductEndpoint.Map(app);
+            UpdateProductEndpoint.Map(app);
+            AddProductPriceEndpoint.Map(app);
+
+            ListPriceListsEndpoint.Map(app);
+            CreatePriceListEndpoint.Map(app);
+            UpdatePriceListEndpoint.Map(app);
+
+            GetDealEconomicsEndpoint.Map(app);
+            AddLineItemEndpoint.Map(app);
+            UpdateLineItemEndpoint.Map(app);
+            RemoveLineItemEndpoint.Map(app);
+            SetDealEconomicsEndpoint.Map(app);
+
+            ListQuotesEndpoint.Map(app);
+            GetQuoteEndpoint.Map(app);
+            GetQuoteDocumentEndpoint.Map(app);
+            CreateQuoteEndpoint.Map(app);
+            UpdateQuoteEndpoint.Map(app);
+            QuoteActionEndpoints.Map(app);
+            SendQuoteEndpoint.Map(app);
+            RespondQuoteEndpoint.Map(app);
+            QuoteShareLinkEndpoints.Map(app);
+            QuoteSettingsEndpoints.Map(app);
+
+            PublicQuoteEndpoints.Map(app);
+        }
+
         private void MapReportEndpoints()
         {
             // Dashboard reports (Phase 05)
@@ -381,6 +423,9 @@ public static class Endpoints
             GetDashboardOpportunitiesEndpoint.Map(app);
             GetDashboardAttentionEndpoint.Map(app);
             GetDashboardActivityEndpoint.Map(app);
+
+            // Line-item revenue: by product, category, recurring vs one-off, discounts.
+            GetRevenueReportEndpoint.Map(app);
         }
 
         private void MapActivityEndpoints()

@@ -1,0 +1,354 @@
+@* Line items, currency and totals for one deal. Every figure shown is the API's — this
+   component formats with Presentation.MoneyExact (the formatter the quote document uses)
+   and never multiplies or rounds for itself, so the screen and the quote agree exactly. *@
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject TenantPresentationService Presentation
+
+<div class="rounded-xl border border-slate-200 bg-white p-5">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-sm font-semibold text-slate-900">Line items</h2>
+        @if (_deal is not null)
+        {
+            <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span>Currency: <strong class="text-slate-800">@(_deal.EffectiveCurrencyCode ?? "tenant default")</strong></span>
+                @if (_deal.ExchangeRate is { } rate)
+                {
+                    <span>· rate @rate.ToString("0.########") on @_deal.ExchangeRateDate?.ToString("d MMM yyyy")</span>
+                }
+                <button type="button" class="text-indigo-600 hover:text-indigo-700" @onclick="() => _showEconomics = !_showEconomics">
+                    @(_showEconomics ? "Close" : "Currency & price list")
+                </button>
+            </div>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">@_error</div>
+    }
+
+    @if (_deal is null)
+    {
+        <p class="text-sm text-slate-500">Loading…</p>
+    }
+    else
+    {
+        @if (_showEconomics)
+        {
+            <div class="mb-4 grid gap-3 rounded-lg bg-slate-50 p-3 sm:grid-cols-4">
+                <label class="text-xs text-slate-600">Currency (ISO)
+                    <input @bind="_currency" maxlength="3" placeholder="@(Presentation.Formatting.CurrencyCode ?? "default")"
+                           class="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm uppercase" />
+                </label>
+                <label class="text-xs text-slate-600">Exchange rate to base
+                    <input type="number" step="0.00000001" min="0" @bind="_rate"
+                           class="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm" />
+                </label>
+                <label class="text-xs text-slate-600">Rate date
+                    <input type="date" @bind="_rateDate" class="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm" />
+                </label>
+                <label class="text-xs text-slate-600">Price list
+                    <select @bind="_priceListId" class="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm">
+                        <option value="">Default</option>
+                        @foreach (var list in _priceLists.Where(l => l.IsActive))
+                        {
+                            <option value="@list.Id">@list.Name (@(list.CurrencyCode ?? "tenant currency"))</option>
+                        }
+                    </select>
+                </label>
+                <p class="text-xs text-slate-500 sm:col-span-3">
+                    A deal in another currency is only added to tenant totals through the rate recorded here.
+                    Without a rate, reports leave it out and say so — they never add it at face value.
+                </p>
+                <button type="button" @onclick="SaveEconomicsAsync" disabled="@_busy"
+                        class="self-end rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50">
+                    Save
+                </button>
+            </div>
+        }
+
+        @if (_deal.Lines.Count == 0)
+        {
+            <p class="mb-4 text-sm text-slate-500">No lines yet. Add a product from the catalog or a free-text line.</p>
+        }
+        else
+        {
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            <th class="py-2 pr-2">Item</th>
+                            <th class="px-2 text-right">Qty</th>
+                            <th class="px-2 text-right">Unit price</th>
+                            <th class="px-2 text-right">Disc %</th>
+                            <th class="px-2 text-right">Tax %</th>
+                            <th class="px-2 text-right">Total</th>
+                            <th class="pl-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var line in _deal.Lines)
+                        {
+                            var editing = _editingId == line.Id;
+                            <tr class="border-b border-slate-100 align-top">
+                                <td class="py-2 pr-2">
+                                    <div class="font-medium text-slate-900">@line.Description</div>
+                                    <div class="text-xs text-slate-500">
+                                        @if (line.ProductCode is not null) { <span>@line.ProductCode · </span> }
+                                        @CommerceLabels.Recurrence(line.ChargeType, line.BillingFrequency, line.Periods)
+                                        @if (line.IsMigrated)
+                                        {
+                                            <span class="ml-1 rounded bg-amber-100 px-1.5 text-amber-800"
+                                                  title="Created from the single Amount this deal had before line items existed.">
+                                                @(line.UnitPrice == 0 ? "Value not recorded before line items" : "Carried over")
+                                            </span>
+                                        }
+                                    </div>
+                                </td>
+                                @if (editing)
+                                {
+                                    <td class="px-2"><input type="number" step="0.0001" min="0" @bind="_editQty" class="w-20 rounded border border-slate-300 px-1 py-0.5 text-right" /></td>
+                                    <td class="px-2"><input type="number" step="0.01" min="0" @bind="_editPrice" class="w-28 rounded border border-slate-300 px-1 py-0.5 text-right" /></td>
+                                    <td class="px-2"><input type="number" step="0.01" min="0" max="100" @bind="_editDiscount" class="w-16 rounded border border-slate-300 px-1 py-0.5 text-right" /></td>
+                                    <td class="px-2"><input type="number" step="0.01" min="0" max="100" @bind="_editTax" class="w-16 rounded border border-slate-300 px-1 py-0.5 text-right" /></td>
+                                    <td class="px-2 text-right text-slate-400">—</td>
+                                    <td class="whitespace-nowrap pl-2 text-right">
+                                        <button class="text-indigo-600 hover:text-indigo-700" disabled="@_busy" @onclick="() => SaveLineAsync(line)">Save</button>
+                                        <button class="ml-2 text-slate-500" @onclick="() => _editingId = null">Cancel</button>
+                                    </td>
+                                }
+                                else
+                                {
+                                    <td class="px-2 text-right">@line.Quantity.ToString("0.####")</td>
+                                    <td class="px-2 text-right">@Money(line.UnitPrice)</td>
+                                    <td class="px-2 text-right">@(line.DiscountPercent == 0 ? "—" : line.DiscountPercent.ToString("0.##"))</td>
+                                    <td class="px-2 text-right">@(line.TaxRatePercent == 0 ? "—" : line.TaxRatePercent.ToString("0.##"))</td>
+                                    <td class="px-2 text-right font-medium">@Money(line.TotalAmount)</td>
+                                    <td class="whitespace-nowrap pl-2 text-right">
+                                        <button class="text-indigo-600 hover:text-indigo-700" @onclick="() => StartEdit(line)">Edit</button>
+                                        <button class="ml-2 text-red-600 hover:text-red-700" disabled="@_busy" @onclick="() => RemoveAsync(line)">Remove</button>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <dl class="ml-auto mt-3 w-full max-w-xs space-y-1 text-sm">
+                <div class="flex justify-between"><dt class="text-slate-500">Subtotal</dt><dd>@Money(_deal.Totals.Subtotal)</dd></div>
+                @if (_deal.Totals.Discount != 0)
+                {
+                    <div class="flex justify-between"><dt class="text-slate-500">Discount</dt><dd>−@Money(_deal.Totals.Discount)</dd></div>
+                }
+                @if (_deal.Totals.Tax != 0)
+                {
+                    <div class="flex justify-between"><dt class="text-slate-500">Tax</dt><dd>@Money(_deal.Totals.Tax)</dd></div>
+                }
+                <div class="flex justify-between border-t border-slate-300 pt-1 font-semibold"><dt>Total</dt><dd>@Money(_deal.Totals.Total)</dd></div>
+                <div class="flex justify-between text-xs text-slate-500"><dt>One-off</dt><dd>@Money(_deal.Totals.OneOffTotal)</dd></div>
+                <div class="flex justify-between text-xs text-slate-500"><dt>Recurring (contract)</dt><dd>@Money(_deal.Totals.RecurringTotal)</dd></div>
+            </dl>
+        }
+
+        <div class="mt-4 rounded-lg border border-dashed border-slate-300 p-3">
+            <div class="mb-2 flex gap-3 text-xs font-semibold">
+                <button class="@(_addMode == "catalog" ? "text-indigo-700" : "text-slate-500")" @onclick='() => _addMode = "catalog"'>From catalog</button>
+                <button class="@(_addMode == "free" ? "text-indigo-700" : "text-slate-500")" @onclick='() => _addMode = "free"'>Free-text line</button>
+            </div>
+            <div class="grid gap-2 sm:grid-cols-6">
+                @if (_addMode == "catalog")
+                {
+                    <select @bind="_newProductId" class="rounded border border-slate-300 px-2 py-1 text-sm sm:col-span-3" aria-label="Product">
+                        <option value="">Choose a product…</option>
+                        @foreach (var group in _products.GroupBy(p => p.Category ?? "Uncategorised"))
+                        {
+                            <optgroup label="@group.Key">
+                                @foreach (var p in group)
+                                {
+                                    <option value="@p.Id">@p.Name (@p.Code)@(p.ListPrice is { } lp ? " — " + Presentation.MoneyExact(lp, p.ListCurrencyCode) : "")</option>
+                                }
+                            </optgroup>
+                        }
+                    </select>
+                    <input type="number" step="0.01" min="0" @bind="_newPrice" placeholder="Price (optional override)"
+                           class="rounded border border-slate-300 px-2 py-1 text-sm sm:col-span-2" />
+                }
+                else
+                {
+                    <input @bind="_newDescription" maxlength="500" placeholder="Description"
+                           class="rounded border border-slate-300 px-2 py-1 text-sm sm:col-span-3" />
+                    <input type="number" step="0.01" min="0" @bind="_newPrice" placeholder="Unit price"
+                           class="rounded border border-slate-300 px-2 py-1 text-sm sm:col-span-2" />
+                }
+                <input type="number" step="0.0001" min="0" @bind="_newQty" placeholder="Qty" aria-label="Quantity"
+                       class="rounded border border-slate-300 px-2 py-1 text-sm" />
+                <input type="number" step="0.01" min="0" max="100" @bind="_newDiscount" placeholder="Discount %" aria-label="Discount percent"
+                       class="rounded border border-slate-300 px-2 py-1 text-sm" />
+                <input type="number" step="0.01" min="0" max="100" @bind="_newTax" placeholder="Tax %" aria-label="Tax percent"
+                       class="rounded border border-slate-300 px-2 py-1 text-sm" />
+                @if (_addMode == "free")
+                {
+                    <select @bind="_newChargeType" class="rounded border border-slate-300 px-2 py-1 text-sm" aria-label="Charge type">
+                        <option value="OneOff">One-off</option>
+                        <option value="Recurring">Recurring</option>
+                    </select>
+                    @if (_newChargeType == "Recurring")
+                    {
+                        <select @bind="_newFrequency" class="rounded border border-slate-300 px-2 py-1 text-sm" aria-label="Frequency">
+                            <option value="Monthly">Monthly</option>
+                            <option value="Quarterly">Quarterly</option>
+                            <option value="PerTerm">Per term</option>
+                            <option value="Annually">Annually</option>
+                        </select>
+                        <input type="number" min="1" @bind="_newPeriods" placeholder="Periods" aria-label="Periods"
+                               class="rounded border border-slate-300 px-2 py-1 text-sm" />
+                    }
+                }
+                <button type="button" disabled="@_busy" @onclick="AddAsync"
+                        class="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50">
+                    Add line
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Guid OpportunityId { get; set; }
+
+    /// <summary>Raised after any change, so the page can refresh the header total.</summary>
+    [Parameter] public EventCallback<DealEconomics> OnChanged { get; set; }
+
+    private DealEconomics? _deal;
+    private List<ProductItem> _products = [];
+    private List<PriceListItem> _priceLists = [];
+    private string? _error;
+    private bool _busy;
+    private bool _showEconomics;
+
+    private string _addMode = "catalog";
+    private string _newProductId = "";
+    private string? _newDescription;
+    private decimal? _newPrice;
+    private decimal _newQty = 1;
+    private decimal? _newDiscount;
+    private decimal? _newTax;
+    private string _newChargeType = "OneOff";
+    private string _newFrequency = "Monthly";
+    private int _newPeriods = 12;
+
+    private Guid? _editingId;
+    private decimal _editQty, _editPrice, _editDiscount, _editTax;
+
+    private string? _currency;
+    private decimal? _rate;
+    private DateOnly? _rateDate;
+    private string _priceListId = "";
+
+    private string Money(decimal value) => Presentation.MoneyExact(value, _deal?.CurrencyCode);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // After the first interactive render: the JWT is unreadable during prerender.
+        if (!firstRender) return;
+        await Presentation.EnsureLoadedAsync();
+        await LoadAsync();
+        _products = await Api.GetFromJsonAsync<List<ProductItem>>("/api/products") ?? [];
+        _priceLists = await Api.GetFromJsonAsync<List<PriceListItem>>("/api/price-lists") ?? [];
+        StateHasChanged();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _deal = await Api.GetFromJsonAsync<DealEconomics>($"/api/opportunities/{OpportunityId}/lines");
+            SyncEconomicsForm();
+        }
+        catch (Exception ex) { _error = $"Could not load line items: {ex.Message}"; }
+    }
+
+    private void SyncEconomicsForm()
+    {
+        _currency = _deal?.CurrencyCode;
+        _rate = _deal?.ExchangeRate;
+        _rateDate = _deal?.ExchangeRateDate;
+        _priceListId = _deal?.PriceListId?.ToString() ?? "";
+    }
+
+    private async Task AddAsync()
+    {
+        _error = null;
+        Guid? productId = _addMode == "catalog" && Guid.TryParse(_newProductId, out var pid) ? pid : null;
+        if (_addMode == "catalog" && productId is null) { _error = "Choose a product."; return; }
+
+        var request = new AddLineRequest(
+            productId, null, _addMode == "free" ? _newDescription : null,
+            _newQty, _newPrice, _addMode == "free" && _newChargeType == "Recurring" ? _newPeriods : null,
+            _newDiscount, _newTax,
+            _addMode == "free" ? _newChargeType : null,
+            _addMode == "free" && _newChargeType == "Recurring" ? _newFrequency : null);
+
+        if (await SendAsync(() => Api.PostAsJsonAsync($"/api/opportunities/{OpportunityId}/lines", request)))
+        {
+            _newProductId = ""; _newDescription = null; _newPrice = null; _newQty = 1; _newDiscount = null; _newTax = null;
+        }
+    }
+
+    private void StartEdit(LineItem line)
+    {
+        _editingId = line.Id;
+        _editQty = line.Quantity;
+        _editPrice = line.UnitPrice;
+        _editDiscount = line.DiscountPercent;
+        _editTax = line.TaxRatePercent;
+    }
+
+    private async Task SaveLineAsync(LineItem line)
+    {
+        var request = new UpdateLineRequest(null, _editQty, _editPrice, null, _editDiscount, _editTax);
+        if (await SendAsync(() => Api.PutAsJsonAsync($"/api/opportunities/{OpportunityId}/lines/{line.Id}", request)))
+            _editingId = null;
+    }
+
+    private Task RemoveAsync(LineItem line) =>
+        SendAsync(() => Api.DeleteAsync($"/api/opportunities/{OpportunityId}/lines/{line.Id}"));
+
+    private async Task SaveEconomicsAsync()
+    {
+        var request = new SetDealEconomicsRequest(
+            string.IsNullOrWhiteSpace(_currency) ? null : _currency.Trim().ToUpperInvariant(),
+            _rate, _rateDate,
+            Guid.TryParse(_priceListId, out var listId) ? listId : null);
+
+        if (await SendAsync(() => Api.PutAsJsonAsync($"/api/opportunities/{OpportunityId}/economics", request)))
+            _showEconomics = false;
+    }
+
+    private async Task<bool> SendAsync(Func<Task<HttpResponseMessage>> call)
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            var response = await call();
+            if (!response.IsSuccessStatusCode)
+            {
+                _error = await CommerceLabels.ErrorAsync(response);
+                return false;
+            }
+
+            _deal = await response.Content.ReadFromJsonAsync<DealEconomics>();
+            SyncEconomicsForm();
+            if (_deal is not null) await OnChanged.InvokeAsync(_deal);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            return false;
+        }
+        finally { _busy = false; }
+    }
+}

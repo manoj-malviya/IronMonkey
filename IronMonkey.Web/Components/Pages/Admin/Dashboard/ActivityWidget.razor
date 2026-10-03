@@ -41,7 +41,7 @@
                                             <span class="truncate text-sm text-slate-800">@conversion.LeadName</span>
                                             @if (conversion.Amount is { } amount)
                                             {
-                                                <span class="shrink-0 text-sm font-semibold tabular-nums text-emerald-700">@Presentation.Money(amount)</span>
+                                                <span class="shrink-0 text-sm font-semibold tabular-nums text-emerald-700">@(conversion.CurrencyCode is null ? Presentation.Money(amount) : Presentation.MoneyExact(amount, conversion.CurrencyCode))</span>
                                             }
                                         </div>
                                         <p class="truncate text-xs text-slate-500">

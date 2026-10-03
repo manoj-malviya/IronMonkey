@@ -28,7 +28,7 @@ plus market research on what a multi-industry CRM is expected to have in 2026.
 | 11 | Privacy, consent and data retention | Compliance | written |
 | 12 | Global search, saved views, report builder | **Adaptability** | written |
 | 13 | Integration platform, public API, SSO | Enterprise | written |
-| 14 | Products, quotes and deal economics | Core CRM gap | written |
+| 14 | Products, quotes and deal economics | Core CRM gap | shipped |
 | 15 | AI assistance and lead scoring | Differentiation | written |
 
 ## What the gap analysis found

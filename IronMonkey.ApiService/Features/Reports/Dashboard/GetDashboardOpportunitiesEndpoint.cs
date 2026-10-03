@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
+using IronMonkey.ApiService.Features.Commerce;
 using IronMonkey.ApiService.Features.Pipelines;
 using IronMonkey.Data;
+using IronMonkey.Data.Commerce;
 using IronMonkey.Data.Entities;
 
 namespace IronMonkey.ApiService.Features.Reports.Dashboard;
@@ -61,7 +63,15 @@ public class GetDashboardOpportunitiesEndpoint : IEndpoint
         Guid? PipelineId,
         bool IsTenantWide,
         bool IsMultiPipeline,
-        DateTime GeneratedAt);
+        DateTime GeneratedAt,
+        /// <summary>The currency every value above is in (null = tenant has configured none).</summary>
+        string? CurrencyCode = null,
+        /// <summary>
+        /// Deals in another currency with no recorded exchange rate. They are counted in the
+        /// counts but NOT in any value — never added at face value — and the UI says so.
+        /// </summary>
+        int UnconvertedCount = 0,
+        Dictionary<string, decimal>? UnconvertedAmounts = null);
 
     /// <param name="pipelineId">
     /// Which pipeline the figures cover. Omitted means the default pipeline, NOT every
@@ -77,7 +87,8 @@ public class GetDashboardOpportunitiesEndpoint : IEndpoint
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
         IPipelineScopeResolver scopeResolver,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ITenantCommerceContextResolver? commerce = null)
     {
         var range = DashboardDateRange.Resolve(preset, from, to);
 
@@ -101,10 +112,14 @@ public class GetDashboardOpportunitiesEndpoint : IEndpoint
         var grouped = await db.Opportunities
             .Where(o => o.CreatedAt >= range.From && o.CreatedAt < range.ToExclusive)
             .Where(o => scopedPipelines.Contains(o.PipelineId))
+            // Currency and recorded rate are part of the key: a SQL SUM over Amount alone
+            // would add pounds to euros. Each currency subgroup is converted (or excluded)
+            // in memory below by MoneyAggregator, the one place that rule lives.
             .GroupBy(o => new
             {
                 o.PipelineStageId, o.Stage.Name, o.Stage.Order, o.Stage.StageType,
-                o.PipelineId, PipelineName = o.Pipeline.Name
+                o.PipelineId, PipelineName = o.Pipeline.Name,
+                o.CurrencyCode, o.ExchangeRate
             })
             .Select(g => new
             {
@@ -114,16 +129,41 @@ public class GetDashboardOpportunitiesEndpoint : IEndpoint
                 g.Key.StageType,
                 g.Key.PipelineId,
                 g.Key.PipelineName,
+                g.Key.CurrencyCode,
+                g.Key.ExchangeRate,
                 Count = g.Count(),
                 // Sum over an empty group cannot happen here (a group exists only because a
                 // row matched), but the nullable cast keeps the translation total either way.
-                TotalValue = g.Sum(o => (decimal?)o.Amount) ?? 0m
+                Value = g.Sum(o => (decimal?)o.Amount) ?? 0m
             })
             .ToListAsync(cancellationToken);
 
+        var baseCurrency = commerce is null ? null : (await commerce.ResolveAsync(tenantId, cancellationToken)).BaseCurrency;
+        var overall = MoneyAggregator.Sum(grouped.Select(g => new MoneyValue(g.Value, g.CurrencyCode, g.ExchangeRate)), baseCurrency);
+
+        // Counted in deals, not in currency subgroups.
+        var unconvertedDeals = grouped
+            .Where(g => !MoneyMath.SameCurrency(g.CurrencyCode, null, baseCurrency) && g.ExchangeRate is not > 0)
+            .Sum(g => g.Count);
+
+        var grouped2 = grouped
+            .GroupBy(g => new { g.PipelineStageId, g.Name, g.Order, g.StageType, g.PipelineId, g.PipelineName })
+            .Select(g => new
+            {
+                g.Key.PipelineStageId,
+                g.Key.Name,
+                g.Key.Order,
+                g.Key.StageType,
+                g.Key.PipelineId,
+                g.Key.PipelineName,
+                Count = g.Sum(x => x.Count),
+                TotalValue = MoneyAggregator.Sum(g.Select(x => new MoneyValue(x.Value, x.CurrencyCode, x.ExchangeRate)), baseCurrency).Total
+            })
+            .ToList();
+
         // Ordered by the tenant's own configured stage order, so the widget reads as that
         // tenant's funnel rather than as a hardcoded one.
-        var byStage = grouped
+        var byStage = grouped2
             // Pipeline leads the sort: across several pipelines the stage orders repeat, so
             // sorting by order alone would interleave two funnels into one unreadable list.
             .OrderBy(g => g.PipelineName, StringComparer.Ordinal)
@@ -175,6 +215,9 @@ public class GetDashboardOpportunitiesEndpoint : IEndpoint
             scope.SelectedPipelineId,
             scope.IsTenantWide,
             scope.IsMultiPipelineTenant,
-            DateTime.UtcNow));
+            DateTime.UtcNow,
+            baseCurrency,
+            unconvertedDeals,
+            overall.ExcludedAmounts.ToDictionary(kv => kv.Key, kv => kv.Value)));
     }
 }

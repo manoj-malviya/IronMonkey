@@ -184,7 +184,7 @@ public class UpdateCustomFieldEndpoint : IEndpoint
     private static async Task<int> ClearStoredValuesAsync(
         TenantDbContext db, CustomFieldDefinition field, CancellationToken ct)
     {
-        var table = field.AppliesTo == CustomFieldEntity.Lead ? "leads" : "contacts";
+        var table = field.AppliesTo.TableName();
 
         // TenantId is filtered explicitly: raw SQL bypasses the global query filters, so
         // without it this would strip the field's values from every tenant sharing the

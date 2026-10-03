@@ -53,6 +53,14 @@
                 </div>
             </div>
 
+            @if (data.UnconvertedCount > 0)
+            {
+                <p class="mt-3 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-900" role="status">
+                    @Plural(data.UnconvertedCount, "deal") in another currency with no recorded exchange rate
+                    @(data.UnconvertedCount == 1 ? "is" : "are") not included in these values.
+                </p>
+            }
+
             @* When the figures span pipelines, show what the total is made of. A single
                cross-pipeline number is the silent-wrong-number case: correct, and read by
                most people as one funnel's. *@

@@ -3,6 +3,7 @@
 @using IronMonkey.Web.Components.Shared
 @inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
 @inject NavigationManager Nav
+@inject TenantPresentationService Presentation
 
 <PageTitle>Contact — IronMonkey</PageTitle>
 
@@ -74,7 +75,7 @@
                                     <button type="button" @onclick='() => Nav.NavigateTo($"/admin/opportunities/{o.Id}")'
                                             class="w-full rounded-lg border border-slate-200 px-3 py-2 text-left hover:border-indigo-300">
                                         <span class="block text-sm font-medium text-slate-900">@o.Title</span>
-                                        <span class="mt-0.5 block text-xs text-slate-500">@o.Stage · @o.Amount.ToString("N0")</span>
+                                        <span class="mt-0.5 block text-xs text-slate-500">@o.Stage · @Presentation.MoneyExact(o.Amount, o.CurrencyCode)</span>
                                     </button>
                                 </li>
                             }
@@ -124,5 +125,6 @@
         public string Title { get; set; } = "";
         public string Stage { get; set; } = "";
         public decimal Amount { get; set; }
+        public string? CurrencyCode { get; set; }
     }
 }
