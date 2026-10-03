@@ -10,7 +10,51 @@ public class StageItem
     public string Name { get; set; } = string.Empty;
     public int Order { get; set; }
     public bool IsActive { get; set; }
+
+    /// <summary>"Entry", "Active", "ClosedWon" or "ClosedLost". Lead stages leave it at the
+    /// default; deal stages edit it, because won/lost is decided by this and never by the
+    /// stage's name.</summary>
+    public string StageType { get; set; } = "Active";
+
+    public bool IsTerminal { get; set; }
+
+    /// <summary>The pipeline this stage belongs to. Present on every stage response.</summary>
+    public Guid PipelineId { get; set; }
+
+    public string PipelineName { get; set; } = string.Empty;
 }
+
+/// <summary>
+/// One of the tenant's named pipelines, as the picker shows it.
+///
+/// The picker itself only renders when <see cref="PipelineListResponse.IsMultiPipeline"/> is
+/// true — a tenant with one pipeline is never asked to choose between one option.
+/// </summary>
+public record PipelineItem(
+    Guid Id, string Name, string RecordType, bool IsDefault, bool IsActive,
+    int Order, string? Description, int StageCount, int RecordCount);
+
+public record PipelineListResponse(
+    List<PipelineItem> Items, bool IsMultiPipeline, Guid? DefaultPipelineId);
+
+/// <summary>The blast radius of removing a pipeline, shown before anything is removed.</summary>
+public record PipelineImpact(
+    Guid Id,
+    string Name,
+    string RecordType,
+    int StageCount,
+    int RecordCount,
+    int ScopedFieldCount,
+    int ScopedRuleCount,
+    int ScopedRoutingCount,
+    int HistoryCount,
+    bool IsDefault,
+    bool IsOnlyPipeline,
+    bool CanRemove,
+    string? Blocker,
+    List<PipelineReassignTarget> ReassignTargets);
+
+public record PipelineReassignTarget(Guid Id, string Name, Guid? EntryStageId, string? EntryStageName);
 
 public class FieldItem
 {
@@ -27,6 +71,11 @@ public class FieldItem
     public bool IsArchived { get; set; }
 }
 
+/// <param name="LeadCount">
+/// Records in the stage — leads for a lead stage, opportunities for a deal stage. The API
+/// names the opportunity one OpportunityCount, so the deal tab maps it across; one property
+/// here because every caller asks the same question.
+/// </param>
 public record StageImpact(
     Guid Id,
     string Name,
@@ -37,6 +86,20 @@ public record StageImpact(
     List<ReassignTarget> ReassignTargets);
 
 public record ReassignTarget(Guid Id, string Name);
+
+/// <summary>
+/// The deal-stage impact response. Separate from <see cref="StageImpact"/> only because the
+/// API names its record count <c>OpportunityCount</c> — the rules it feeds (reassign before
+/// removing, never remove the last active stage) are identical, deliberately so.
+/// </summary>
+public record OpportunityStageImpact(
+    Guid Id,
+    string Name,
+    int OpportunityCount,
+    int HistoryCount,
+    bool IsOnlyActiveStage,
+    bool CanDelete,
+    List<ReassignTarget> ReassignTargets);
 
 public record FieldImpact(
     Guid Id,

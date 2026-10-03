@@ -33,6 +33,7 @@ public class TenantDbContext : DbContext
     public DbSet<Contact> Contacts => Set<Contact>();
     public DbSet<Opportunity> Opportunities => Set<Opportunity>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<Pipeline> Pipelines => Set<Pipeline>();
     public DbSet<PipelineStage> PipelineStages => Set<PipelineStage>();
     public DbSet<CustomFieldDefinition> CustomFieldDefinitions => Set<CustomFieldDefinition>();
     public DbSet<LeadMerge> LeadMerges => Set<LeadMerge>();
@@ -40,6 +41,7 @@ public class TenantDbContext : DbContext
     public DbSet<LeadTask> LeadTasks => Set<LeadTask>();
     public DbSet<WorkflowRule> WorkflowRules => Set<WorkflowRule>();
     public DbSet<StageTransition> StageTransitions => Set<StageTransition>();
+    public DbSet<StageChange> StageChanges => Set<StageChange>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<RoutingConfig> RoutingConfigs => Set<RoutingConfig>();
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
@@ -64,6 +66,7 @@ public class TenantDbContext : DbContext
         modelBuilder.Entity<Lead>().HasQueryFilter(l => l.TenantId == _tenantId && !l.IsDeleted);
         modelBuilder.Entity<Contact>().HasQueryFilter(c => c.TenantId == _tenantId && !c.IsDeleted);
         modelBuilder.Entity<Opportunity>().HasQueryFilter(o => o.TenantId == _tenantId && !o.IsDeleted);
+        modelBuilder.Entity<Pipeline>().HasQueryFilter(p => p.TenantId == _tenantId && !p.IsDeleted);
         modelBuilder.Entity<PipelineStage>().HasQueryFilter(p => p.TenantId == _tenantId && !p.IsDeleted);
         modelBuilder.Entity<CustomFieldDefinition>().HasQueryFilter(c => c.TenantId == _tenantId && !c.IsDeleted);
         modelBuilder.Entity<LeadMerge>().HasQueryFilter(m => m.TenantId == _tenantId);
@@ -71,6 +74,11 @@ public class TenantDbContext : DbContext
         modelBuilder.Entity<LeadTask>().HasQueryFilter(t => t.TenantId == _tenantId && !t.IsDeleted);
         modelBuilder.Entity<WorkflowRule>().HasQueryFilter(r => r.TenantId == _tenantId && !r.IsDeleted);
         modelBuilder.Entity<StageTransition>().HasQueryFilter(t => t.TenantId == _tenantId);
+
+        // Stage history is never soft-deleted: how long a record sat in a stage is a fact
+        // about the past that a later edit must not be able to remove, so the filter is
+        // TenantId only.
+        modelBuilder.Entity<StageChange>().HasQueryFilter(c => c.TenantId == _tenantId);
         modelBuilder.Entity<Notification>().HasQueryFilter(n => n.TenantId == _tenantId && !n.IsDeleted);
         modelBuilder.Entity<RoutingConfig>().HasQueryFilter(r => r.TenantId == _tenantId);
         modelBuilder.Entity<ActivityLog>().HasQueryFilter(a => a.TenantId == _tenantId);
@@ -167,12 +175,161 @@ public class TenantDbContext : DbContext
         {
             AddDomainEventsAsOutboxMessages();
             GenerateTimestamps();
+            DerivePipelineMembership();
             return await base.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException ex)
         {
             throw new ConcurrencyException("Concurrency exception occurred.", ex);
         }
+    }
+
+    /// <summary>
+    /// Fills in <c>PipelineId</c> on any lead, opportunity or stage saved without one, by
+    /// reading it from the stage (or, for a stage, from the tenant's default pipeline of its
+    /// record type).
+    ///
+    /// <para>
+    /// This exists because <c>PipelineId</c> is non-nullable and there is no honest default
+    /// for it that does not depend on data. Threading it through every <c>Create</c>
+    /// signature would make the invariant a convention every one of dozens of call sites has
+    /// to remember; deriving it here makes it a property of saving, which no call site can
+    /// skip. A record's pipeline is, by definition, the pipeline of the stage it is in — so
+    /// this derives the value rather than inventing one.
+    /// </para>
+    ///
+    /// <para>
+    /// It only ever fills an <i>empty</i> value. A caller that set the pipeline explicitly —
+    /// every cross-pipeline move does — is never overridden, so this cannot silently undo a
+    /// deliberate placement.
+    /// </para>
+    ///
+    /// <para>
+    /// Note it reads stages with <c>IgnoreQueryFilters</c> off: the stage must be one of this
+    /// tenant's, and the global filter is what guarantees that. A stage id from another
+    /// tenant resolves to nothing and the value stays empty, where the foreign key rejects
+    /// it — loudly, which is correct.
+    /// </para>
+    /// </summary>
+    private void DerivePipelineMembership()
+    {
+        var entries = ChangeTracker.Entries()
+            .Where(e => e.State is EntityState.Added or EntityState.Modified)
+            .ToList();
+
+        var pendingLeads = entries
+            .Select(e => e.Entity).OfType<Lead>()
+            .Where(l => l.PipelineId == Guid.Empty).ToList();
+
+        var pendingOpportunities = entries
+            .Select(e => e.Entity).OfType<Opportunity>()
+            .Where(o => o.PipelineId == Guid.Empty).ToList();
+
+        var pendingStages = entries
+            .Select(e => e.Entity).OfType<PipelineStage>()
+            .Where(s => s.PipelineId == Guid.Empty).ToList();
+
+        if (pendingLeads.Count == 0 && pendingOpportunities.Count == 0 && pendingStages.Count == 0)
+            return;
+
+        // Stages are resolved FIRST. A lead and the stage it points at are routinely created
+        // in the same SaveChanges, and the lead's pipeline is read off that stage — so if the
+        // stage had not been given its own pipeline yet, the lead would find nothing and the
+        // foreign key would reject the whole save.
+        if (pendingStages.Count > 0)
+        {
+            // A stage created through the older CreateFor/Create factories, which name no
+            // pipeline. It joins its tenant's default pipeline for its own record type —
+            // the same pipeline a record created without one would land in, so the stage and
+            // the records that point at it stay in agreement.
+            var trackedPipelines = ChangeTracker.Entries<Pipeline>()
+                .Select(e => e.Entity)
+                .ToList();
+
+            foreach (var group in pendingStages.GroupBy(s => s.RecordType))
+            {
+                var recordType = group.Key;
+
+                var pipeline =
+                    trackedPipelines.FirstOrDefault(p => p.RecordType == recordType && p.IsDefault)
+                    ?? trackedPipelines.FirstOrDefault(p => p.RecordType == recordType)
+                    ?? Pipelines.AsTracking()
+                        .Where(p => p.RecordType == recordType)
+                        .OrderByDescending(p => p.IsDefault)
+                        .ThenBy(p => p.Order)
+                        .FirstOrDefault();
+
+                // No pipeline of this record type exists yet — the tenant predates pipelines
+                // in-process, or a test is building a fixture stage-first. Create the default
+                // one rather than refusing the save: a stage with no pipeline is precisely
+                // the orphan state the model forbids, and the alternative to creating the
+                // pipeline it belongs in is a foreign key violation nobody can act on.
+                //
+                // This is the same default pipeline the migration backfills into, by the same
+                // name, so an in-process creation and a migrated database agree.
+                pipeline ??= CreateDefaultPipeline(recordType);
+
+                foreach (var stage in group) stage.AssignToPipeline(pipeline);
+            }
+        }
+
+        // Stages being added in this same save are not in the database yet, so they are read
+        // from the change tracker as well.
+        var trackedStages = ChangeTracker.Entries<PipelineStage>()
+            .Select(e => e.Entity)
+            .Where(s => s.PipelineId != Guid.Empty)
+            .ToDictionary(s => s.Id, s => s.PipelineId);
+
+        Guid PipelineOfStage(Guid stageId)
+        {
+            if (trackedStages.TryGetValue(stageId, out var tracked)) return tracked;
+
+            var stage = PipelineStages.AsTracking()
+                .FirstOrDefault(s => s.Id == stageId);
+
+            return stage?.PipelineId ?? Guid.Empty;
+        }
+
+        foreach (var lead in pendingLeads)
+        {
+            var pipelineId = PipelineOfStage(lead.PipelineStageId);
+            if (pipelineId != Guid.Empty) lead.SetPipeline(pipelineId);
+        }
+
+        foreach (var opportunity in pendingOpportunities)
+        {
+            var pipelineId = PipelineOfStage(opportunity.PipelineStageId);
+            if (pipelineId != Guid.Empty) opportunity.SetPipeline(pipelineId);
+        }
+
+    }
+
+    /// <summary>
+    /// The name the default pipeline is created under, in-process and by the migration
+    /// alike. Kept in one place so the two cannot drift — a tenant migrated by SQL and a
+    /// tenant provisioned in code must end up with the same thing.
+    /// </summary>
+    public const string DefaultLeadPipelineName = "Default";
+
+    /// <summary>The default opportunity pipeline's name. Distinct from the lead one only for
+    /// legibility in a picker that shows both.</summary>
+    public const string DefaultOpportunityPipelineName = "Default";
+
+    private Pipeline CreateDefaultPipeline(PipelineRecordType recordType)
+    {
+        var name = recordType == PipelineRecordType.Opportunity
+            ? DefaultOpportunityPipelineName
+            : DefaultLeadPipelineName;
+
+        var pipeline = Pipeline.Create(_tenantId, recordType, name, order: 1, isDefault: true);
+        Pipelines.Add(pipeline);
+
+        // Timestamped here because GenerateTimestamps has already run for this save — a row
+        // added during derivation would otherwise reach the database with default dates.
+        pipeline.CreatedAt = DateTime.UtcNow;
+        pipeline.UpdatedAt = DateTime.UtcNow;
+
+        return pipeline;
     }
 
     private void GenerateTimestamps()

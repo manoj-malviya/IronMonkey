@@ -5,6 +5,7 @@ using IronMonkey.Common.Auth;
 using IronMonkey.ApiService.Features.Leads;
 using IronMonkey.ApiService.Features.Leads.CustomFields;
 using IronMonkey.ApiService.Features.Leads.PipelineStages;
+using IronMonkey.ApiService.Features.Pipelines;
 using IronMonkey.ApiService.Features.Leads.Duplicates;
 using IronMonkey.ApiService.Features.Leads.Ingestion.Api;
 using IronMonkey.ApiService.Features.Leads.Ingestion.Csv;
@@ -30,6 +31,7 @@ using IronMonkey.ApiService.Features.UserManagement.Invitations;
 using IronMonkey.ApiService.Features.RoleManagement;
 using IronMonkey.ApiService.Features.Contacts;
 using IronMonkey.ApiService.Features.Opportunities;
+using IronMonkey.ApiService.Features.Opportunities.Stages;
 using IronMonkey.ApiService.Features.Communications.Endpoints;
 using IronMonkey.ApiService.Features.Communications.Webhooks;
 using IronMonkey.ApiService.Features.Presentation;
@@ -63,6 +65,7 @@ public static class Endpoints
         endpoints.MapRecipeEndpoints();
         endpoints.MapContactEndpoints();
         endpoints.MapOpportunityEndpoints();
+        endpoints.MapNamedPipelineEndpoints();
         endpoints.MapPresentationEndpoints();
         endpoints.MapOnboardingEndpoints();
         endpoints.MapCommunicationEndpoints();
@@ -292,6 +295,35 @@ public static class Endpoints
             CreateOpportunityEndpoint.Map(app);
             UpdateOpportunityEndpoint.Map(app);
             DeleteOpportunityEndpoint.Map(app);
+
+            // Opportunity stages, mirroring the lead pipeline-stage endpoints rule for rule.
+            ListOpportunityStagesEndpoint.Map(app);
+            CreateOpportunityStageEndpoint.Map(app);
+            UpdateOpportunityStageEndpoint.Map(app);
+            DeleteOpportunityStageEndpoint.Map(app);
+            ReorderOpportunityStagesEndpoint.Map(app);
+            GetOpportunityStageImpactEndpoint.Map(app);
+        }
+
+        /// <summary>
+        /// Named pipelines: a tenant may run more than one lead funnel and more than one deal
+        /// funnel, each with its own stages, fields, rules and routing.
+        ///
+        /// These are ordinary tenant endpoints under /api, not /admin/* — a pipeline is the
+        /// tenant's own configuration, like its stages and custom fields, and not platform
+        /// catalog data.
+        /// </summary>
+        private void MapNamedPipelineEndpoints()
+        {
+            ListPipelinesEndpoint.Map(app);
+            CreatePipelineEndpoint.Map(app);
+            UpdatePipelineEndpoint.Map(app);
+            DeletePipelineEndpoint.Map(app);
+            GetPipelineImpactEndpoint.Map(app);
+
+            // Moving one record between pipelines. Registers routes on both /api/leads and
+            // /api/opportunities, since the operation is the same for either.
+            MoveRecordPipelineEndpoint.Map(app);
         }
 
         private void MapIngestionEndpoints()

@@ -39,14 +39,38 @@
         <input type="search" placeholder="Search title or contact..."
                value="@_search" @oninput="OnSearchInput"
                class="w-72 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+
+        @* Rendered only when the tenant genuinely has more than one deal pipeline. A tenant
+           with one is never shown a control whose only option is the thing it already has. *@
+        @if (_isMultiPipeline)
+        {
+            <select @bind="_pipelineFilter" @bind:after="OnPipelineChangedAsync"
+                    aria-label="Pipeline"
+                    class="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                @foreach (var p in _pipelineOptions)
+                {
+                    <option value="@p.Id">@p.Name@(p.IsDefault ? " (default)" : "")</option>
+                }
+                @* The explicit cross-pipeline view. It is a deliberate choice, never what an
+                   omitted filter silently does — a total that spans pipelines has to be asked
+                   for, or one pipeline's heading ends up over the tenant's sum. *@
+                <option value="all">All pipelines</option>
+            </select>
+        }
+
         <select @bind="_stageFilter" @bind:after="LoadAsync"
                 class="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             <option value="">All stages</option>
-            @foreach (var s in IronMonkey.Common.OpportunityStages.All)
+            @foreach (var s in _stages)
             {
-                <option value="@s">@s</option>
+                <option value="@s.Id">@s.Name</option>
             }
         </select>
+
+        @if (_isMultiPipeline && _scopeLabel is { Length: > 0 } label)
+        {
+            <span class="text-xs text-slate-500">Showing: <strong>@label</strong></span>
+        }
     </div>
 
     @if (!string.IsNullOrEmpty(_error))
@@ -89,8 +113,8 @@
                             </td>
                             <td class="px-6 py-4 text-sm text-slate-600">@o.ContactName</td>
                             <td class="px-6 py-4">
-                                <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold @StageClass(o.Stage)">@o.Stage</span>
-                                @if (o.Stage == "Lost" && !string.IsNullOrWhiteSpace(o.LossReason))
+                                <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold @StageClass(o.StageType)">@o.Stage</span>
+                                @if (o.StageType == "ClosedLost" && !string.IsNullOrWhiteSpace(o.LossReason))
                                 {
                                     <span class="ml-2 text-xs text-slate-500">@o.LossReason</span>
                                 }
@@ -134,23 +158,50 @@
     private string? _error;
     private string _search = "";
     private string _stageFilter = "";
+    private List<StageItem> _stages = [];
     private OpportunityItem? _deleting;
+
+    /// <summary>
+    /// The pipeline filter, empty for "let the server choose the default". Only ever set by
+    /// the picker, which renders only when <see cref="_isMultiPipeline"/> is true — so a
+    /// single-pipeline tenant never sets it and never sees the control.
+    /// </summary>
+    private string _pipelineFilter = "";
+
+    private bool _isMultiPipeline;
+
+    /// <summary>What the rows cover — a pipeline name, or "All pipelines".</summary>
+    private string? _scopeLabel;
+
+    private List<PipelineOption> _pipelineOptions = [];
+
+    private class PipelineOption
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = "";
+        public bool IsDefault { get; set; }
+    }
     private bool _isDeleting;
     private CancellationTokenSource? _debounce;
 
-    private decimal OpenValue => _opportunities
-        .Where(o => !IronMonkey.Common.OpportunityStages.IsTerminal(o.Stage)).Sum(o => o.Amount);
+    // Open/won are decided by the stage's configured type, never by its name: a tenant is
+    // free to rename "Won" to anything, and these tiles must keep meaning the same thing.
+    private decimal OpenValue => _opportunities.Where(o => !o.IsTerminal).Sum(o => o.Amount);
 
     private decimal WonValue => _opportunities
-        .Where(o => o.Stage == IronMonkey.Common.OpportunityStages.Won).Sum(o => o.Amount);
+        .Where(o => o.StageType == "ClosedWon").Sum(o => o.Amount);
 
-    private int OpenCount => _opportunities
-        .Count(o => !IronMonkey.Common.OpportunityStages.IsTerminal(o.Stage));
+    private int OpenCount => _opportunities.Count(o => !o.IsTerminal);
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync()
     {
         Presentation.Changed += OnPresentationChanged;
-        await LoadAsync();
+
+        // Deliberately does NOT fetch. This runs during prerender, where the JWT in
+        // ProtectedSessionStorage is unreadable, so the call would go out unauthenticated and
+        // 401 silently. Everything is loaded from OnAfterRenderAsync instead — which is also
+        // where the pipeline list has to be read before the rows, so the two cannot race.
+        return Task.CompletedTask;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -158,7 +209,54 @@
         // After the first interactive render: the JWT is in ProtectedSessionStorage and
         // unreadable during prerender, so an earlier fetch would go out unauthenticated.
         if (firstRender)
+        {
             await Presentation.EnsureLoadedAsync();
+
+            // Stages are fetched here rather than in OnInitializedAsync for the same reason:
+            // the JWT lives in ProtectedSessionStorage and is unreadable during prerender, so
+            // an earlier call goes out unauthenticated and 401s silently.
+            var pipelines = await Api.GetFromJsonAsync<PipelineListPayload>(
+                "/api/pipelines?recordType=Opportunity");
+
+            _pipelineOptions = pipelines?.Items ?? [];
+            _isMultiPipeline = pipelines?.IsMultiPipeline ?? false;
+
+            // Preselect the default so the picker shows what is actually on screen. The
+            // filter still resolves to the same pipeline if it is left empty — this is
+            // labelling, not a change of behaviour.
+            if (_isMultiPipeline && pipelines?.DefaultPipelineId is { } defaultId)
+                _pipelineFilter = defaultId.ToString();
+
+            await LoadStagesAsync();
+            await LoadAsync();
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Reloads the stage picker as well as the rows: each pipeline has its own stages, so a
+    /// stage filter chosen in one pipeline means nothing in another and is cleared.
+    /// </summary>
+    private async Task OnPipelineChangedAsync()
+    {
+        _stageFilter = "";
+        await LoadStagesAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadStagesAsync()
+    {
+        var url = "/api/opportunity-stages";
+        if (!string.IsNullOrWhiteSpace(_pipelineFilter)) url += $"?pipelineId={Uri.EscapeDataString(_pipelineFilter)}";
+
+        _stages = await Api.GetFromJsonAsync<List<StageItem>>(url) ?? [];
+    }
+
+    private class PipelineListPayload
+    {
+        public List<PipelineOption> Items { get; set; } = [];
+        public bool IsMultiPipeline { get; set; }
+        public Guid? DefaultPipelineId { get; set; }
     }
 
     private async Task OnSearchInput(ChangeEventArgs e)
@@ -179,9 +277,23 @@
         {
             var q = new List<string>();
             if (!string.IsNullOrWhiteSpace(_search)) q.Add($"search={Uri.EscapeDataString(_search)}");
-            if (!string.IsNullOrWhiteSpace(_stageFilter)) q.Add($"stage={Uri.EscapeDataString(_stageFilter)}");
+            if (!string.IsNullOrWhiteSpace(_stageFilter)) q.Add($"stageId={Uri.EscapeDataString(_stageFilter)}");
+            // A pipeline is sent only when the tenant actually has more than one and the
+            // user picked one. Omitting it resolves to the default pipeline server-side,
+            // which for a single-pipeline tenant is the only one — so this page behaves
+            // exactly as it did before pipelines existed.
+            if (!string.IsNullOrWhiteSpace(_pipelineFilter)) q.Add($"pipelineId={Uri.EscapeDataString(_pipelineFilter)}");
+
             var url = "/api/opportunities" + (q.Count > 0 ? "?" + string.Join("&", q) : "");
-            _opportunities = await Api.GetFromJsonAsync<List<OpportunityItem>>(url) ?? [];
+
+            // The endpoint returns a list object rather than a bare array, so it can say
+            // which pipeline(s) the rows cover. A list shown without that is a set of numbers
+            // whose scope the reader has to guess.
+            var response = await Api.GetFromJsonAsync<OpportunityListResponse>(url);
+
+            _opportunities = response?.Items ?? [];
+            _isMultiPipeline = response?.IsMultiPipeline ?? false;
+            _scopeLabel = response?.ScopeLabel;
         }
         catch (Exception ex) { _error = $"Failed to load opportunities: {ex.Message}"; }
         finally { _isLoading = false; StateHasChanged(); }
@@ -201,14 +313,25 @@
         finally { _isDeleting = false; _deleting = null; }
     }
 
-    private static string StageClass(string stage) => stage switch
+    // Keyed on the stage TYPE rather than the name, so a renamed stage keeps its colour and
+    // a tenant's own stage names never need to appear in this file.
+    private static string StageClass(string stageType) => stageType switch
     {
-        "Won" => "bg-emerald-100 text-emerald-800",
-        "Lost" => "bg-red-100 text-red-800",
-        "Negotiation" => "bg-amber-100 text-amber-800",
-        "Proposal" => "bg-indigo-100 text-indigo-800",
+        "ClosedWon" => "bg-emerald-100 text-emerald-800",
+        "ClosedLost" => "bg-red-100 text-red-800",
+        "Entry" => "bg-indigo-100 text-indigo-800",
         _ => "bg-slate-100 text-slate-700"
     };
+
+    /// <summary>Mirrors ListOpportunitiesEndpoint.OpportunityList.</summary>
+    private class OpportunityListResponse
+    {
+        public List<OpportunityItem> Items { get; set; } = [];
+        public Guid? PipelineId { get; set; }
+        public string ScopeLabel { get; set; } = "";
+        public bool IsTenantWide { get; set; }
+        public bool IsMultiPipeline { get; set; }
+    }
 
     private class OpportunityItem
     {
@@ -216,10 +339,21 @@
         public string Title { get; set; } = "";
         public Guid ContactId { get; set; }
         public string ContactName { get; set; } = "";
+        public Guid StageId { get; set; }
         public string Stage { get; set; } = "";
+        public string StageType { get; set; } = "";
+        public bool IsTerminal { get; set; }
+        public Guid PipelineId { get; set; }
+        public string PipelineName { get; set; } = "";
         public decimal Amount { get; set; }
         public DateTime ExpectedCloseDate { get; set; }
         public string? LossReason { get; set; }
+    }
+
+    private class StageItem
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = "";
     }
 
     // Terminology is resolved once per circuit by the shared scoped service. Subscribing

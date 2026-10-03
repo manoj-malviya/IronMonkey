@@ -1,4 +1,5 @@
 using System.Text.Json;
+using IronMonkey.ApiService.Features.Pipelines;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -11,8 +12,16 @@ public class LeadRoutingService : ILeadRoutingService
         Guid tenantId, string connectionString, Lead lead, TenantDbContext db,
         CancellationToken cancellationToken)
     {
-        var config = await db.RoutingConfigs
-            .FirstOrDefaultAsync(r => r.TenantId == tenantId, cancellationToken);
+        // Pipeline precedence, same rule as workflow rules: a config scoped to this lead's
+        // pipeline wins, and the tenant-wide one is then not consulted. A tenant that has
+        // scoped nothing gets the single tenant-wide row it always got.
+        var configs = await db.RoutingConfigs
+            .Where(r => r.TenantId == tenantId)
+            .ToListAsync(cancellationToken);
+
+        var config = PipelineTargeting
+            .Resolve(configs, lead.PipelineId, r => r.PipelineId)
+            .FirstOrDefault();
 
         if (config == null || !config.IsEnabled) return null;
 

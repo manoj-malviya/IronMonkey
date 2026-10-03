@@ -77,7 +77,10 @@ public class DashboardEndpointTests(PostgreSqlFixture fixture) : IClassFixture<P
         db.Contacts.Add(contact);
         await db.SaveChangesAsync();
 
-        var opportunity = Opportunity.Create(tenantId, "Deal", contact.Id, DateTime.UtcNow.AddDays(30), "Won");
+        var oppStages = await OpportunityStageSeed.EnsureAsync(db, tenantId);
+        var opportunity = Opportunity.Create(
+            tenantId, "Deal", contact.Id, DateTime.UtcNow.AddDays(30),
+            oppStages[IronMonkey.Common.OpportunityStages.Won]);
         opportunity.SetAmount(1000m);
         db.Opportunities.Add(opportunity);
         await db.SaveChangesAsync();
@@ -90,11 +93,12 @@ public class DashboardEndpointTests(PostgreSqlFixture fixture) : IClassFixture<P
         db.Leads.AddRange(l1, l2, l3, l4);
         await db.SaveChangesAsync();
 
-        var result = await GetDashboardSummaryEndpoint.Handle(
+        var result = (await GetDashboardSummaryEndpoint.Handle(
             DashboardDateRange.AllTime, null, null,
-            Tenant(tenantId, connectionString), _factory, CancellationToken.None);
+            null,
+            Tenant(tenantId, connectionString), _factory, PipelineTestHelpers.Scope(), CancellationToken.None)).Ok();
 
-        var body = result.Value!;
+        var body = result;
 
         Assert.Equal(4, body.TotalLeads);
         Assert.Equal(1, body.ConvertedLeads);
@@ -128,13 +132,14 @@ public class DashboardEndpointTests(PostgreSqlFixture fixture) : IClassFixture<P
             Lead.Create(tenantId, "Dead", "Lead", "2", "d@t.com", LeadSource.Manual, lost.Id));
         await db.SaveChangesAsync();
 
-        var result = await GetDashboardSummaryEndpoint.Handle(
+        var result = (await GetDashboardSummaryEndpoint.Handle(
             DashboardDateRange.AllTime, null, null,
-            Tenant(tenantId, connectionString), _factory, CancellationToken.None);
+            null,
+            Tenant(tenantId, connectionString), _factory, PipelineTestHelpers.Scope(), CancellationToken.None)).Ok();
 
-        Assert.Equal(2, result.Value!.TotalLeads);
-        Assert.Equal(1, result.Value!.OpenLeads);
-        Assert.Equal(0, result.Value!.ConvertedLeads);
+        Assert.Equal(2, result.TotalLeads);
+        Assert.Equal(1, result.OpenLeads);
+        Assert.Equal(0, result.ConvertedLeads);
     }
 
     [Fact]
@@ -148,22 +153,29 @@ public class DashboardEndpointTests(PostgreSqlFixture fixture) : IClassFixture<P
         db.Contacts.Add(contact);
         await db.SaveChangesAsync();
 
-        var proposal1 = Opportunity.Create(tenantId, "P1", contact.Id, DateTime.UtcNow.AddDays(10), "Proposal");
+        var oppStages = await OpportunityStageSeed.EnsureAsync(db, tenantId);
+
+        var proposal1 = Opportunity.Create(tenantId, "P1", contact.Id, DateTime.UtcNow.AddDays(10),
+            oppStages[IronMonkey.Common.OpportunityStages.Proposal]);
         proposal1.SetAmount(1000m);
-        var proposal2 = Opportunity.Create(tenantId, "P2", contact.Id, DateTime.UtcNow.AddDays(20), "Proposal");
+        var proposal2 = Opportunity.Create(tenantId, "P2", contact.Id, DateTime.UtcNow.AddDays(20),
+            oppStages[IronMonkey.Common.OpportunityStages.Proposal]);
         proposal2.SetAmount(500m);
-        var won = Opportunity.Create(tenantId, "W1", contact.Id, DateTime.UtcNow.AddDays(5), "Won");
+        var won = Opportunity.Create(tenantId, "W1", contact.Id, DateTime.UtcNow.AddDays(5),
+            oppStages[IronMonkey.Common.OpportunityStages.Won]);
         won.SetAmount(2500m);
-        var lost = Opportunity.Create(tenantId, "L1", contact.Id, DateTime.UtcNow.AddDays(5), "Lost");
+        var lost = Opportunity.Create(tenantId, "L1", contact.Id, DateTime.UtcNow.AddDays(5),
+            oppStages[IronMonkey.Common.OpportunityStages.Lost]);
         lost.SetAmount(9000m);
         db.Opportunities.AddRange(proposal1, proposal2, won, lost);
         await db.SaveChangesAsync();
 
-        var result = await GetDashboardOpportunitiesEndpoint.Handle(
+        var result = (await GetDashboardOpportunitiesEndpoint.Handle(
             DashboardDateRange.AllTime, null, null,
-            Tenant(tenantId, connectionString), _factory, CancellationToken.None);
+            null,
+            Tenant(tenantId, connectionString), _factory, PipelineTestHelpers.Scope(), CancellationToken.None)).Ok();
 
-        var body = result.Value!;
+        var body = result;
 
         Assert.Equal(4, body.TotalCount);
         Assert.Equal(13000m, body.TotalValue);
@@ -205,11 +217,12 @@ public class DashboardEndpointTests(PostgreSqlFixture fixture) : IClassFixture<P
         // Noon avoids any ambiguity about which calendar day the row belongs to.
         await BackdateLeadAsync(db, lead.Id, DateTime.UtcNow.Date.AddDays(dayOffset).AddHours(12));
 
-        var result = await GetDashboardSummaryEndpoint.Handle(
+        var result = (await GetDashboardSummaryEndpoint.Handle(
             DashboardDateRange.Last7Days, null, null,
-            Tenant(tenantId, connectionString), _factory, CancellationToken.None);
+            null,
+            Tenant(tenantId, connectionString), _factory, PipelineTestHelpers.Scope(), CancellationToken.None)).Ok();
 
-        Assert.Equal(expectedInRange ? 1 : 0, result.Value!.TotalLeads);
+        Assert.Equal(expectedInRange ? 1 : 0, result.TotalLeads);
     }
 
     [Fact]
@@ -233,11 +246,12 @@ public class DashboardEndpointTests(PostgreSqlFixture fixture) : IClassFixture<P
         // and a half-open "< end.Date + 1 day" bound keeps.
         await BackdateLeadAsync(db, lead.Id, endDate.AddDays(1).AddTicks(-1));
 
-        var result = await GetDashboardSummaryEndpoint.Handle(
+        var result = (await GetDashboardSummaryEndpoint.Handle(
             DashboardDateRange.Custom, endDate.AddDays(-3), endDate,
-            Tenant(tenantId, connectionString), _factory, CancellationToken.None);
+            null,
+            Tenant(tenantId, connectionString), _factory, PipelineTestHelpers.Scope(), CancellationToken.None)).Ok();
 
-        Assert.Equal(1, result.Value!.TotalLeads);
+        Assert.Equal(1, result.TotalLeads);
     }
 
     [Fact]
@@ -292,11 +306,12 @@ public class DashboardEndpointTests(PostgreSqlFixture fixture) : IClassFixture<P
         var tenantId = Guid.NewGuid();
         var connectionString = await CreateTenantDbAsync(tenantId, "empty");
 
-        var result = await GetDashboardSummaryEndpoint.Handle(
+        var result = (await GetDashboardSummaryEndpoint.Handle(
             DashboardDateRange.AllTime, null, null,
-            Tenant(tenantId, connectionString), _factory, CancellationToken.None);
+            null,
+            Tenant(tenantId, connectionString), _factory, PipelineTestHelpers.Scope(), CancellationToken.None)).Ok();
 
-        var body = result.Value!;
+        var body = result;
 
         Assert.Equal(0, body.TotalLeads);
         Assert.Equal(0, body.OpenLeads);
@@ -315,13 +330,14 @@ public class DashboardEndpointTests(PostgreSqlFixture fixture) : IClassFixture<P
         var tenantId = Guid.NewGuid();
         var connectionString = await CreateTenantDbAsync(tenantId, "attempty");
 
-        var result = await GetDashboardAttentionEndpoint.Handle(
-            Tenant(tenantId, connectionString), _factory, CancellationToken.None);
+        var result = (await GetDashboardAttentionEndpoint.Handle(
+            null,
+            Tenant(tenantId, connectionString), _factory, PipelineTestHelpers.Scope(), CancellationToken.None)).Ok();
 
-        Assert.Equal(0, result.Value!.OverdueTaskCount);
-        Assert.Empty(result.Value!.OverdueTasks);
-        Assert.Equal(0, result.Value!.StaleLeadCount);
-        Assert.Empty(result.Value!.StaleLeads);
+        Assert.Equal(0, result.OverdueTaskCount);
+        Assert.Empty(result.OverdueTasks);
+        Assert.Equal(0, result.StaleLeadCount);
+        Assert.Empty(result.StaleLeads);
     }
 
     [Fact]
@@ -330,13 +346,14 @@ public class DashboardEndpointTests(PostgreSqlFixture fixture) : IClassFixture<P
         var tenantId = Guid.NewGuid();
         var connectionString = await CreateTenantDbAsync(tenantId, "oppempty");
 
-        var result = await GetDashboardOpportunitiesEndpoint.Handle(
+        var result = (await GetDashboardOpportunitiesEndpoint.Handle(
             DashboardDateRange.AllTime, null, null,
-            Tenant(tenantId, connectionString), _factory, CancellationToken.None);
+            null,
+            Tenant(tenantId, connectionString), _factory, PipelineTestHelpers.Scope(), CancellationToken.None)).Ok();
 
-        Assert.Equal(0, result.Value!.TotalCount);
-        Assert.Equal(0m, result.Value!.TotalValue);
-        Assert.Empty(result.Value!.ByStage);
+        Assert.Equal(0, result.TotalCount);
+        Assert.Equal(0m, result.TotalValue);
+        Assert.Empty(result.ByStage);
     }
 
     // ── Attention panel ─────────────────────────────────────────────────────
@@ -378,14 +395,15 @@ public class DashboardEndpointTests(PostgreSqlFixture fixture) : IClassFixture<P
         db.LeadTasks.AddRange(overdue, alsoOverdue, doneButLate, upcoming, undated);
         await db.SaveChangesAsync();
 
-        var result = await GetDashboardAttentionEndpoint.Handle(
-            Tenant(tenantId, connectionString), _factory, CancellationToken.None);
+        var result = (await GetDashboardAttentionEndpoint.Handle(
+            null,
+            Tenant(tenantId, connectionString), _factory, PipelineTestHelpers.Scope(), CancellationToken.None)).Ok();
 
-        Assert.Equal(2, result.Value!.OverdueTaskCount);
+        Assert.Equal(2, result.OverdueTaskCount);
 
         // Most overdue first, so the top of the panel is the most urgent item.
-        Assert.Equal("Call back", result.Value!.OverdueTasks.First().Title);
-        Assert.All(result.Value!.OverdueTasks, t => Assert.True(t.DaysOverdue >= 0));
+        Assert.Equal("Call back", result.OverdueTasks.First().Title);
+        Assert.All(result.OverdueTasks, t => Assert.True(t.DaysOverdue >= 0));
     }
 
     [Fact]
@@ -417,14 +435,15 @@ public class DashboardEndpointTests(PostgreSqlFixture fixture) : IClassFixture<P
         await BackdateLeadAsync(db, oldButLost.Id, longAgo);
         await BackdateLeadAsync(db, oldButConverted.Id, longAgo);
 
-        var result = await GetDashboardAttentionEndpoint.Handle(
-            Tenant(tenantId, connectionString), _factory, CancellationToken.None);
+        var result = (await GetDashboardAttentionEndpoint.Handle(
+            null,
+            Tenant(tenantId, connectionString), _factory, PipelineTestHelpers.Scope(), CancellationToken.None)).Ok();
 
         // Only the genuinely neglected open lead: the lost one is finished and the
         // converted one is a success, so ageing in either is expected, not a problem.
-        Assert.Equal(1, result.Value!.StaleLeadCount);
-        Assert.Equal("Stale Lead", result.Value!.StaleLeads.Single().LeadName);
-        Assert.True(result.Value!.StaleLeads.Single().DaysSinceActivity >= 14);
+        Assert.Equal(1, result.StaleLeadCount);
+        Assert.Equal("Stale Lead", result.StaleLeads.Single().LeadName);
+        Assert.True(result.StaleLeads.Single().DaysSinceActivity >= 14);
     }
 
     // ── Recent activity / conversions ───────────────────────────────────────
@@ -444,7 +463,10 @@ public class DashboardEndpointTests(PostgreSqlFixture fixture) : IClassFixture<P
         db.Contacts.Add(contact);
         await db.SaveChangesAsync();
 
-        var opportunity = Opportunity.Create(tenantId, "Big Deal", contact.Id, DateTime.UtcNow.AddDays(30), "Won");
+        var oppStages = await OpportunityStageSeed.EnsureAsync(db, tenantId);
+        var opportunity = Opportunity.Create(
+            tenantId, "Big Deal", contact.Id, DateTime.UtcNow.AddDays(30),
+            oppStages[IronMonkey.Common.OpportunityStages.Won]);
         opportunity.SetAmount(7500m);
         db.Opportunities.Add(opportunity);
         await db.SaveChangesAsync();
@@ -510,19 +532,21 @@ public class DashboardEndpointTests(PostgreSqlFixture fixture) : IClassFixture<P
             await dbB.SaveChangesAsync();
         }
 
-        var resultA = await GetDashboardSummaryEndpoint.Handle(
+        var resultA = (await GetDashboardSummaryEndpoint.Handle(
             DashboardDateRange.AllTime, null, null,
-            Tenant(tenantA, connectionString), _factory, CancellationToken.None);
+            null,
+            Tenant(tenantA, connectionString), _factory, PipelineTestHelpers.Scope(), CancellationToken.None)).Ok();
 
-        var resultB = await GetDashboardSummaryEndpoint.Handle(
+        var resultB = (await GetDashboardSummaryEndpoint.Handle(
             DashboardDateRange.AllTime, null, null,
-            Tenant(tenantB, connectionString), _factory, CancellationToken.None);
+            null,
+            Tenant(tenantB, connectionString), _factory, PipelineTestHelpers.Scope(), CancellationToken.None)).Ok();
 
-        Assert.Equal(1, resultA.Value!.TotalLeads);
-        Assert.Single(resultA.Value!.ByStage);
+        Assert.Equal(1, resultA.TotalLeads);
+        Assert.Single(resultA.ByStage);
 
-        Assert.Equal(2, resultB.Value!.TotalLeads);
-        Assert.Single(resultB.Value!.ByStage);
+        Assert.Equal(2, resultB.TotalLeads);
+        Assert.Single(resultB.ByStage);
     }
 
     [Fact]
@@ -538,7 +562,9 @@ public class DashboardEndpointTests(PostgreSqlFixture fixture) : IClassFixture<P
             dbA.Contacts.Add(contact);
             await dbA.SaveChangesAsync();
 
-            var opp = Opportunity.Create(tenantA, "A Deal", contact.Id, DateTime.UtcNow.AddDays(10), "Proposal");
+            var stagesA = await OpportunityStageSeed.EnsureAsync(dbA, tenantA);
+            var opp = Opportunity.Create(tenantA, "A Deal", contact.Id, DateTime.UtcNow.AddDays(10),
+                stagesA[IronMonkey.Common.OpportunityStages.Proposal]);
             opp.SetAmount(100m);
             dbA.Opportunities.Add(opp);
             await dbA.SaveChangesAsync();
@@ -550,18 +576,21 @@ public class DashboardEndpointTests(PostgreSqlFixture fixture) : IClassFixture<P
             dbB.Contacts.Add(contact);
             await dbB.SaveChangesAsync();
 
-            var opp = Opportunity.Create(tenantB, "B Deal", contact.Id, DateTime.UtcNow.AddDays(10), "Proposal");
+            var stagesB = await OpportunityStageSeed.EnsureAsync(dbB, tenantB);
+            var opp = Opportunity.Create(tenantB, "B Deal", contact.Id, DateTime.UtcNow.AddDays(10),
+                stagesB[IronMonkey.Common.OpportunityStages.Proposal]);
             opp.SetAmount(9999m);
             dbB.Opportunities.Add(opp);
             await dbB.SaveChangesAsync();
         }
 
-        var resultA = await GetDashboardOpportunitiesEndpoint.Handle(
+        var resultA = (await GetDashboardOpportunitiesEndpoint.Handle(
             DashboardDateRange.AllTime, null, null,
-            Tenant(tenantA, connectionString), _factory, CancellationToken.None);
+            null,
+            Tenant(tenantA, connectionString), _factory, PipelineTestHelpers.Scope(), CancellationToken.None)).Ok();
 
-        Assert.Equal(1, resultA.Value!.TotalCount);
-        Assert.Equal(100m, resultA.Value!.TotalValue);
+        Assert.Equal(1, resultA.TotalCount);
+        Assert.Equal(100m, resultA.TotalValue);
     }
 
     [Fact]
@@ -586,10 +615,11 @@ public class DashboardEndpointTests(PostgreSqlFixture fixture) : IClassFixture<P
             await dbB.SaveChangesAsync();
         }
 
-        var resultA = await GetDashboardAttentionEndpoint.Handle(
-            Tenant(tenantA, connectionString), _factory, CancellationToken.None);
+        var resultA = (await GetDashboardAttentionEndpoint.Handle(
+            null,
+            Tenant(tenantA, connectionString), _factory, PipelineTestHelpers.Scope(), CancellationToken.None)).Ok();
 
-        Assert.Equal(0, resultA.Value!.OverdueTaskCount);
-        Assert.Empty(resultA.Value!.OverdueTasks);
+        Assert.Equal(0, resultA.OverdueTaskCount);
+        Assert.Empty(resultA.OverdueTasks);
     }
 }

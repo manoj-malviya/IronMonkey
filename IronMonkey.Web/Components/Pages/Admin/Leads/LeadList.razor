@@ -30,6 +30,23 @@
                    value="@_search" @oninput="OnSearchInput"
                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:w-72" />
         </div>
+        @* Rendered only for a tenant that genuinely has more than one lead pipeline. *@
+        @if (_isMultiPipeline)
+        {
+            <div>
+                <label for="lead-pipeline" class="sr-only">Filter by pipeline</label>
+                <select id="lead-pipeline" value="@_pipelineFilter" @onchange="OnPipelineChanged"
+                        class="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    @foreach (var p in _pipelineOptions)
+                    {
+                        <option value="@p.Id">@p.Name@(p.IsDefault ? " (default)" : "")</option>
+                    }
+                    @* Asked for explicitly. An omitted filter never widens to this. *@
+                    <option value="all">All pipelines</option>
+                </select>
+            </div>
+        }
+
         <div>
             <label for="lead-stage" class="sr-only">Filter by stage</label>
             <select id="lead-stage" value="@_stageFilter" @onchange="OnStageChanged"
@@ -206,8 +223,33 @@
     [SupplyParameterFromQuery(Name = "sort")] public string? SortParam { get; set; }
     [SupplyParameterFromQuery(Name = "page")] public int? PageParam { get; set; }
 
+    /// <summary>
+    /// A pipeline id, or the literal "all". Absent means "let the server choose the default",
+    /// which for a single-pipeline tenant is the only pipeline — so an existing bookmark
+    /// without this parameter keeps working and keeps meaning the same thing.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "pipeline")] public string? PipelineParam { get; set; }
+
     private LeadPage? _page;
     private List<StageItem> _stages = [];
+
+    private string _pipelineFilter = string.Empty;
+    private bool _isMultiPipeline;
+    private List<PipelineOption> _pipelineOptions = [];
+
+    private class PipelineOption
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = "";
+        public bool IsDefault { get; set; }
+    }
+
+    private class PipelineListPayload
+    {
+        public List<PipelineOption> Items { get; set; } = [];
+        public bool IsMultiPipeline { get; set; }
+        public Guid? DefaultPipelineId { get; set; }
+    }
     private bool _isLoading = true;
     private string? _error;
     private string? _deleteError;
@@ -221,7 +263,13 @@
     private bool _isDeleting;
     private CancellationTokenSource? _debounce;
 
-    private bool _stagesLoaded;
+    private bool _pipelinesLoaded;
+
+    // The pipeline filter the cached _stages was fetched for. The stage URL is built from
+    // _pipelineFilter and nothing else, so keying on exactly that input refetches when the
+    // options would actually differ and never otherwise. null is a safe initial sentinel:
+    // _pipelineFilter is normalised to string.Empty above, never null.
+    private string? _stagesLoadedForPipeline;
 
     private bool HasActiveFilter =>
         !string.IsNullOrWhiteSpace(_search) || !string.IsNullOrWhiteSpace(_stageFilter);
@@ -234,11 +282,34 @@
         _stageFilter = StageParam ?? string.Empty;
         _sort = string.IsNullOrWhiteSpace(SortParam) ? "created_desc" : SortParam;
         _currentPage = PageParam is > 0 ? PageParam.Value : 1;
+        _pipelineFilter = PipelineParam ?? string.Empty;
 
-        if (!_stagesLoaded)
+        if (!_pipelinesLoaded)
         {
-            _stagesLoaded = true;
-            _stages = await Api.GetFromJsonAsync<List<StageItem>>("/api/pipeline-stages") ?? [];
+            // The pipeline list does not depend on _pipelineFilter, so it is genuinely
+            // once per circuit. includeCounts=false: this page reads only Items and
+            // IsMultiPipeline, and the counts cost a GROUP BY over every lead.
+            var pipelines = await Api.GetFromJsonAsync<PipelineListPayload>(
+                "/api/pipelines?recordType=Lead&includeCounts=false");
+            _pipelineOptions = pipelines?.Items ?? [];
+            _isMultiPipeline = pipelines?.IsMultiPipeline ?? false;
+
+            // Set after the await, not before: a failed fetch must be retried on the next
+            // parameter change rather than being latched as done.
+            _pipelinesLoaded = true;
+        }
+
+        // Stages belong to one pipeline, so the stage filter's options follow the selection.
+        // Refetched only when that selection changed — otherwise this ran on every sort,
+        // page, filter and settled keystroke, serially ahead of the leads query.
+        if (!string.Equals(_stagesLoadedForPipeline, _pipelineFilter, StringComparison.Ordinal))
+        {
+            var stageUrl = "/api/pipeline-stages";
+            if (!string.IsNullOrWhiteSpace(_pipelineFilter))
+                stageUrl += $"?pipelineId={Uri.EscapeDataString(_pipelineFilter)}";
+
+            _stages = await Api.GetFromJsonAsync<List<StageItem>>(stageUrl) ?? [];
+            _stagesLoadedForPipeline = _pipelineFilter;
         }
 
         await LoadAsync();
@@ -266,6 +337,17 @@
     private void OnStageChanged(ChangeEventArgs e)
     {
         _stageFilter = e.Value?.ToString() ?? string.Empty;
+        NavigateWithState(page: 1);
+    }
+
+    /// <summary>
+    /// Switching pipeline clears the stage filter: each pipeline has its own stages, so a
+    /// stage id chosen in one means nothing in another and would simply match no rows.
+    /// </summary>
+    private void OnPipelineChanged(ChangeEventArgs e)
+    {
+        _pipelineFilter = e.Value?.ToString() ?? string.Empty;
+        _stageFilter = string.Empty;
         NavigateWithState(page: 1);
     }
 
@@ -305,6 +387,7 @@
         var query = new List<string>();
         if (!string.IsNullOrWhiteSpace(_search)) query.Add($"search={Uri.EscapeDataString(_search)}");
         if (!string.IsNullOrWhiteSpace(_stageFilter)) query.Add($"stageId={_stageFilter}");
+        if (!string.IsNullOrWhiteSpace(_pipelineFilter)) query.Add($"pipeline={Uri.EscapeDataString(_pipelineFilter)}");
         if (_sort != "created_desc") query.Add($"sort={_sort}");
         if (page > 1) query.Add($"page={page}");
         return "/admin/leads" + (query.Count > 0 ? "?" + string.Join("&", query) : "");
@@ -328,6 +411,12 @@
             var query = new List<string> { $"page={_currentPage}", $"sort={_sort}" };
             if (!string.IsNullOrWhiteSpace(_search)) query.Add($"search={Uri.EscapeDataString(_search)}");
             if (!string.IsNullOrWhiteSpace(_stageFilter)) query.Add($"stageId={_stageFilter}");
+
+            // Omitted resolves to the default pipeline server-side — never to every pipeline.
+            // A widening default would make TotalCount the tenant's total while the heading
+            // still named one pipeline.
+            if (!string.IsNullOrWhiteSpace(_pipelineFilter))
+                query.Add($"pipelineId={Uri.EscapeDataString(_pipelineFilter)}");
 
             var result = await Api.GetFromJsonAsync<LeadPage>("/api/leads?" + string.Join("&", query));
 
@@ -360,9 +449,16 @@
             var first = ((page.Page - 1) * page.PageSize) + 1;
             var last = Math.Min(first + page.Items.Count - 1, page.TotalCount);
 
-            return page.TotalCount <= page.PageSize
+            var count = page.TotalCount <= page.PageSize
                 ? $"{page.TotalCount} lead{(page.TotalCount == 1 ? "" : "s")}"
                 : $"{first}–{last} of {page.TotalCount} leads";
+
+            // The scope is named alongside the total whenever there is more than one
+            // pipeline it could have come from. A bare "240 leads" is the silent-wrong-number
+            // case: correct for one pipeline, and read as the tenant's total.
+            return page.IsMultiPipeline && page.ScopeLabel.Length > 0
+                ? $"{count} · {page.ScopeLabel}"
+                : count;
         }
     }
 
@@ -420,6 +516,12 @@
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 25;
         public int TotalPages { get; set; }
+
+        /// <summary>What TotalCount covers — a pipeline name, or "All pipelines".</summary>
+        public string ScopeLabel { get; set; } = "";
+
+        public bool IsTenantWide { get; set; }
+        public bool IsMultiPipeline { get; set; }
     }
 
     private class LeadItem

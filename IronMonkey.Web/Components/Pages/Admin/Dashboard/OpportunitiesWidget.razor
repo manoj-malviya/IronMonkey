@@ -30,6 +30,16 @@
         }
         else
         {
+            @* Names what the figures below cover, but only when there is more than one
+               pipeline they could have come from. An unlabelled total is correct for a
+               single-pipeline tenant and silently ambiguous for anyone else. *@
+            @if (data.IsMultiPipeline && data.ScopeLabel.Length > 0)
+            {
+                <p class="mb-3 text-xs font-medium text-slate-500">
+                    @data.ScopeLabel
+                </p>
+            }
+
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <p class="text-xs font-medium text-slate-500">Open value</p>
@@ -43,18 +53,39 @@
                 </div>
             </div>
 
+            @* When the figures span pipelines, show what the total is made of. A single
+               cross-pipeline number is the silent-wrong-number case: correct, and read by
+               most people as one funnel's. *@
+            @if (data.IsTenantWide && data.ByPipeline.Count > 1)
+            {
+                <div class="mt-4 space-y-1 border-t border-slate-200 pt-3">
+                    @foreach (var pipeline in data.ByPipeline)
+                    {
+                        <div class="flex items-baseline justify-between gap-3 text-xs">
+                            <span class="min-w-0 truncate text-slate-600">@pipeline.PipelineName</span>
+                            <span class="shrink-0 tabular-nums text-slate-900">
+                                @Money(pipeline.TotalValue)
+                                <span class="text-slate-500">(@Plural(pipeline.Count, "deal"))</span>
+                            </span>
+                        </div>
+                    }
+                </div>
+            }
+
             <ul class="mt-4 space-y-2 border-t border-slate-100 pt-3">
                 @foreach (var stage in data.ByStage)
                 {
                     <li>
-                        <a href="@($"/admin/opportunities?stage={Uri.EscapeDataString(stage.Stage)}")"
+                        <a href="@($"/admin/opportunities?stageId={stage.StageId}")"
                            class="flex items-baseline justify-between gap-3 rounded-lg px-1 py-1 text-sm hover:bg-slate-50"
                            title="@($"View {stage.Count} {stage.Stage} opportunity/opportunities")">
                             <span class="truncate text-slate-700">
                                 @stage.Stage
                                 <span class="ml-1 text-xs text-slate-400">@stage.Count</span>
                             </span>
-                            <span class="shrink-0 tabular-nums font-medium @(stage.Stage == "Won" ? "text-emerald-700" : "text-slate-900")">
+                            @* Won is the stage TYPE, never the name — a renamed "Won" stage
+                               must keep reading as won business. *@
+                            <span class="shrink-0 tabular-nums font-medium @(stage.StageType == "ClosedWon" ? "text-emerald-700" : "text-slate-900")">
                                 @Money(stage.TotalValue)
                             </span>
                         </a>

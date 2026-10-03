@@ -66,9 +66,13 @@ public class PipelineDashboardTests(PostgreSqlFixture fixture) : IClassFixture<P
         db.Contacts.Add(contact);
         await db.SaveChangesAsync();
 
-        var opp1 = Opportunity.Create(tenantId, "Deal 1", contact.Id, DateTime.UtcNow.AddDays(30), "Open");
+        // Opportunity stages are tenant rows now, so the deals need a real one to point at.
+        var oppStages = await OpportunityStageSeed.EnsureAsync(db, tenantId);
+        var openStageId = oppStages[IronMonkey.Common.OpportunityStages.Qualification];
+
+        var opp1 = Opportunity.Create(tenantId, "Deal 1", contact.Id, DateTime.UtcNow.AddDays(30), openStageId);
         opp1.SetAmount(5000m);
-        var opp2 = Opportunity.Create(tenantId, "Deal 2", contact.Id, DateTime.UtcNow.AddDays(60), "Open");
+        var opp2 = Opportunity.Create(tenantId, "Deal 2", contact.Id, DateTime.UtcNow.AddDays(60), openStageId);
         opp2.SetAmount(3000m);
         db.Opportunities.AddRange(opp1, opp2);
         await db.SaveChangesAsync();

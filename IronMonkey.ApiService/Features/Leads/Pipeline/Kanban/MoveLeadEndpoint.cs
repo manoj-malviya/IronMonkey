@@ -3,6 +3,7 @@ using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Features.Leads.Pipeline.States;
 using IronMonkey.ApiService.Features.Leads.Workflow.Rules;
+using IronMonkey.ApiService.Features.Pipelines;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
 
@@ -42,6 +43,27 @@ public class MoveLeadEndpoint : IEndpoint
         var lead = await db.Leads.FindAsync(new object[] { leadId }, cancellationToken);
 
         if (lead == null) return TypedResults.NotFound();
+
+        // The target stage must belong to the lead's OWN pipeline.
+        //
+        // Without this a caller could post any stage id and land the lead on a stage from a
+        // different pipeline — it would then show on neither board, be excluded from its own
+        // pipeline's per-stage totals and counted in another's. That is the central
+        // correctness risk of multiple pipelines, and a board drag is the easiest way to hit
+        // it, so it is refused here rather than relied upon from the UI.
+        //
+        // Moving a record BETWEEN pipelines is a different operation with different
+        // semantics (it picks a landing stage and records the jump as a pipeline change) and
+        // lives at POST /api/leads/{id}/pipeline.
+        var targetInPipeline = await PipelineStageResolution.FindInPipelineAsync(
+            db, lead.PipelineId, request.TargetStageId, cancellationToken);
+
+        if (targetInPipeline is null)
+        {
+            return TypedResults.BadRequest(
+                "That stage does not belong to this lead's pipeline. " +
+                "Use the pipeline move endpoint to put the lead in a different pipeline.");
+        }
 
         lead.MoveToPipelineStage(request.TargetStageId);
         await db.SaveChangesAsync(cancellationToken);

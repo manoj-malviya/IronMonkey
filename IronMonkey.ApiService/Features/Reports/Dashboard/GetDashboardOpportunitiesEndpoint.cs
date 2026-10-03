@@ -2,8 +2,9 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
-using IronMonkey.Common;
+using IronMonkey.ApiService.Features.Pipelines;
 using IronMonkey.Data;
+using IronMonkey.Data.Entities;
 
 namespace IronMonkey.ApiService.Features.Reports.Dashboard;
 
@@ -21,7 +22,27 @@ public class GetDashboardOpportunitiesEndpoint : IEndpoint
         .WithTags("Dashboard")
         .RequireAuthorization();
 
-    public record OpportunityStageItem(string Stage, int Count, decimal TotalValue, bool IsTerminal);
+    /// <param name="StageType">
+    /// The stage's configured type. Won/lost is read from here and never from the name — a
+    /// tenant that renames "Won" to "Closed - Order Placed" must still see its own won
+    /// figures, and a tenant with an active stage called "Won" must not have it counted as
+    /// closed business.
+    /// </param>
+    public record OpportunityStageItem(
+        Guid StageId, string Stage, string StageType, int Count, decimal TotalValue, bool IsTerminal,
+        Guid PipelineId, string PipelineName);
+
+    /// <summary>
+    /// Per-pipeline subtotals, present whenever the scope covers more than one pipeline.
+    ///
+    /// This is the direct answer to "a tenant with two pipelines must never see one
+    /// pipeline's counts presented as the tenant total". When the figures span pipelines the
+    /// widget can show the split rather than a single number whose composition is invisible,
+    /// and when they do not, this holds exactly one entry which the UI can omit.
+    /// </summary>
+    public record PipelineBreakdownItem(
+        Guid PipelineId, string PipelineName, int Count, decimal TotalValue,
+        int OpenCount, decimal OpenValue, int WonCount, decimal WonValue);
 
     public record DashboardOpportunitiesResponse(
         DateTime RangeFrom,
@@ -34,14 +55,28 @@ public class GetDashboardOpportunitiesEndpoint : IEndpoint
         int WonCount,
         decimal WonValue,
         List<OpportunityStageItem> ByStage,
+        List<PipelineBreakdownItem> ByPipeline,
+        /// <summary>Which pipeline(s) every figure above covers — a name, or "All pipelines".</summary>
+        string ScopeLabel,
+        Guid? PipelineId,
+        bool IsTenantWide,
+        bool IsMultiPipeline,
         DateTime GeneratedAt);
 
-    internal static async Task<Ok<DashboardOpportunitiesResponse>> Handle(
+    /// <param name="pipelineId">
+    /// Which pipeline the figures cover. Omitted means the default pipeline, NOT every
+    /// pipeline — an omitted parameter that widened the scope is exactly how one pipeline's
+    /// heading ends up over the tenant total. Pass "all" for the tenant-wide figure, which
+    /// the response then labels as such and breaks down per pipeline.
+    /// </param>
+    internal static async Task<Results<Ok<DashboardOpportunitiesResponse>, BadRequest<string>>> Handle(
         string? preset,
         DateTime? from,
         DateTime? to,
+        string? pipelineId,
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
+        IPipelineScopeResolver scopeResolver,
         CancellationToken cancellationToken)
     {
         var range = DashboardDateRange.Resolve(preset, from, to);
@@ -50,12 +85,35 @@ public class GetDashboardOpportunitiesEndpoint : IEndpoint
         var connectionString = await tenantService.GetConnectionStringAsync(cancellationToken);
         await using var db = dbContextFactory.CreateForTenant(connectionString, tenantId);
 
+        var scope = await scopeResolver.ResolveAsync(
+            db, PipelineRecordType.Opportunity, pipelineId, cancellationToken);
+
+        if (!scope.IsValid) return TypedResults.BadRequest(scope.Error!);
+
+        var scopedPipelines = scope.PipelineIds;
+
+        // Group by the stage id and carry the stage's own name, order and type out of the
+        // join, so a renamed stage reports under its current name with no mapping table.
+        //
+        // The pipeline predicate sits beside the date range and is equally non-optional:
+        // every figure this endpoint returns is the sum over exactly the pipelines the
+        // caller asked for.
         var grouped = await db.Opportunities
             .Where(o => o.CreatedAt >= range.From && o.CreatedAt < range.ToExclusive)
-            .GroupBy(o => o.Stage)
+            .Where(o => scopedPipelines.Contains(o.PipelineId))
+            .GroupBy(o => new
+            {
+                o.PipelineStageId, o.Stage.Name, o.Stage.Order, o.Stage.StageType,
+                o.PipelineId, PipelineName = o.Pipeline.Name
+            })
             .Select(g => new
             {
-                Stage = g.Key,
+                g.Key.PipelineStageId,
+                g.Key.Name,
+                g.Key.Order,
+                g.Key.StageType,
+                g.Key.PipelineId,
+                g.Key.PipelineName,
                 Count = g.Count(),
                 // Sum over an empty group cannot happen here (a group exists only because a
                 // row matched), but the nullable cast keeps the translation total either way.
@@ -63,25 +121,43 @@ public class GetDashboardOpportunitiesEndpoint : IEndpoint
             })
             .ToListAsync(cancellationToken);
 
-        // Ordered by the canonical pipeline order so the widget reads as a funnel; any
-        // stage string not in the canonical list (legacy or hand-written data) sorts last
-        // rather than being dropped.
+        // Ordered by the tenant's own configured stage order, so the widget reads as that
+        // tenant's funnel rather than as a hardcoded one.
         var byStage = grouped
+            // Pipeline leads the sort: across several pipelines the stage orders repeat, so
+            // sorting by order alone would interleave two funnels into one unreadable list.
+            .OrderBy(g => g.PipelineName, StringComparer.Ordinal)
+            .ThenBy(g => g.Order)
+            .ThenBy(g => g.Name, StringComparer.Ordinal)
             .Select(g => new OpportunityStageItem(
-                g.Stage,
+                g.PipelineStageId,
+                g.Name,
+                g.StageType.ToString(),
                 g.Count,
                 g.TotalValue,
-                OpportunityStages.IsTerminal(g.Stage)))
-            .OrderBy(s =>
-            {
-                var index = OpportunityStages.All.ToList().IndexOf(s.Stage);
-                return index < 0 ? int.MaxValue : index;
-            })
-            .ThenBy(s => s.Stage)
+                g.StageType is StageType.ClosedWon or StageType.ClosedLost,
+                g.PipelineId,
+                g.PipelineName))
             .ToList();
 
-        var won = byStage.Where(s => s.Stage == OpportunityStages.Won).ToList();
+        var won = byStage.Where(s => s.StageType == nameof(StageType.ClosedWon)).ToList();
         var open = byStage.Where(s => !s.IsTerminal).ToList();
+
+        // Subtotals per pipeline, derived from the same rows as the totals so the parts can
+        // never fail to sum to the whole.
+        var byPipeline = byStage
+            .GroupBy(s => new { s.PipelineId, s.PipelineName })
+            .OrderBy(g => g.Key.PipelineName, StringComparer.Ordinal)
+            .Select(g => new PipelineBreakdownItem(
+                g.Key.PipelineId,
+                g.Key.PipelineName,
+                g.Sum(s => s.Count),
+                g.Sum(s => s.TotalValue),
+                g.Where(s => !s.IsTerminal).Sum(s => s.Count),
+                g.Where(s => !s.IsTerminal).Sum(s => s.TotalValue),
+                g.Where(s => s.StageType == nameof(StageType.ClosedWon)).Sum(s => s.Count),
+                g.Where(s => s.StageType == nameof(StageType.ClosedWon)).Sum(s => s.TotalValue)))
+            .ToList();
 
         return TypedResults.Ok(new DashboardOpportunitiesResponse(
             range.From,
@@ -94,6 +170,11 @@ public class GetDashboardOpportunitiesEndpoint : IEndpoint
             won.Sum(s => s.Count),
             won.Sum(s => s.TotalValue),
             byStage,
+            byPipeline,
+            scope.ScopeLabel,
+            scope.SelectedPipelineId,
+            scope.IsTenantWide,
+            scope.IsMultiPipelineTenant,
             DateTime.UtcNow));
     }
 }

@@ -39,15 +39,58 @@ public sealed class DashboardOpportunities
     public int WonCount { get; set; }
     public decimal WonValue { get; set; }
     public List<OpportunityStageItem> ByStage { get; set; } = [];
+
+    /// <summary>
+    /// Per-pipeline subtotals, present whenever the figures span more than one pipeline.
+    /// Derived server-side from the same rows as the totals, so the parts always sum to the
+    /// whole — which is what lets the widget show the split rather than one number whose
+    /// composition the reader has to guess at.
+    /// </summary>
+    public List<PipelineBreakdownItem> ByPipeline { get; set; } = [];
+
+    /// <summary>What these figures cover — a pipeline name, or "All pipelines".</summary>
+    public string ScopeLabel { get; set; } = string.Empty;
+
+    public Guid? PipelineId { get; set; }
+    public bool IsTenantWide { get; set; }
+
+    /// <summary>
+    /// Whether the tenant has more than one deal pipeline. False means the widget shows no
+    /// scope label and no picker at all — a single-pipeline tenant's dashboard is unchanged.
+    /// </summary>
+    public bool IsMultiPipeline { get; set; }
+
     public DateTime GeneratedAt { get; set; }
+}
+
+public sealed class PipelineBreakdownItem
+{
+    public Guid PipelineId { get; set; }
+    public string PipelineName { get; set; } = string.Empty;
+    public int Count { get; set; }
+    public decimal TotalValue { get; set; }
+    public int OpenCount { get; set; }
+    public decimal OpenValue { get; set; }
+    public int WonCount { get; set; }
+    public decimal WonValue { get; set; }
 }
 
 public sealed class OpportunityStageItem
 {
+    public Guid StageId { get; set; }
     public string Stage { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Entry, Active, ClosedWon or ClosedLost. The widget colours and the open/won split read
+    /// this rather than the name, which the tenant owns and may change at any time.
+    /// </summary>
+    public string StageType { get; set; } = string.Empty;
     public int Count { get; set; }
     public decimal TotalValue { get; set; }
     public bool IsTerminal { get; set; }
+
+    public Guid PipelineId { get; set; }
+    public string PipelineName { get; set; } = string.Empty;
 }
 
 public sealed class DashboardAttention

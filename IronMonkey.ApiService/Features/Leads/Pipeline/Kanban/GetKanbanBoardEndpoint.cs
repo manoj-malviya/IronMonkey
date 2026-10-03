@@ -23,24 +23,50 @@ public class GetKanbanBoardEndpoint : IEndpoint
         Guid StageId, string StageName, int Order, string StageType,
         List<LeadCardDto> Leads, bool HasMore, int TotalCount);
 
-    public record BoardResponse(List<KanbanColumnDto> Columns);
+    /// <param name="ScopeLabel">Which pipeline the columns belong to — a name, or "All pipelines".</param>
+    public record BoardResponse(
+        List<KanbanColumnDto> Columns,
+        Guid? PipelineId,
+        string ScopeLabel,
+        bool IsTenantWide,
+        bool IsMultiPipeline);
 
-    private static async Task<Ok<BoardResponse>> Handle(
+    /// <param name="pipelineId">
+    /// Which pipeline's board to show. Omitted means the default one — a board is a single
+    /// funnel by definition, and merging two pipelines' columns would produce a board whose
+    /// columns no single record can move between.
+    /// </param>
+    internal static async Task<Results<Ok<BoardResponse>, BadRequest<string>>> Handle(
         Guid? assignedAgentId,
         string? leadSource,
         DateTime? dateFrom,
         DateTime? dateTo,
+        string? pipelineId,
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
+        Features.Pipelines.IPipelineScopeResolver scopeResolver,
         CancellationToken cancellationToken)
     {
         var tenantId = tenantService.GetCurrentTenantId();
         var connectionString = await tenantService.GetConnectionStringAsync(cancellationToken);
         await using var db = dbContextFactory.CreateForTenant(connectionString, tenantId);
 
+        var scope = await scopeResolver.ResolveAsync(
+            db, PipelineRecordType.Lead, pipelineId, cancellationToken);
+
+        if (!scope.IsValid) return TypedResults.BadRequest(scope.Error!);
+
+        var scopedPipelines = scope.PipelineIds;
+
+        // The RecordType predicate also closes a pre-existing hole: opportunity stages have
+        // shared this table since Part A, so an unfiltered board rendered every deal stage as
+        // an empty lead column.
         var stages = await db.PipelineStages
-            .Where(p => p.IsActive)
+            .Where(p => p.IsActive
+                        && p.RecordType == PipelineRecordType.Lead
+                        && scopedPipelines.Contains(p.PipelineId))
             .OrderBy(p => p.Order)
+            .ThenBy(p => p.Id)
             .ToListAsync(cancellationToken);
 
         var now = DateTime.UtcNow;
@@ -82,6 +108,11 @@ public class GetKanbanBoardEndpoint : IEndpoint
                 leads, totalCount > 20, totalCount));
         }
 
-        return TypedResults.Ok(new BoardResponse(columns));
+        return TypedResults.Ok(new BoardResponse(
+            columns,
+            scope.SelectedPipelineId,
+            scope.ScopeLabel,
+            scope.IsTenantWide,
+            scope.IsMultiPipelineTenant));
     }
 }

@@ -71,6 +71,11 @@ public static class ConfigureServices
             builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
             builder.Services.AddScoped<ILeadRoutingService, LeadRoutingService>();
             builder.Services.AddScoped<IConfigurationUsageService, ConfigurationUsageService>();
+
+            // Resolves the pipelineId query parameter every pipeline-aware endpoint takes.
+            // Stateless, so a singleton is enough.
+            builder.Services.AddSingleton<Features.Pipelines.IPipelineScopeResolver,
+                Features.Pipelines.PipelineScopeResolver>();
             builder.Services.AddScoped<IStateValidationService, StateValidationService>();
             // Phase 5: Activity tracking
             // Singleton + exposed as IInterceptor so TenantDbContextFactory (itself a

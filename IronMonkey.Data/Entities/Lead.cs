@@ -28,8 +28,22 @@ public sealed class Lead : BaseTenantEntity
     public string Email { get; private set; } = string.Empty;
     public LeadSource Source { get; private set; } = LeadSource.Manual;
     public Guid PipelineStageId { get; private set; }
+
+    /// <summary>
+    /// The pipeline this lead runs in. Non-nullable: a record outside every pipeline appears
+    /// on no board and in no pipeline-scoped total, so the state is forbidden rather than
+    /// handled. Kept denormalised beside <see cref="PipelineStageId"/> — rather than read
+    /// through <c>Stage.PipelineId</c> — so a list or dashboard filtered by pipeline is an
+    /// index seek on the lead table, not a join for every row.
+    ///
+    /// The two are held consistent by <see cref="MoveToPipelineStage"/>, which is the only
+    /// way either changes.
+    /// </summary>
+    public Guid PipelineId { get; private set; }
+
     public CustomFieldValues CustomFields { get; private set; } = new();
     public PipelineStage Stage { get; private set; } = null!;
+    public Pipeline Pipeline { get; private set; } = null!;
     public Guid? ConvertedAccountId { get; private set; }
     public Guid? ConvertedContactId { get; private set; }
     public Guid? ConvertedOpportunityId { get; private set; }
@@ -68,5 +82,32 @@ public sealed class Lead : BaseTenantEntity
 
     public void AssignTo(Guid? userId) => AssignedToUserId = userId;
 
+    /// <summary>
+    /// Moves the lead to a stage within its current pipeline.
+    ///
+    /// This overload deliberately does not touch <see cref="PipelineId"/>: an ordinary stage
+    /// move must never change which pipeline a record is in, and the callers that use it
+    /// have already validated the stage against the lead's own pipeline.
+    /// </summary>
     public void MoveToPipelineStage(Guid stageId) => PipelineStageId = stageId;
+
+    /// <summary>
+    /// Moves the lead into a different pipeline, landing on an explicitly chosen stage of
+    /// that pipeline.
+    ///
+    /// Both values are set together and by one method because setting either alone is the
+    /// central correctness risk of multiple pipelines: a pipeline change that kept the old
+    /// stage would leave the record pointing at a stage from a pipeline it is no longer in —
+    /// invisible on its new board, and counted in the old pipeline's per-stage totals. The
+    /// caller resolves <paramref name="stageId"/> within <paramref name="pipelineId"/> and
+    /// the move is refused outright if it cannot.
+    /// </summary>
+    public void MoveToPipeline(Guid pipelineId, Guid stageId)
+    {
+        PipelineId = pipelineId;
+        PipelineStageId = stageId;
+    }
+
+    /// <summary>Places the lead in a pipeline at creation or during seeding.</summary>
+    public void SetPipeline(Guid pipelineId) => PipelineId = pipelineId;
 }

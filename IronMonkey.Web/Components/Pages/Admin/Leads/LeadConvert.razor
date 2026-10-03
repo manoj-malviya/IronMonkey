@@ -67,11 +67,11 @@
                         </div>
                         <div>
                             <label class="mb-1 block text-sm font-medium text-slate-700">Stage</label>
-                            <select @bind="_model.Stage"
+                            <select @bind="_model.StageId"
                                     class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                @foreach (var s in IronMonkey.Common.OpportunityStages.All)
+                                @foreach (var s in _stages)
                                 {
-                                    <option value="@s">@s</option>
+                                    <option value="@s.Id">@s.Name</option>
                                 }
                             </select>
                         </div>
@@ -103,10 +103,19 @@
     private bool _isLoading = true;
     private bool _isSaving;
     private string? _error;
+    private List<StageItem> _stages = [];
 
     protected override async Task OnInitializedAsync()
     {
         _lead = await Api.GetFromJsonAsync<LeadDetail>($"/api/leads/{Id}");
+
+        // The tenant's own opportunity stages, not a hardcoded list. Active only: a
+        // conversion should never land a new deal in a stage that is out of use.
+        _stages = await Api.GetFromJsonAsync<List<StageItem>>("/api/opportunity-stages") ?? [];
+
+        // Default to the entry stage, falling back to the first active one.
+        var entry = _stages.FirstOrDefault(s => s.StageType == "Entry") ?? _stages.FirstOrDefault();
+        if (entry is not null) _model.StageId = entry.Id;
         if (_lead is null) _error = "Lead not found.";
         else if (_lead.IsConverted) _error = "This lead has already been converted.";
         else _model.OpportunityTitle = $"{_lead.FirstName} {_lead.LastName}".Trim();
@@ -126,7 +135,7 @@
                 _model.OpportunityTitle,
                 _model.Amount,
                 ExpectedCloseDate = DateTime.SpecifyKind(_model.ExpectedCloseDate, DateTimeKind.Utc),
-                _model.Stage
+                _model.StageId
             });
 
             if (res.IsSuccessStatusCode)
@@ -155,7 +164,14 @@
 
         public decimal Amount { get; set; }
         public DateTime ExpectedCloseDate { get; set; } = DateTime.UtcNow.AddDays(30);
-        public string Stage { get; set; } = IronMonkey.Common.OpportunityStages.Qualification;
+        public Guid StageId { get; set; }
+    }
+
+    private class StageItem
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = "";
+        public string StageType { get; set; } = "";
     }
 
     private class LeadDetail

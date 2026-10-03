@@ -5,7 +5,8 @@ using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Common.Extensions;
 using IronMonkey.ApiService.Common.Results;
-using IronMonkey.Common;
+using IronMonkey.ApiService.Features.Configuration;
+using IronMonkey.ApiService.Features.Opportunities;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
 
@@ -30,7 +31,7 @@ public class ConvertLeadEndpoint : IEndpoint
         string? OpportunityTitle,
         decimal Amount,
         DateTime? ExpectedCloseDate,
-        string? Stage);
+        Guid? StageId);
 
     public record Response(Guid LeadId, Guid ContactId, Guid? OpportunityId, string Message);
 
@@ -50,6 +51,7 @@ public class ConvertLeadEndpoint : IEndpoint
         Request request,
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
+        IUserContext userContext,
         CancellationToken cancellationToken)
     {
         var tenantId = tenantService.GetCurrentTenantId();
@@ -64,9 +66,25 @@ public class ConvertLeadEndpoint : IEndpoint
         if (lead.IsConverted)
             return new ValidationError("This lead has already been converted.");
 
-        var stage = request.Stage ?? OpportunityStages.Qualification;
-        if (request.CreateOpportunity && !OpportunityStages.IsValid(stage))
-            return new ValidationError($"Invalid stage. Valid: {string.Join(", ", OpportunityStages.All)}");
+        // Resolve the opportunity stage up front, before anything is written: converting a
+        // lead and then failing on the stage would leave a contact created for a conversion
+        // that did not happen.
+        PipelineStage? opportunityStage = null;
+        if (request.CreateOpportunity)
+        {
+            opportunityStage = request.StageId is { } requestedStageId
+                ? await OpportunityStageResolver.FindAsync(db, requestedStageId, cancellationToken)
+                : await OpportunityStageResolver.GetDefaultEntryAsync(db, cancellationToken);
+
+            if (opportunityStage is null)
+                return new ValidationError(
+                    request.StageId is null
+                        ? "This tenant has no active opportunity stage to place the deal in."
+                        : "The selected stage does not exist for this tenant.");
+
+            if (!opportunityStage.IsActive)
+                return new ValidationError($"'{opportunityStage.Name}' is not an active stage.");
+        }
 
         var email = lead.Email.Trim().ToLowerInvariant();
 
@@ -101,9 +119,16 @@ public class ConvertLeadEndpoint : IEndpoint
                 DateTime.SpecifyKind(
                     request.ExpectedCloseDate ?? DateTime.UtcNow.AddDays(30),
                     DateTimeKind.Utc),
-                stage);
+                opportunityStage!.Id);
             opportunity.SetAmount(request.Amount);
             db.Opportunities.Add(opportunity);
+
+            // The deal's first placement, recorded like any other move so its time in the
+            // entry stage is measurable from conversion rather than from its first edit.
+            StageChangeRecorder.Record(
+                db, tenantId, PipelineRecordType.Opportunity, opportunity.Id,
+                fromStageId: null, toStageId: opportunityStage.Id, userContext.UserId,
+                fromPipelineId: null, toPipelineId: opportunityStage.PipelineId);
         }
 
         lead.Convert(accountId: null, contactId: contact.Id, opportunityId: opportunity?.Id);

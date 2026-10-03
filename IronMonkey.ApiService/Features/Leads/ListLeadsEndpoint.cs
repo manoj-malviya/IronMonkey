@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
+using IronMonkey.ApiService.Features.Pipelines;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
 
@@ -26,7 +27,8 @@ public class ListLeadsEndpoint : IEndpoint
 
     public record LeadItem(
         Guid Id, string FirstName, string LastName, string Email, string Mobile,
-        string Source, Guid PipelineStageId, string StageName, bool IsConverted,
+        string Source, Guid PipelineStageId, string StageName,
+        Guid PipelineId, string PipelineName, bool IsConverted,
         Guid? AssignedToUserId, DateTime CreatedAt,
         Dictionary<string, object?> CustomFields);
 
@@ -39,16 +41,29 @@ public class ListLeadsEndpoint : IEndpoint
         int TotalCount,
         int Page,
         int PageSize,
-        int TotalPages);
+        int TotalPages,
+        /// <summary>Which pipeline(s) TotalCount covers — a name, or "All pipelines". A
+        /// total shown without this is a number whose meaning the reader has to guess.</summary>
+        string ScopeLabel,
+        Guid? PipelineId,
+        bool IsTenantWide,
+        bool IsMultiPipeline);
 
-    internal static async Task<Ok<LeadPage>> Handle(
+    /// <param name="pipelineId">
+    /// Which pipeline's leads to list. Omitted means the default pipeline, NOT all of them.
+    /// TotalCount is counted over the same scope, so "1–25 of 240" describes the pipeline
+    /// the list claims to be showing rather than the tenant. Pass "all" for every pipeline.
+    /// </param>
+    internal static async Task<Results<Ok<LeadPage>, BadRequest<string>>> Handle(
         string? search,
         Guid? stageId,
         string? sort,
         int? page,
         int? pageSize,
+        string? pipelineId,
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
+        IPipelineScopeResolver scopeResolver,
         CancellationToken cancellationToken)
     {
         var tenantId = tenantService.GetCurrentTenantId();
@@ -56,7 +71,22 @@ public class ListLeadsEndpoint : IEndpoint
 
         await using var db = dbContextFactory.CreateForTenant(connectionString, tenantId);
 
-        var query = db.Leads.Include(l => l.Stage).AsQueryable();
+        var scope = await scopeResolver.ResolveAsync(
+            db, PipelineRecordType.Lead, pipelineId, cancellationToken);
+
+        if (!scope.IsValid) return TypedResults.BadRequest(scope.Error!);
+
+        var scopedPipelines = scope.PipelineIds;
+
+        // Applied before the count, so the total describes the same set the page comes from.
+        // No Include: the only things read from those navigations are two names, and a
+        // projection below fetches exactly them. AsNoTracking because nothing here mutates
+        // or saves — tracking 25 leads plus their stage and pipeline was pure overhead on a
+        // read-only list.
+        var query = db.Leads
+            .AsNoTracking()
+            .Where(l => scopedPipelines.Contains(l.PipelineId))
+            .AsQueryable();
 
         if (stageId.HasValue)
             query = query.Where(l => l.PipelineStageId == stageId.Value);
@@ -87,17 +117,32 @@ public class ListLeadsEndpoint : IEndpoint
         var requested = Math.Max(page ?? 1, 1);
         var current = totalPages == 0 ? 1 : Math.Min(requested, totalPages);
 
-        var leads = await query
+        // Projected AFTER the sort, so ApplySort keeps ordering by l.Stage.Order (EF emits
+        // the join) and needs no change. CustomFields stays in the projection: it is part of
+        // the published LeadItem contract, so dropping it would be an API break rather than
+        // an optimisation.
+        var rows = await query
             .Skip((current - 1) * size)
             .Take(size)
+            .Select(l => new Row(
+                l.Id, l.FirstName, l.LastName, l.Email, l.Mobile,
+                l.Source, l.PipelineStageId, l.Stage.Name,
+                l.PipelineId, l.Pipeline.Name,
+                l.IsConverted, l.AssignedToUserId, l.CreatedAt, l.CustomFields))
             .ToListAsync(cancellationToken);
 
-        var items = leads.Select(l => new LeadItem(
-            l.Id, l.FirstName, l.LastName, l.Email, l.Mobile,
-            l.Source.ToString(), l.PipelineStageId, l.Stage?.Name ?? "—",
-            l.IsConverted, l.AssignedToUserId, l.CreatedAt, l.CustomFields.Values)).ToList();
+        // Source.ToString() and the "—" fallbacks cannot be translated to SQL, so they run
+        // here over the 25 rows already fetched.
+        var items = rows.Select(r => new LeadItem(
+            r.Id, r.FirstName, r.LastName, r.Email, r.Mobile,
+            r.Source.ToString(), r.PipelineStageId, r.StageName ?? "—",
+            r.PipelineId, r.PipelineName ?? "—",
+            r.IsConverted, r.AssignedToUserId, r.CreatedAt, r.CustomFields.Values)).ToList();
 
-        return TypedResults.Ok(new LeadPage(items, totalCount, current, size, totalPages));
+        return TypedResults.Ok(new LeadPage(
+            items, totalCount, current, size, totalPages,
+            scope.ScopeLabel, scope.SelectedPipelineId,
+            scope.IsTenantWide, scope.IsMultiPipelineTenant));
     }
 
     /// <summary>
@@ -110,6 +155,17 @@ public class ListLeadsEndpoint : IEndpoint
     /// Every branch ends with a tiebreak on Id. Without it, rows sharing a sort value have
     /// no defined order between queries, so a row can appear on two pages or on none.
     /// </summary>
+    /// <summary>
+    /// The columns the list actually reads, so the query fetches those and not whole
+    /// entities. Private to this endpoint — the published shape is <see cref="LeadItem"/>.
+    /// </summary>
+    private sealed record Row(
+        Guid Id, string FirstName, string LastName, string Email, string Mobile,
+        LeadSource Source, Guid PipelineStageId, string? StageName,
+        Guid PipelineId, string? PipelineName,
+        bool IsConverted, Guid? AssignedToUserId, DateTime CreatedAt,
+        CustomFieldValues CustomFields);
+
     private static IQueryable<Lead> ApplySort(IQueryable<Lead> query, string? sort) => sort switch
     {
         "name" => query.OrderBy(l => l.FirstName).ThenBy(l => l.LastName).ThenBy(l => l.Id),

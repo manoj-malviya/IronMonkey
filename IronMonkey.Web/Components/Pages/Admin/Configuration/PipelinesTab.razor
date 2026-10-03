@@ -1,0 +1,576 @@
+@using IronMonkey.Web.HttpHandlers
+@inject AdminApiClient Api
+
+@* Pipelines — where a tenant creates a second funnel, and the only place that choice is made.
+
+   A dealership running new-car sales alongside service bookings, or a university running
+   undergraduate admissions alongside executive education, needs separate funnels inside one
+   tenant. Everything else in the workspace stays single-pipeline until a second one exists
+   here, which is what keeps a single-pipeline tenant from ever being asked to choose. *@
+
+<div class="space-y-6">
+
+    @foreach (var group in new[] { ("Lead", "Lead pipelines", "How enquiries progress to a conversion."),
+                                   ("Opportunity", "Deal pipelines", "How deals progress to won or lost.") })
+    {
+        var recordType = group.Item1;
+        var pipelines = _byRecordType.GetValueOrDefault(recordType, []);
+
+        <section class="space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-base font-semibold text-slate-900">@group.Item2</h2>
+                    <p class="text-sm text-slate-600">@group.Item3</p>
+                </div>
+                <button type="button" @onclick="() => StartAdd(recordType)"
+                        class="shrink-0 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                    Add @(recordType == "Lead" ? "lead" : "deal") pipeline
+                </button>
+            </div>
+
+            @if (_loading)
+            {
+                <p class="py-8 text-center text-sm text-slate-500">Loading…</p>
+            }
+            else if (pipelines.Count == 0)
+            {
+                <p class="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-8 text-center text-sm text-slate-600">
+                    No pipelines configured.
+                </p>
+            }
+            else
+            {
+                <ul class="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                    @foreach (var pipeline in pipelines)
+                    {
+                        <li @key="pipeline.Id" class="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
+                            <div class="min-w-0 flex-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <p class="text-sm font-medium text-slate-900">@pipeline.Name</p>
+                                    @if (pipeline.IsDefault)
+                                    {
+                                        @* The default is what every "no pipeline specified"
+                                           caller resolves to, which is why exactly one
+                                           carries it and why it cannot be removed. *@
+                                        <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800">
+                                            Default
+                                        </span>
+                                    }
+                                    @if (!pipeline.IsActive)
+                                    {
+                                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                                            Inactive
+                                        </span>
+                                    }
+                                </div>
+                                <p class="mt-0.5 text-xs text-slate-500">
+                                    @pipeline.StageCount stage@(pipeline.StageCount == 1 ? "" : "s") ·
+                                    @pipeline.RecordCount record@(pipeline.RecordCount == 1 ? "" : "s")
+                                    @if (!string.IsNullOrWhiteSpace(pipeline.Description))
+                                    {
+                                        <span> · @pipeline.Description</span>
+                                    }
+                                </p>
+                            </div>
+
+                            <div class="flex shrink-0 basis-full items-center justify-end gap-1 sm:basis-auto">
+                                @if (!pipeline.IsDefault && pipeline.IsActive)
+                                {
+                                    <button type="button" @onclick="() => MakeDefaultAsync(pipeline)"
+                                            class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                        Make default
+                                    </button>
+                                }
+                                <button type="button" @onclick="() => StartEdit(pipeline)"
+                                        aria-label="@($"Edit {pipeline.Name}")"
+                                        class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                    Edit
+                                </button>
+                                <a href="@($"/admin/configuration?tab={(recordType == "Lead" ? "stages" : "deal-stages")}")"
+                                   class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                    Stages
+                                </a>
+                                <button type="button" @onclick="() => OpenRemoveAsync(pipeline)"
+                                        disabled="@pipeline.IsDefault"
+                                        aria-label="@($"Remove {pipeline.Name}")"
+                                        class="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-30">
+                                    Remove
+                                </button>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    }
+</div>
+
+@* ── Create / edit panel ────────────────────────────────────────────────────── *@
+@if (_panelOpen)
+{
+    <div class="fixed inset-0 z-40 bg-slate-900/30" @onclick="ClosePanel"></div>
+
+    <aside role="dialog" aria-modal="true" aria-label="@(_editing is null ? "Add pipeline" : "Edit pipeline")"
+           class="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white shadow-xl">
+
+        <header class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+            <h2 class="text-lg font-semibold text-slate-900">
+                @(_editing is null ? "Add pipeline" : "Edit pipeline")
+            </h2>
+            <button type="button" @onclick="ClosePanel" aria-label="Close"
+                    class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">✕</button>
+        </header>
+
+        <div class="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+            @if (_panelError is not null)
+            {
+                <p class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">@_panelError</p>
+            }
+
+            <div>
+                <label for="pipeline-name" class="mb-1 block text-sm font-medium text-slate-700">Pipeline name</label>
+                <input id="pipeline-name" @bind="_draftName" @bind:event="oninput" maxlength="100"
+                       class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+
+            <div>
+                <label for="pipeline-description" class="mb-1 block text-sm font-medium text-slate-700">
+                    Description <span class="font-normal text-slate-500">(optional)</span>
+                </label>
+                <input id="pipeline-description" @bind="_draftDescription" @bind:event="oninput" maxlength="500"
+                       class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+
+            @if (_editing is null)
+            {
+                @* A pipeline with no stages accepts no records, so stages are part of creating
+                   one rather than a follow-up step that can be forgotten. Leaving the box
+                   empty seeds the product's defaults, which are immediately editable. *@
+                <div>
+                    <label for="pipeline-stages" class="mb-1 block text-sm font-medium text-slate-700">
+                        Stages, one per line
+                    </label>
+                    <textarea id="pipeline-stages" @bind="_draftStages" rows="6"
+                              placeholder="@StagePlaceholder"
+                              class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                    <p class="mt-1 text-xs text-slate-500">
+                        Leave blank to start from the standard set. You can rename, reorder and
+                        set which stages mean won or lost afterwards.
+                    </p>
+                </div>
+            }
+            else
+            {
+                <div>
+                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                        <input type="checkbox" checked="@_draftActive"
+                               @onchange="e => _draftActive = (bool)(e.Value ?? false)"
+                               disabled="@_editing.IsDefault"
+                               class="rounded border-slate-300" />
+                        <span>Active</span>
+                    </label>
+                    <p class="mt-1 text-xs text-slate-500">
+                        @(_editing.IsDefault
+                            ? "The default pipeline is always active. Make another pipeline the default first."
+                            : "An inactive pipeline keeps its records but is hidden from pickers. It cannot be deactivated while it still holds any.")
+                    </p>
+                </div>
+            }
+        </div>
+
+        <footer class="flex justify-end gap-2 border-t border-slate-200 px-6 py-4">
+            <button type="button" @onclick="ClosePanel"
+                    class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                Cancel
+            </button>
+            <button type="button" @onclick="SavePanelAsync" disabled="@_panelSaving"
+                    class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                @(_panelSaving ? "Saving…" : "Save")
+            </button>
+        </footer>
+    </aside>
+}
+
+@* ── Remove confirmation, with impact ───────────────────────────────────────── *@
+@if (_removing is not null)
+{
+    <div class="fixed inset-0 z-40 bg-slate-900/40" @onclick="CancelRemove"></div>
+
+    <div role="dialog" aria-modal="true" aria-labelledby="remove-pipeline-title"
+         class="fixed left-1/2 top-1/2 z-50 w-[min(34rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-xl">
+
+        <h2 id="remove-pipeline-title" class="text-lg font-semibold text-slate-900">
+            Remove “@_removing.Name”?
+        </h2>
+
+        @if (_impact is null)
+        {
+            <p class="mt-3 text-sm text-slate-600">Checking what this affects…</p>
+        }
+        else
+        {
+            <div class="mt-3 space-y-3 text-sm text-slate-600">
+                @if (_impact.Blocker is { } blocker)
+                {
+                    <p class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-red-700">@blocker</p>
+                }
+                else
+                {
+                    <p>
+                        This pipeline has <strong>@_impact.StageCount stage@(_impact.StageCount == 1 ? "" : "s")</strong>
+                        and holds <strong>@_impact.RecordCount record@(_impact.RecordCount == 1 ? "" : "s")</strong>.
+                    </p>
+
+                    @if (_impact.RecordCount > 0)
+                    {
+                        <div>
+                            <label for="pipeline-reassign" class="mb-1 block text-sm font-medium text-slate-700">
+                                Move those records to
+                            </label>
+                            <select id="pipeline-reassign" @bind="_reassignTo"
+                                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                                <option value="">— Choose a pipeline —</option>
+                                @foreach (var target in _impact.ReassignTargets)
+                                {
+                                    <option value="@target.Id">
+                                        @target.Name@(target.EntryStageName is { } s ? $" — they will land in “{s}”" : "")
+                                    </option>
+                                }
+                            </select>
+                            @* Stating the landing stage is the point. A move that does not say
+                               which stage it lands in is the silent cross-pipeline placement
+                               this whole feature exists to prevent. *@
+                            <p class="mt-1 text-xs text-slate-500">
+                                Records land in the destination's first stage — never in the
+                                stage they hold now, which belongs to the pipeline being removed.
+                            </p>
+                        </div>
+                    }
+
+                    @if (_impact.ScopedFieldCount + _impact.ScopedRuleCount + _impact.ScopedRoutingCount > 0)
+                    {
+                        <p class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800">
+                            @(_impact.ScopedFieldCount + _impact.ScopedRuleCount + _impact.ScopedRoutingCount)
+                            item(s) target this pipeline
+                            (@_impact.ScopedFieldCount field(s), @_impact.ScopedRuleCount rule(s),
+                            @_impact.ScopedRoutingCount routing config(s)).
+                            They are <strong>not deleted</strong> — they will apply to the whole
+                            organisation instead, so check they still do what you want.
+                        </p>
+                    }
+
+                    @if (_impact.HistoryCount > 0)
+                    {
+                        <p class="text-slate-500">
+                            @_impact.HistoryCount history record(s) refer to this pipeline and are kept.
+                        </p>
+                    }
+                }
+            </div>
+        }
+
+        @if (_removeError is not null)
+        {
+            <p class="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">@_removeError</p>
+        }
+
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" @onclick="CancelRemove"
+                    class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                Cancel
+            </button>
+            <button type="button" @onclick="ConfirmRemoveAsync"
+                    disabled="@(_removeBusy || _impact is null || !_impact.CanRemove
+                                || (_impact.RecordCount > 0 && string.IsNullOrEmpty(_reassignTo)))"
+                    class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+                @(_removeBusy ? "Removing…" : "Remove pipeline")
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public EventCallback<string> OnSuccess { get; set; }
+
+    [Parameter] public EventCallback<string> OnError { get; set; }
+
+    private readonly Dictionary<string, List<PipelineItem>> _byRecordType = [];
+
+    private bool _loading = true;
+
+    private bool _panelOpen;
+    private PipelineItem? _editing;
+    private string _draftRecordType = "Lead";
+    private string _draftName = string.Empty;
+    private string _draftDescription = string.Empty;
+    private string _draftStages = string.Empty;
+    private bool _draftActive = true;
+    private bool _panelSaving;
+    private string? _panelError;
+
+    private PipelineItem? _removing;
+    private PipelineImpact? _impact;
+    private string _reassignTo = string.Empty;
+    private bool _removeBusy;
+    private string? _removeError;
+
+    private string StagePlaceholder => _draftRecordType == "Opportunity"
+        ? "Qualification\nProposal\nNegotiation\nWon\nLost"
+        : "New\nContacted\nQualified\nConverted\nClosed Lost";
+
+    /// <summary>
+    /// Fetched after the first interactive render: the JWT lives in ProtectedSessionStorage
+    /// and is unreadable during prerender, so a call made there goes out unauthenticated.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        await LoadAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            foreach (var recordType in new[] { "Lead", "Opportunity" })
+            {
+                // includeInactive so a retired pipeline can be found and reactivated; the
+                // pickers elsewhere leave it off.
+                var response = await Api.GetFromJsonAsync<PipelineListResponse>(
+                    $"/api/pipelines?recordType={recordType}&includeInactive=true");
+
+                _byRecordType[recordType] = response?.Items ?? [];
+            }
+        }
+        catch (Exception ex)
+        {
+            await OnError.InvokeAsync($"Failed to load pipelines: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void StartAdd(string recordType)
+    {
+        _editing = null;
+        _draftRecordType = recordType;
+        _draftName = string.Empty;
+        _draftDescription = string.Empty;
+        _draftStages = string.Empty;
+        _draftActive = true;
+        _panelError = null;
+        _panelOpen = true;
+    }
+
+    private void StartEdit(PipelineItem pipeline)
+    {
+        _editing = pipeline;
+        _draftRecordType = pipeline.RecordType;
+        _draftName = pipeline.Name;
+        _draftDescription = pipeline.Description ?? string.Empty;
+        _draftActive = pipeline.IsActive;
+        _panelError = null;
+        _panelOpen = true;
+    }
+
+    private void ClosePanel()
+    {
+        _panelOpen = false;
+        _editing = null;
+        _panelError = null;
+    }
+
+    private async Task SavePanelAsync()
+    {
+        var name = _draftName.Trim();
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            _panelError = "Enter a pipeline name.";
+            return;
+        }
+
+        _panelSaving = true;
+        _panelError = null;
+
+        try
+        {
+            HttpResponseMessage response;
+
+            if (_editing is null)
+            {
+                // An empty list is sent as null so the server seeds its defaults — the
+                // difference between "no opinion" and "seed nothing" matters here, and only
+                // the former is a sensible thing for this form to express.
+                var stages = _draftStages
+                    .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(line => new { Name = line, StageType = "Active" })
+                    .ToList();
+
+                response = await Api.PostAsJsonAsync("/api/pipelines", new
+                {
+                    Name = name,
+                    RecordType = _draftRecordType,
+                    Description = string.IsNullOrWhiteSpace(_draftDescription) ? null : _draftDescription.Trim(),
+                    Stages = stages.Count > 0 ? stages : null
+                });
+            }
+            else
+            {
+                response = await Api.PutAsJsonAsync($"/api/pipelines/{_editing.Id}", new
+                {
+                    Name = name,
+                    Description = string.IsNullOrWhiteSpace(_draftDescription) ? null : _draftDescription.Trim(),
+                    IsActive = _draftActive
+                });
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                var verb = _editing is null ? "created" : "updated";
+                ClosePanel();
+                await LoadAsync();
+                await OnSuccess.InvokeAsync($"Pipeline '{name}' {verb}.");
+            }
+            else
+            {
+                _panelError = await ReadProblemAsync(response);
+            }
+        }
+        catch (Exception ex)
+        {
+            _panelError = ex.Message;
+        }
+        finally
+        {
+            _panelSaving = false;
+        }
+    }
+
+    /// <summary>
+    /// Promotes a pipeline to the default. The server demotes the previous one in the same
+    /// transaction — exactly one default per record type is a database constraint, because it
+    /// is what makes "no pipeline specified" resolve to a single answer.
+    /// </summary>
+    private async Task MakeDefaultAsync(PipelineItem pipeline)
+    {
+        try
+        {
+            var response = await Api.PutAsJsonAsync($"/api/pipelines/{pipeline.Id}", new
+            {
+                pipeline.Name,
+                pipeline.Description,
+                IsDefault = true
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadAsync();
+                await OnSuccess.InvokeAsync($"'{pipeline.Name}' is now the default.");
+            }
+            else
+            {
+                await OnError.InvokeAsync(await ReadProblemAsync(response));
+            }
+        }
+        catch (Exception ex)
+        {
+            await OnError.InvokeAsync(ex.Message);
+        }
+    }
+
+    private async Task OpenRemoveAsync(PipelineItem pipeline)
+    {
+        _removing = pipeline;
+        _impact = null;
+        _reassignTo = string.Empty;
+        _removeError = null;
+
+        try
+        {
+            _impact = await Api.GetFromJsonAsync<PipelineImpact>($"/api/pipelines/{pipeline.Id}/impact");
+
+            if (_impact is null)
+                _removeError = "Could not check what this pipeline affects. Try again.";
+        }
+        catch (Exception ex)
+        {
+            _removeError = ex.Message;
+        }
+    }
+
+    private void CancelRemove()
+    {
+        _removing = null;
+        _impact = null;
+        _removeError = null;
+    }
+
+    private async Task ConfirmRemoveAsync()
+    {
+        if (_removing is null) return;
+
+        _removeBusy = true;
+        _removeError = null;
+
+        try
+        {
+            var url = $"/api/pipelines/{_removing.Id}";
+            if (!string.IsNullOrEmpty(_reassignTo)) url += $"?reassignTo={_reassignTo}";
+
+            var response = await Api.DeleteAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // The server's own message names how many records moved, where they landed,
+                // and how much configuration was widened — more useful than a generic
+                // "removed", so it is shown verbatim.
+                var body = await response.Content.ReadFromJsonAsync<PipelineRemovalResult>();
+
+                CancelRemove();
+                await LoadAsync();
+                await OnSuccess.InvokeAsync(body?.Message ?? "Pipeline removed.");
+            }
+            else
+            {
+                _removeError = await ReadProblemAsync(response);
+            }
+        }
+        catch (Exception ex)
+        {
+            _removeError = ex.Message;
+        }
+        finally
+        {
+            _removeBusy = false;
+        }
+    }
+
+    private record PipelineRemovalResult(
+        bool Success, string Message, int ReassignedRecords, Guid? ReassignedToPipelineId,
+        string? ReassignedToStageName, int WidenedFields, int WidenedRules, int WidenedRoutingConfigs);
+
+    private static async Task<string> ReadProblemAsync(HttpResponseMessage response)
+    {
+        var body = await response.Content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(body)) return $"Request failed ({(int)response.StatusCode}).";
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(body);
+            if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.String)
+                return doc.RootElement.GetString() ?? body;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            // Not JSON — show it as-is.
+        }
+
+        return body;
+    }
+}

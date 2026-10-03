@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Features.Configuration;
+using IronMonkey.ApiService.Features.Pipelines;
 using IronMonkey.Data;
 
 namespace IronMonkey.ApiService.Features.Leads.PipelineStages;
@@ -47,7 +48,9 @@ public class GetPipelineStageImpactEndpoint : IEndpoint
 
         var usage = await usageService.GetStageUsageAsync(db, id, cancellationToken);
 
-        var targets = await db.PipelineStages
+        // Offered from the stage's OWN pipeline only: a target from another pipeline would
+        // strand every reassigned lead on a stage its pipeline does not contain.
+        var targets = await PipelineStageResolution.Stages(db, stage.PipelineId)
             .Where(p => p.Id != id && p.IsActive)
             .OrderBy(p => p.Order)
             .Select(p => new ReassignTarget(p.Id, p.Name))

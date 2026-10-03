@@ -78,11 +78,20 @@ public class ActivityInterceptorTests(PostgreSqlFixture fixture) : IClassFixture
         var factory = TrackingFactory();
 
         Guid opportunityId;
+        Guid qualificationStageId;
+        Guid wonStageId;
         await using (var db = factory.CreateForTenant(connStr, tenantId))
         {
             var contact = Contact.Create(tenantId, "Grace Hopper", "555", "grace@test.com");
             db.Contacts.Add(contact);
-            var opportunity = Opportunity.Create(tenantId, "Compiler licence", contact.Id, DateTime.UtcNow.AddDays(30), "Qualification");
+            await db.SaveChangesAsync();
+
+            var oppStages = await OpportunityStageSeed.EnsureAsync(db, tenantId);
+            qualificationStageId = oppStages[IronMonkey.Common.OpportunityStages.Qualification];
+            wonStageId = oppStages[IronMonkey.Common.OpportunityStages.Won];
+
+            var opportunity = Opportunity.Create(
+                tenantId, "Compiler licence", contact.Id, DateTime.UtcNow.AddDays(30), qualificationStageId);
             opportunity.SetAmount(1000m);
             db.Opportunities.Add(opportunity);
             await db.SaveChangesAsync();
@@ -92,7 +101,7 @@ public class ActivityInterceptorTests(PostgreSqlFixture fixture) : IClassFixture
         await using (var db = factory.CreateForTenant(connStr, tenantId))
         {
             var opportunity = await db.Opportunities.SingleAsync(o => o.Id == opportunityId);
-            opportunity.UpdateStage("Won");
+            opportunity.MoveToPipelineStage(wonStageId);
             opportunity.SetAmount(2500m);
             await db.SaveChangesAsync();
         }
@@ -102,8 +111,12 @@ public class ActivityInterceptorTests(PostgreSqlFixture fixture) : IClassFixture
             .Where(a => a.SubjectType == "Opportunity" && a.SubjectId == opportunityId && a.EventType == "Updated")
             .SingleAsync();
 
-        Assert.Equal("Qualification", update.OldValues!["Stage"]!.ToString());
-        Assert.Equal("Won", update.NewValues!["Stage"]!.ToString());
+        // The stage is a foreign key now, not a free-text name, so the interceptor records
+        // the id that changed. The name is resolved for display by joining pipeline_stages —
+        // logging a name here would freeze it at the value it had when the move happened and
+        // then disagree with the stage after a rename.
+        Assert.Equal(qualificationStageId.ToString(), update.OldValues!["PipelineStageId"]!.ToString());
+        Assert.Equal(wonStageId.ToString(), update.NewValues!["PipelineStageId"]!.ToString());
         Assert.Equal("1000", update.OldValues["Amount"]!.ToString());
         Assert.Equal("2500", update.NewValues["Amount"]!.ToString());
 

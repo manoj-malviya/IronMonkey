@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using IronMonkey.ApiService.Features.Communications;
+using IronMonkey.ApiService.Features.Pipelines;
 using IronMonkey.ApiService.Features.Leads.Workflow.Execution;
 using IronMonkey.ApiService.Notifications;
 using IronMonkey.Data.Communications;
@@ -25,9 +26,18 @@ public class WorkflowRuleEngine(
         TenantDbContext db, CancellationToken cancellationToken,
         WorkflowExecutionContext? context = null)
     {
-        var rules = await db.WorkflowRules
+        var candidates = await db.WorkflowRules
             .Where(r => r.Trigger == trigger && r.IsActive)
             .ToListAsync(cancellationToken);
+
+        // Pipeline precedence: rules scoped to THIS lead's pipeline win outright, and the
+        // tenant-wide rules are then NOT also run. Unioning them would leave a pipeline-scoped
+        // rule unable to override anything — it could only ever add — so "this pipeline
+        // instead" would be inexpressible. See PipelineTargeting for the full rationale.
+        //
+        // Every rule written before pipelines existed carries a null target, so for a tenant
+        // that has scoped nothing this returns exactly the set it always did.
+        var rules = PipelineTargeting.Resolve(candidates, lead.PipelineId, r => r.PipelineId);
 
         foreach (var rule in rules)
         {
