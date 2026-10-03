@@ -4,6 +4,7 @@ using IronMonkey.Common.Exceptions;
 using IronMonkey.Data.Abstractions;
 using IronMonkey.Data.Entities;
 using IronMonkey.Data.Outbox;
+using IronMonkey.Data.Visibility;
 
 namespace IronMonkey.Data;
 
@@ -16,11 +17,41 @@ public class TenantDbContext : DbContext
 {
     private readonly Guid _tenantId;
 
+    // Record visibility, captured once at construction from the ambient request visibility
+    // (see RecordVisibility). The query filters below read these fields, which EF Core
+    // parameterises per context instance — so one cached model serves every caller and each
+    // context enforces its own caller's scope.
+    private readonly bool _leadsAll;
+    private readonly bool _contactsAll;
+    private readonly bool _opportunitiesAll;
+    private readonly bool _tasksAll;
+    private readonly List<Guid> _leadOwners;
+    private readonly List<Guid> _contactOwners;
+    private readonly List<Guid> _opportunityOwners;
+    private readonly List<Guid> _taskOwners;
+
     public TenantDbContext(DbContextOptions<TenantDbContext> options, Guid tenantId)
+        : this(options, tenantId, RecordVisibility.Current)
+    {
+    }
+
+    public TenantDbContext(DbContextOptions<TenantDbContext> options, Guid tenantId, RecordVisibility visibility)
         : base(options)
     {
         _tenantId = tenantId;
+        Visibility = visibility;
+        _leadsAll = visibility.IsUnrestricted(VisibilityRecordType.Lead);
+        _contactsAll = visibility.IsUnrestricted(VisibilityRecordType.Contact);
+        _opportunitiesAll = visibility.IsUnrestricted(VisibilityRecordType.Opportunity);
+        _tasksAll = visibility.IsUnrestricted(VisibilityRecordType.Task);
+        _leadOwners = [.. visibility.OwnersFor(VisibilityRecordType.Lead)];
+        _contactOwners = [.. visibility.OwnersFor(VisibilityRecordType.Contact)];
+        _opportunityOwners = [.. visibility.OwnersFor(VisibilityRecordType.Opportunity)];
+        _taskOwners = [.. visibility.OwnersFor(VisibilityRecordType.Task)];
     }
+
+    /// <summary>The record visibility this context enforces.</summary>
+    public RecordVisibility Visibility { get; }
 
     /// <summary>Exposes the tenant identity for interceptors that need to create tenant-scoped activity log entries.</summary>
     public Guid TenantId => _tenantId;
@@ -63,6 +94,14 @@ public class TenantDbContext : DbContext
     public DbSet<QuoteStatusChange> QuoteStatusChanges => Set<QuoteStatusChange>();
     public DbSet<QuoteShareLink> QuoteShareLinks => Set<QuoteShareLink>();
     public DbSet<QuoteSettings> QuoteSettings => Set<QuoteSettings>();
+    public DbSet<Team> Teams => Set<Team>();
+    public DbSet<TeamMembership> TeamMemberships => Set<TeamMembership>();
+    public DbSet<RoleRecordScope> RoleRecordScopes => Set<RoleRecordScope>();
+    public DbSet<SavedView> SavedViews => Set<SavedView>();
+    public DbSet<UserDefaultView> UserDefaultViews => Set<UserDefaultView>();
+    public DbSet<ReportDefinition> ReportDefinitions => Set<ReportDefinition>();
+    public DbSet<ReportRun> ReportRuns => Set<ReportRun>();
+    public DbSet<ExportJob> ExportJobs => Set<ExportJob>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -72,15 +111,25 @@ public class TenantDbContext : DbContext
         // Global query filters — enforced on every query, cannot be accidentally skipped
         // These are the primary TNCY-02 enforcement mechanism
         modelBuilder.Entity<User>().HasQueryFilter(u => u.TenantId == _tenantId && !u.IsDeleted);
-        modelBuilder.Entity<Lead>().HasQueryFilter(l => l.TenantId == _tenantId && !l.IsDeleted);
-        modelBuilder.Entity<Contact>().HasQueryFilter(c => c.TenantId == _tenantId && !c.IsDeleted);
-        modelBuilder.Entity<Opportunity>().HasQueryFilter(o => o.TenantId == _tenantId && !o.IsDeleted);
+        // Record visibility sits beside TenantId in the same filter, so every query — list,
+        // count, detail, aggregate, duplicate check — enforces it. A record outside the
+        // caller's scope behaves exactly like one that does not exist.
+        modelBuilder.Entity<Lead>().HasQueryFilter(l => l.TenantId == _tenantId && !l.IsDeleted
+            && (_leadsAll || (l.AssignedToUserId != null && _leadOwners.Contains(l.AssignedToUserId.Value))));
+        modelBuilder.Entity<Contact>().HasQueryFilter(c => c.TenantId == _tenantId && !c.IsDeleted
+            && (_contactsAll || (c.OwnerUserId != null && _contactOwners.Contains(c.OwnerUserId.Value))));
+        modelBuilder.Entity<Opportunity>().HasQueryFilter(o => o.TenantId == _tenantId && !o.IsDeleted
+            && (_opportunitiesAll || (o.OwnerUserId != null && _opportunityOwners.Contains(o.OwnerUserId.Value))));
         modelBuilder.Entity<Pipeline>().HasQueryFilter(p => p.TenantId == _tenantId && !p.IsDeleted);
         modelBuilder.Entity<PipelineStage>().HasQueryFilter(p => p.TenantId == _tenantId && !p.IsDeleted);
         modelBuilder.Entity<CustomFieldDefinition>().HasQueryFilter(c => c.TenantId == _tenantId && !c.IsDeleted);
         modelBuilder.Entity<LeadMerge>().HasQueryFilter(m => m.TenantId == _tenantId);
         modelBuilder.Entity<ImportBatch>().HasQueryFilter(b => b.TenantId == _tenantId);
-        modelBuilder.Entity<LeadTask>().HasQueryFilter(t => t.TenantId == _tenantId && !t.IsDeleted);
+        // A task is visible when its own assignee is in scope AND its lead is visible: a task
+        // must not become a side door to a lead the caller cannot open.
+        modelBuilder.Entity<LeadTask>().HasQueryFilter(t => t.TenantId == _tenantId && !t.IsDeleted
+            && (_tasksAll || (t.AssignedToUserId != null && _taskOwners.Contains(t.AssignedToUserId.Value)))
+            && (_leadsAll || Set<Lead>().Any(l => l.Id == t.LeadId)));
         modelBuilder.Entity<WorkflowRule>().HasQueryFilter(r => r.TenantId == _tenantId && !r.IsDeleted);
         modelBuilder.Entity<StageTransition>().HasQueryFilter(t => t.TenantId == _tenantId);
 
@@ -90,20 +139,29 @@ public class TenantDbContext : DbContext
         modelBuilder.Entity<StageChange>().HasQueryFilter(c => c.TenantId == _tenantId);
         modelBuilder.Entity<Notification>().HasQueryFilter(n => n.TenantId == _tenantId && !n.IsDeleted);
         modelBuilder.Entity<RoutingConfig>().HasQueryFilter(r => r.TenantId == _tenantId);
-        modelBuilder.Entity<ActivityLog>().HasQueryFilter(a => a.TenantId == _tenantId);
+        modelBuilder.Entity<ActivityLog>().HasQueryFilter(a => a.TenantId == _tenantId
+            && ((_leadsAll && _contactsAll && _opportunitiesAll)
+                || (a.SubjectType == "Lead" ? Set<Lead>().Any(l => l.Id == a.SubjectId)
+                    : a.SubjectType == "Contact" ? Set<Contact>().Any(c => c.Id == a.SubjectId)
+                    : a.SubjectType == "Opportunity" ? Set<Opportunity>().Any(o => o.Id == a.SubjectId)
+                    : true)));
 
         // Execution history is never soft-deleted — retention removes it outright — so the
         // filter is TenantId only. Steps carry their own filter rather than relying on the
         // parent's: a step loaded through Include inherits nothing, and the table is also
         // queried directly by the action-type filter.
-        modelBuilder.Entity<WorkflowExecutionLog>().HasQueryFilter(l => l.TenantId == _tenantId);
+        modelBuilder.Entity<WorkflowExecutionLog>().HasQueryFilter(l => l.TenantId == _tenantId && (_leadsAll || Set<Lead>().Any(x => x.Id == l.LeadId)));
         modelBuilder.Entity<WorkflowExecutionStep>().HasQueryFilter(s => s.TenantId == _tenantId);
 
         // Messages are conversation history and are never soft-deleted: a record of what was
         // said to a customer must survive the lead being removed, so the filter is TenantId
         // only. Consent is likewise permanent — an opt-out that could be soft-deleted would
         // silently become permission to message again.
-        modelBuilder.Entity<Message>().HasQueryFilter(m => m.TenantId == _tenantId);
+        modelBuilder.Entity<Message>().HasQueryFilter(m => m.TenantId == _tenantId
+            && ((_leadsAll && _contactsAll)
+                || (m.LeadId != null ? Set<Lead>().Any(x => x.Id == m.LeadId)
+                    : m.ContactId != null ? Set<Contact>().Any(x => x.Id == m.ContactId)
+                    : true)));
         modelBuilder.Entity<MessageConsent>().HasQueryFilter(c => c.TenantId == _tenantId);
         modelBuilder.Entity<MessageTemplate>().HasQueryFilter(t => t.TenantId == _tenantId && !t.IsDeleted);
         modelBuilder.Entity<MessagingPolicy>().HasQueryFilter(p => p.TenantId == _tenantId);
@@ -128,11 +186,19 @@ public class TenantDbContext : DbContext
         modelBuilder.Entity<PriceList>().HasQueryFilter(p => p.TenantId == _tenantId && !p.IsDeleted);
         modelBuilder.Entity<ProductPrice>().HasQueryFilter(p => p.TenantId == _tenantId);
         modelBuilder.Entity<OpportunityLineItem>().HasQueryFilter(l => l.TenantId == _tenantId);
-        modelBuilder.Entity<Quote>().HasQueryFilter(q => q.TenantId == _tenantId && !q.IsDeleted);
+        modelBuilder.Entity<Quote>().HasQueryFilter(q => q.TenantId == _tenantId && !q.IsDeleted
+            && (_opportunitiesAll || Set<Opportunity>().Any(o => o.Id == q.OpportunityId)));
         modelBuilder.Entity<QuoteLine>().HasQueryFilter(l => l.TenantId == _tenantId);
         modelBuilder.Entity<QuoteStatusChange>().HasQueryFilter(c => c.TenantId == _tenantId);
         modelBuilder.Entity<QuoteShareLink>().HasQueryFilter(l => l.TenantId == _tenantId);
         modelBuilder.Entity<QuoteSettings>().HasQueryFilter(s => s.TenantId == _tenantId);
+        modelBuilder.Entity<Team>().HasQueryFilter(t => t.TenantId == _tenantId && !t.IsDeleted);
+        modelBuilder.Entity<TeamMembership>().HasQueryFilter(m => m.TenantId == _tenantId);
+        modelBuilder.Entity<SavedView>().HasQueryFilter(v => v.TenantId == _tenantId && !v.IsDeleted);
+        modelBuilder.Entity<UserDefaultView>().HasQueryFilter(d => d.TenantId == _tenantId);
+        modelBuilder.Entity<ReportDefinition>().HasQueryFilter(r => r.TenantId == _tenantId && !r.IsDeleted);
+        modelBuilder.Entity<ReportRun>().HasQueryFilter(r => r.TenantId == _tenantId);
+        modelBuilder.Entity<ExportJob>().HasQueryFilter(e => e.TenantId == _tenantId);
 
         // ActivityLog JSONB columns and dashboard indexes
         modelBuilder.Entity<ActivityLog>(entity =>

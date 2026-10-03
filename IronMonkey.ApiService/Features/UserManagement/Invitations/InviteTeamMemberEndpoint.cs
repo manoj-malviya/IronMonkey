@@ -80,6 +80,11 @@ public class InviteTeamMemberEndpoint : IEndpoint
         if (role is null)
             return TypedResults.NotFound();
 
+        // Assigning a role grants its permissions. Refused when the role holds anything the
+        // actor does not — otherwise a user-manager could hand out (or take) more than they have.
+        if (await IronMonkey.ApiService.Features.RoleManagement.PrivilegeGuard.CheckCanAssignRoleAsync(db, userContext.UserId, role.Id, cancellationToken) is { } escalation)
+            return new ValidationError(escalation);
+
         // Already a member of THIS tenant — including a deactivated one, whose row still
         // holds the address. Safe to state plainly: the caller is an admin of this tenant
         // and can see its own membership list anyway.

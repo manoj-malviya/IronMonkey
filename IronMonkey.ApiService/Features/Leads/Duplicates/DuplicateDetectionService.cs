@@ -73,11 +73,10 @@ public class DuplicateDetectionService : IDuplicateDetectionService
         // Fuzzy name match — only when no other candidates found, confidence = score
         if (candidates.Count == 0 && !string.IsNullOrWhiteSpace(name))
         {
-            // Use IgnoreQueryFilters but apply explicit tenant + deleted filter for safety
-            var allLeads = await db.Leads
-                .IgnoreQueryFilters()
-                .Where(l => l.TenantId == tenantId && !l.IsDeleted)
-                .ToListAsync(ct);
+            // The global filter, not IgnoreQueryFilters: it already applies tenant and
+            // soft-delete, and it also applies record visibility. Bypassing it reported "this
+            // lead already exists" against leads the caller may not see — disclosing them.
+            var allLeads = await db.Leads.ToListAsync(ct);
 
             foreach (var lead in allLeads)
             {

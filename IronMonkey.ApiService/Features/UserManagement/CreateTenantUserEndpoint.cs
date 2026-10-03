@@ -64,6 +64,11 @@ public class CreateTenantUserEndpoint : IEndpoint
         if (role is null)
             return TypedResults.NotFound();
 
+        // Assigning a role grants its permissions. Refused when the role holds anything the
+        // actor does not — otherwise a user-manager could hand out (or take) more than they have.
+        if (await IronMonkey.ApiService.Features.RoleManagement.PrivilegeGuard.CheckCanAssignRoleAsync(db, userContext.UserId, role.Id, cancellationToken) is { } escalation)
+            return new ValidationError(escalation);
+
         // The email must be unique across the whole platform, not just this tenant:
         // UserTenantIndex maps one email to exactly one tenant, and LoginEndpoint reads it
         // with SingleOrDefault, so a second row for the same email breaks login for both.

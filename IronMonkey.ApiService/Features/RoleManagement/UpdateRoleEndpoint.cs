@@ -6,6 +6,7 @@ using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Common.Cache;
 using IronMonkey.ApiService.Common.Extensions;
 using IronMonkey.ApiService.Common.Results;
+using IronMonkey.ApiService.Features.UserManagement;
 using IronMonkey.Common.Auth;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
@@ -18,7 +19,7 @@ public class UpdateRoleEndpoint : IEndpoint
         .MapPut("/users/roles/{roleId:int}", Handle)
         .WithSummary("Replace a role's permissions, and rename it if it is not a seeded role")
         .WithTags("Role Management")
-        .RequireAuthorization()
+        .RequireAuthorization(PermissionConstants.UsersWrite)
         .WithRequestValidation<Request>();
 
     public record Request(string Name, List<int> PermissionIds);
@@ -34,12 +35,14 @@ public class UpdateRoleEndpoint : IEndpoint
         }
     }
 
-    private static async Task<Results<Ok<Response>, ValidationError, NotFound>> Handle(
+    internal static async Task<Results<Ok<Response>, ValidationError, NotFound>> Handle(
         int roleId,
         Request request,
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
         ICacheService cacheService,
+        IUserContext userContext,
+        IRecordVisibilityCache visibilityCache,
         CancellationToken cancellationToken)
     {
         // A hidden role must behave as if it does not exist, so a tenant cannot probe for it.
@@ -80,6 +83,20 @@ public class UpdateRoleEndpoint : IEndpoint
         if (permissions is null)
             return new ValidationError("One or more selected permissions are invalid.");
 
+        // Only permissions being ADDED need the actor to hold them: removing a grant the actor
+        // lacks is a narrowing, not an escalation.
+        var before = role.Permissions.Select(p => p.Name).ToHashSet();
+        var added = permissions.Select(p => p.Name).Where(n => !before.Contains(n));
+        if (await PrivilegeGuard.CheckCanGrantAsync(db, userContext.UserId, added, cancellationToken) is { } escalation)
+            return new ValidationError(escalation);
+
+        // The Admin role must keep user management, or the tenant locks itself out of every
+        // role and user change with no way back short of platform intervention.
+        if (roleId == AdminSafetyGuard.AdminRoleId
+            && PrivilegeGuard.AdminRoleFloor.Any(f => permissions.All(p => p.Name != f)))
+            return new ValidationError(
+                $"The Admin role must keep {string.Join(" and ", PrivilegeGuard.AdminRoleFloor.Order())} so the tenant can still manage its users.");
+
         // Role.Name is init-only, so a rename replaces the row rather than mutating it.
         if (!TenantRoleRules.IsSystemRole(roleId) && !role.Name.Equals(name, StringComparison.Ordinal))
         {
@@ -91,9 +108,15 @@ public class UpdateRoleEndpoint : IEndpoint
         foreach (var permission in permissions)
             role.AddPermission(permission);
 
+        PermissionAudit.Record(db, tenantId, userContext.UserId, PermissionAudit.RoleSubject,
+            PermissionAudit.RoleSubjectId(roleId), "RolePermissionsChanged", roleId.ToString(),
+            new() { ["Name"] = role.Name, ["Permissions"] = before.Order().ToList() },
+            new() { ["Name"] = name, ["Permissions"] = permissions.Select(p => p.Name).Order().ToList() });
+
         await db.SaveChangesAsync(cancellationToken);
 
         await InvalidatePermissionCacheAsync(db, cacheService, tenantId, roleId, cancellationToken);
+        await visibilityCache.InvalidateTenantAsync(tenantId, cancellationToken);
 
         return TypedResults.Ok(new Response(
             role.Id, name, permissions.Select(p => p.Name).OrderBy(n => n).ToList()));

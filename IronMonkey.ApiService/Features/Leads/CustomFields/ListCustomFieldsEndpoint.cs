@@ -19,7 +19,9 @@ public class ListCustomFieldsEndpoint : IEndpoint
         List<string> Options, string AppliesTo, int DisplayOrder, string? HelpText,
         string? DefaultValue, bool IsArchived,
         /// <summary>The pipeline this field is scoped to, or null for tenant-wide.</summary>
-        Guid? PipelineId);
+        Guid? PipelineId,
+        /// <summary>Whether global search matches this field.</summary>
+        bool IsSearchable = false);
 
     /// <param name="includeArchived">
     /// Archived fields are hidden by default so forms never render a retired field. The
@@ -74,7 +76,7 @@ public class ListCustomFieldsEndpoint : IEndpoint
         var response = fields
             .Select(f => new Response(f.Id, f.FieldName, f.FieldKey, f.FieldType.ToString(), f.IsRequired,
                 f.Options, f.AppliesTo.ToString(), f.DisplayOrder, f.HelpText, f.DefaultValue,
-                f.IsArchived, f.PipelineId))
+                f.IsArchived, f.PipelineId, f.IsSearchable))
             .ToList();
 
         return TypedResults.Ok(response);

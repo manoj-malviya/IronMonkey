@@ -20,7 +20,7 @@ public class ListTenantRolesEndpoint : IEndpoint
         .MapGet("/users/roles", Handle)
         .WithSummary("List the roles available in the current tenant")
         .WithTags("User Management")
-        .RequireAuthorization();
+        .RequireAuthorization(PermissionConstants.UsersRead);
 
     public record RoleItem(
         int RoleId,

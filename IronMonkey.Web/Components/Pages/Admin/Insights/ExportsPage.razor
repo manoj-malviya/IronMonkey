@@ -1,0 +1,106 @@
+@page "/admin/exports"
+@attribute [Authorize]
+@implements IAsyncDisposable
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject TenantPresentationService Presentation
+@inject IJSRuntime JS
+
+<PageTitle>Exports — IronMonkey</PageTitle>
+
+<div class="space-y-5">
+    <div>
+        <h1 class="text-2xl font-bold text-slate-900">Exports</h1>
+        <p class="text-sm text-slate-500">Exports are built in the background and kept for 7 days. Only you can download your exports, and every one is recorded.</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_error)) { <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">@_error</div> }
+
+    <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <table class="min-w-full text-sm">
+            <thead>
+                <tr class="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <th class="px-4 py-2">Export</th><th class="px-4 py-2">Requested</th><th class="px-4 py-2">Status</th><th class="px-4 py-2 text-right">Rows</th><th class="px-4 py-2"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (_jobs.Count == 0) { <tr><td class="px-4 py-6 text-slate-500" colspan="5">No exports yet. Use “Export CSV” on a list or report.</td></tr> }
+                @foreach (var j in _jobs)
+                {
+                    <tr class="border-t border-slate-100">
+                        <td class="px-4 py-2">@j.Description</td>
+                        <td class="px-4 py-2">@Presentation.DateTimeShort(j.CreatedAt)</td>
+                        <td class="px-4 py-2">
+                            @j.Status
+                            @if (j.Error is not null) { <span class="block text-xs text-red-600">@j.Error</span> }
+                            @if (j.WasTruncated) { <span class="block text-xs text-amber-700">Capped at 50,000 rows</span> }
+                        </td>
+                        <td class="px-4 py-2 text-right tabular-nums">@(j.RowCount?.ToString("#,##0") ?? "—")</td>
+                        <td class="px-4 py-2 text-right">
+                            @if (j.CanDownload)
+                            {
+                                <button class="text-indigo-600 hover:text-indigo-700" @onclick="() => DownloadAsync(j)">Download</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private List<ExportJob> _jobs = [];
+    private string? _error;
+    private PeriodicTimer? _timer;
+    private CancellationTokenSource _cts = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        await Presentation.EnsureLoadedAsync();
+        await LoadAsync();
+        StateHasChanged();
+        _ = PollAsync();
+    }
+
+    // Refresh while anything is still queued or running, so a finished export appears without a reload.
+    private async Task PollAsync()
+    {
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
+        try
+        {
+            while (await _timer.WaitForNextTickAsync(_cts.Token))
+            {
+                if (_jobs.All(j => j.Status is "Completed" or "Failed")) continue;
+                await LoadAsync();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private async Task LoadAsync()
+    {
+        try { _jobs = await Api.GetFromJsonAsync<List<ExportJob>>("/api/exports") ?? []; }
+        catch (Exception ex) { _error = $"Could not load exports: {ex.Message}"; }
+    }
+
+    private async Task DownloadAsync(ExportJob job)
+    {
+        // Fetched through the API client (which carries the token) and handed to the browser
+        // as a data URL; a plain link would go out without authentication.
+        var res = await Api.GetAsync($"/api/exports/{job.Id}/download");
+        if (!res.IsSuccessStatusCode) { _error = "This export is no longer available."; await LoadAsync(); return; }
+        var bytes = await res.Content.ReadAsByteArrayAsync();
+        var name = res.Content.Headers.ContentDisposition?.FileNameStar ?? res.Content.Headers.ContentDisposition?.FileName?.Trim('"') ?? "export.csv";
+        await JS.InvokeVoidAsync("eval",
+            $"(() => {{ const a = document.createElement('a'); a.href = 'data:text/csv;base64,{Convert.ToBase64String(bytes)}'; a.download = {System.Text.Json.JsonSerializer.Serialize(name)}; a.click(); }})()");
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _cts.Cancel();
+        _timer?.Dispose();
+        return ValueTask.CompletedTask;
+    }
+}

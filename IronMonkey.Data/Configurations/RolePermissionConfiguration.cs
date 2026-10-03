@@ -36,6 +36,7 @@ internal sealed class RolePermissionConfiguration : IEntityTypeConfiguration<Rol
             new RolePermission { RoleId = Role.SuperAdmin.Id, PermissionId = Permission.MessagesRead.Id },
             new RolePermission { RoleId = Role.SuperAdmin.Id, PermissionId = Permission.QuotesApprove.Id },
             new RolePermission { RoleId = Role.SuperAdmin.Id, PermissionId = Permission.CatalogWrite.Id },
+            new RolePermission { RoleId = Role.SuperAdmin.Id, PermissionId = Permission.DataExport.Id },
             // Admin is the per-tenant administrator: full CRM access, no platform admin or delete rights
             new RolePermission { RoleId = Role.Admin.Id, PermissionId = Permission.UsersRead.Id },
             new RolePermission { RoleId = Role.Admin.Id, PermissionId = Permission.UsersWrite.Id },
@@ -62,8 +63,29 @@ internal sealed class RolePermissionConfiguration : IEntityTypeConfiguration<Rol
             // Catalog and quote settings: everyday sales administration, which a tenant Admin
             // must be able to run — Admin does not hold settings:write.
             new RolePermission { RoleId = Role.Admin.Id, PermissionId = Permission.CatalogWrite.Id },
+            // Export: Admin only by default. Taking the book out of the CRM is a separate act
+            // from reading it on screen, so other roles must be granted it deliberately.
+            new RolePermission { RoleId = Role.Admin.Id, PermissionId = Permission.DataExport.Id },
             // Owner has read access
-            new RolePermission { RoleId = Role.Owner.Id, PermissionId = Permission.UsersRead.Id }
+            new RolePermission { RoleId = Role.Owner.Id, PermissionId = Permission.UsersRead.Id },
+            // CRM record access for Owner and TeleCaller. Before record permissions were
+            // enforced, every authenticated user could read and edit leads, contacts and
+            // opportunities whatever their role held. These grants make that existing access
+            // explicit, so enforcing leads:* / contacts:* / opportunities:* changes nothing
+            // for a tenant until an Admin chooses to narrow a role. (Custom roles get the same
+            // backfill in the RecordVisibility migration.)
+            new RolePermission { RoleId = Role.Owner.Id, PermissionId = Permission.LeadsRead.Id },
+            new RolePermission { RoleId = Role.Owner.Id, PermissionId = Permission.LeadsWrite.Id },
+            new RolePermission { RoleId = Role.Owner.Id, PermissionId = Permission.ContactsRead.Id },
+            new RolePermission { RoleId = Role.Owner.Id, PermissionId = Permission.ContactsWrite.Id },
+            new RolePermission { RoleId = Role.Owner.Id, PermissionId = Permission.OpportunitiesRead.Id },
+            new RolePermission { RoleId = Role.Owner.Id, PermissionId = Permission.OpportunitiesWrite.Id },
+            new RolePermission { RoleId = Role.TeleCaller.Id, PermissionId = Permission.LeadsRead.Id },
+            new RolePermission { RoleId = Role.TeleCaller.Id, PermissionId = Permission.LeadsWrite.Id },
+            new RolePermission { RoleId = Role.TeleCaller.Id, PermissionId = Permission.ContactsRead.Id },
+            new RolePermission { RoleId = Role.TeleCaller.Id, PermissionId = Permission.ContactsWrite.Id },
+            new RolePermission { RoleId = Role.TeleCaller.Id, PermissionId = Permission.OpportunitiesRead.Id },
+            new RolePermission { RoleId = Role.TeleCaller.Id, PermissionId = Permission.OpportunitiesWrite.Id }
         ]);
     }
 }

@@ -128,10 +128,19 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<string>("MobileDigits")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("text")
+                        .HasComputedColumnSql("regexp_replace(\"Mobile\", '[^0-9]', '', 'g')", true);
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("OwnerUserId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
@@ -144,6 +153,8 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.HasIndex("TenantId");
 
                     b.HasIndex("TenantId", "Email");
+
+                    b.HasIndex("TenantId", "OwnerUserId");
 
                     b.ToTable("contacts", (string)null);
                 });
@@ -206,6 +217,9 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.Property<bool>("IsRequired")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsSearchable")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Options")
                         .IsRequired()
                         .HasColumnType("text");
@@ -232,6 +246,84 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .HasDatabaseName("ix_custom_field_definitions_tenant_scope_key_unique");
 
                     b.ToTable("custom_field_definitions", (string)null);
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.ExportJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("Content")
+                        .HasColumnType("bytea");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DefinitionJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FileName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("RecordType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("RowCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("WasTruncated")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "RequestedByUserId", "CreatedAt");
+
+                    b.ToTable("export_jobs", (string)null);
                 });
 
             modelBuilder.Entity("IronMonkey.Data.Entities.ImportBatch", b =>
@@ -415,6 +507,12 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<string>("MobileDigits")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("text")
+                        .HasComputedColumnSql("regexp_replace(\"Mobile\", '[^0-9]', '', 'g')", true);
 
                     b.Property<Guid>("PipelineId")
                         .HasColumnType("uuid");
@@ -949,6 +1047,9 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
 
+                    b.Property<Guid?>("OwnerUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("PipelineId")
                         .HasColumnType("uuid");
 
@@ -988,6 +1089,8 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.HasIndex("PriceListId");
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "OwnerUserId");
 
                     b.HasIndex("TenantId", "PipelineStageId")
                         .HasDatabaseName("IX_opportunities_TenantId_PipelineStageId");
@@ -1241,6 +1344,11 @@ namespace IronMonkey.Data.Migrations.Tenant
                         {
                             Id = 22,
                             Name = "catalog:write"
+                        },
+                        new
+                        {
+                            Id = 23,
+                            Name = "data:export"
                         });
                 });
 
@@ -1929,6 +2037,106 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.ToTable("quote_status_changes", (string)null);
                 });
 
+            modelBuilder.Entity("IronMonkey.Data.Entities.ReportDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DefinitionJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsShared")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastRunAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RecordType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Schedule")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "OwnerUserId");
+
+                    b.ToTable("report_definitions", (string)null);
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.ReportRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("RanAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ReportDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ResultJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReportDefinitionId");
+
+                    b.HasIndex("TenantId", "ReportDefinitionId", "RanAt");
+
+                    b.ToTable("report_runs", (string)null);
+                });
+
             modelBuilder.Entity("IronMonkey.Data.Entities.Role", b =>
                 {
                     b.Property<int>("Id")
@@ -2095,6 +2303,11 @@ namespace IronMonkey.Data.Migrations.Tenant
                         },
                         new
                         {
+                            RoleId = 1,
+                            PermissionId = 23
+                        },
+                        new
+                        {
                             RoleId = 201,
                             PermissionId = 1
                         },
@@ -2170,9 +2383,93 @@ namespace IronMonkey.Data.Migrations.Tenant
                         },
                         new
                         {
+                            RoleId = 201,
+                            PermissionId = 23
+                        },
+                        new
+                        {
                             RoleId = 301,
                             PermissionId = 1
+                        },
+                        new
+                        {
+                            RoleId = 301,
+                            PermissionId = 4
+                        },
+                        new
+                        {
+                            RoleId = 301,
+                            PermissionId = 5
+                        },
+                        new
+                        {
+                            RoleId = 301,
+                            PermissionId = 7
+                        },
+                        new
+                        {
+                            RoleId = 301,
+                            PermissionId = 8
+                        },
+                        new
+                        {
+                            RoleId = 301,
+                            PermissionId = 10
+                        },
+                        new
+                        {
+                            RoleId = 301,
+                            PermissionId = 11
+                        },
+                        new
+                        {
+                            RoleId = 302,
+                            PermissionId = 4
+                        },
+                        new
+                        {
+                            RoleId = 302,
+                            PermissionId = 5
+                        },
+                        new
+                        {
+                            RoleId = 302,
+                            PermissionId = 7
+                        },
+                        new
+                        {
+                            RoleId = 302,
+                            PermissionId = 8
+                        },
+                        new
+                        {
+                            RoleId = 302,
+                            PermissionId = 10
+                        },
+                        new
+                        {
+                            RoleId = 302,
+                            PermissionId = 11
                         });
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.RoleRecordScope", b =>
+                {
+                    b.Property<int>("RoleId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RecordType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.HasKey("RoleId", "RecordType");
+
+                    b.ToTable("role_record_scopes", (string)null);
                 });
 
             modelBuilder.Entity("IronMonkey.Data.Entities.RoutingConfig", b =>
@@ -2228,6 +2525,54 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.HasIndex("TenantId", "PipelineId");
 
                     b.ToTable("routing_configs", (string)null);
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.SavedView", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DefinitionJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsShared")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RecordType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "RecordType", "OwnerUserId");
+
+                    b.ToTable("saved_views", (string)null);
                 });
 
             modelBuilder.Entity("IronMonkey.Data.Entities.SignupRequest", b =>
@@ -2407,6 +2752,51 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.ToTable("stage_transitions", (string)null);
                 });
 
+            modelBuilder.Entity("IronMonkey.Data.Entities.Team", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("ManagerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("ParentTeamId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentTeamId");
+
+                    b.HasIndex("TenantId", "ManagerUserId");
+
+                    b.ToTable("teams", (string)null);
+                });
+
             modelBuilder.Entity("IronMonkey.Data.Entities.TeamInvitation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2492,6 +2882,24 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .HasDatabaseName("IX_TeamInvitations_TenantId_TokenPrefix");
 
                     b.ToTable("team_invitations", (string)null);
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.TeamMembership", b =>
+                {
+                    b.Property<Guid>("TeamId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("TeamId", "UserId");
+
+                    b.HasIndex("TenantId", "UserId");
+
+                    b.ToTable("team_memberships", (string)null);
                 });
 
             modelBuilder.Entity("IronMonkey.Data.Entities.Tenant", b =>
@@ -2712,6 +3120,28 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .HasDatabaseName("IX_UserAuditLogs_TenantId_TargetUserId_OccurredAt");
 
                     b.ToTable("user_audit_logs", (string)null);
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.UserDefaultView", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RecordType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("SavedViewId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("UserId", "RecordType");
+
+                    b.HasIndex("SavedViewId");
+
+                    b.ToTable("user_default_views", (string)null);
                 });
 
             modelBuilder.Entity("IronMonkey.Data.Entities.WorkflowExecutionLog", b =>
@@ -3184,6 +3614,15 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("IronMonkey.Data.Entities.ReportRun", b =>
+                {
+                    b.HasOne("IronMonkey.Data.Entities.ReportDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("ReportDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("IronMonkey.Data.Entities.RolePermission", b =>
                 {
                     b.HasOne("IronMonkey.Data.Entities.Permission", null)
@@ -3192,6 +3631,15 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("IronMonkey.Data.Entities.Role", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.RoleRecordScope", b =>
+                {
                     b.HasOne("IronMonkey.Data.Entities.Role", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
@@ -3236,6 +3684,32 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.Navigation("ToStage");
                 });
 
+            modelBuilder.Entity("IronMonkey.Data.Entities.Team", b =>
+                {
+                    b.HasOne("IronMonkey.Data.Entities.Team", null)
+                        .WithMany()
+                        .HasForeignKey("ParentTeamId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.TeamMembership", b =>
+                {
+                    b.HasOne("IronMonkey.Data.Entities.Team", null)
+                        .WithMany("Members")
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.UserDefaultView", b =>
+                {
+                    b.HasOne("IronMonkey.Data.Entities.SavedView", null)
+                        .WithMany()
+                        .HasForeignKey("SavedViewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("IronMonkey.Data.Entities.WorkflowExecutionStep", b =>
                 {
                     b.HasOne("IronMonkey.Data.Entities.WorkflowExecutionLog", "ExecutionLog")
@@ -3272,6 +3746,11 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.Navigation("Lines");
 
                     b.Navigation("StatusChanges");
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.Team", b =>
+                {
+                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("IronMonkey.Data.Entities.WorkflowExecutionLog", b =>

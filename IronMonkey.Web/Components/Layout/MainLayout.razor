@@ -36,6 +36,14 @@
         }
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
+            <AuthorizeView>
+                <Authorized>
+                    @if (!context.User.IsInRole(IronMonkey.Common.Auth.RoleConstants.SuperAdmin) || AuthProvider.IsImpersonating)
+                    {
+                        <GlobalSearchBox />
+                    }
+                </Authorized>
+            </AuthorizeView>
             @Body
         </div>
     </main>

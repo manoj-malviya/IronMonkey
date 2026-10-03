@@ -1,0 +1,309 @@
+@page "/admin/reports/builder"
+@attribute [Authorize]
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject TenantPresentationService Presentation
+
+<PageTitle>Report builder — IronMonkey</PageTitle>
+
+<div class="space-y-5">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900">Report builder</h1>
+            <p class="text-sm text-slate-500">Group, count and sum any field — built-in or custom. Dates are in your tenant's timezone.</p>
+        </div>
+        <select value="@(_selected?.Id.ToString() ?? "")" @onchange="OnPick" aria-label="Saved report"
+                class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+            <option value="">New report</option>
+            @foreach (var r in _reports) { <option value="@r.Id">@r.Name@(r.IsShared ? " (shared)" : "")@(r.Problems.Count > 0 ? " — broken" : "")</option> }
+        </select>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_notice)) { <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">@((MarkupString)_notice)</div> }
+    @if (_problems.Count > 0)
+    {
+        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+            <p class="font-semibold">This report cannot be run as written.</p>
+            <ul class="mt-1 list-disc pl-5">@foreach (var p in _problems) { <li>@p</li> }</ul>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(_error)) { <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">@_error</div> }
+
+    <div class="grid gap-5 lg:grid-cols-3">
+        <div class="space-y-3 rounded-xl border border-slate-200 bg-white p-4 text-sm">
+            <label class="block text-xs text-slate-600">Records
+                <select value="@_type" @onchange="OnTypeChanged" class="mt-1 w-full rounded border border-slate-300 px-2 py-1">
+                    <option value="Lead">@Presentation.Terms(TerminologyTerm.Lead)</option>
+                    <option value="Contact">@Presentation.Terms(TerminologyTerm.Contact)</option>
+                    <option value="Opportunity">@Presentation.Terms(TerminologyTerm.Opportunity)</option>
+                    <option value="Task">Tasks</option>
+                </select>
+            </label>
+            <label class="block text-xs text-slate-600">Group by
+                <select @bind="_spec.GroupBy" class="mt-1 w-full rounded border border-slate-300 px-2 py-1">
+                    <option value="">(none)</option>
+                    @foreach (var f in _fields.Where(f => f.Groupable)) { <option value="@f.Key">@f.Label</option> }
+                </select>
+            </label>
+            <div class="grid grid-cols-2 gap-2">
+                <label class="block text-xs text-slate-600">Over time
+                    <select @bind="_spec.TimeField" class="mt-1 w-full rounded border border-slate-300 px-2 py-1">
+                        <option value="">(no)</option>
+                        @foreach (var f in DateFields) { <option value="@f.Key">@f.Label</option> }
+                    </select>
+                </label>
+                <label class="block text-xs text-slate-600">By
+                    <select @bind="_spec.TimeGranularity" class="mt-1 w-full rounded border border-slate-300 px-2 py-1">
+                        <option value="day">Day</option><option value="week">Week</option><option value="month">Month</option>
+                        <option value="quarter">Quarter</option><option value="year">Year</option>
+                    </select>
+                </label>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <label class="block text-xs text-slate-600">Date range on
+                    <select value="@(_spec.DateRange?.Field ?? "")" @onchange="OnRangeField" class="mt-1 w-full rounded border border-slate-300 px-2 py-1">
+                        <option value="">(all dates)</option>
+                        @foreach (var f in DateFields) { <option value="@f.Key">@f.Label</option> }
+                    </select>
+                </label>
+                @if (_spec.DateRange is not null)
+                {
+                    <label class="block text-xs text-slate-600">Range
+                        <select @bind="_spec.DateRange.Preset" class="mt-1 w-full rounded border border-slate-300 px-2 py-1">
+                            <option value="thismonth">This month</option><option value="thisquarter">This quarter</option>
+                            <option value="thisyear">This year</option><option value="last30days">Last 30 days</option>
+                            <option value="alltime">All time</option>
+                        </select>
+                    </label>
+                }
+            </div>
+            <div>
+                <p class="text-xs font-semibold text-slate-600">Measures</p>
+                @foreach (var m in _spec.Measures.ToList())
+                {
+                    <div class="mt-1 flex gap-1">
+                        <select @bind="m.Fn" class="rounded border border-slate-300 px-2 py-1">
+                            <option value="count">Count</option><option value="sum">Sum</option><option value="avg">Average</option>
+                            <option value="min">Min</option><option value="max">Max</option>
+                        </select>
+                        @if (m.Fn != "count")
+                        {
+                            <select @bind="m.Field" class="w-full rounded border border-slate-300 px-2 py-1">
+                                <option value="">Choose…</option>
+                                @foreach (var f in _fields.Where(f => f.Kind == "Number")) { <option value="@f.Key">@f.Label</option> }
+                            </select>
+                        }
+                        @if (_spec.Measures.Count > 1) { <button class="text-red-600" @onclick="() => _spec.Measures.Remove(m)">✕</button> }
+                    </div>
+                }
+                @if (_spec.Measures.Count < 6) { <button class="mt-1 text-xs text-indigo-600" @onclick="() => _spec.Measures.Add(new MeasureSpec())">+ Measure</button> }
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button class="rounded-lg bg-indigo-600 px-4 py-1.5 font-semibold text-white disabled:opacity-50" disabled="@_busy" @onclick="RunAsync">Run</button>
+                <button class="rounded-lg border border-slate-300 px-3 py-1.5" disabled="@_busy" @onclick="ExportAsync">Export CSV</button>
+            </div>
+
+            <div class="space-y-2 border-t border-slate-100 pt-3">
+                <input @bind="_name" placeholder="Report name" maxlength="100" class="w-full rounded border border-slate-300 px-2 py-1" />
+                <label class="flex items-center gap-1 text-xs"><input type="checkbox" @bind="_shared" /> Share with the team (each viewer sees only their own records)</label>
+                <label class="block text-xs text-slate-600">Schedule
+                    <select @bind="_schedule" class="mt-1 w-full rounded border border-slate-300 px-2 py-1">
+                        <option value="None">Not scheduled</option><option value="Daily">Daily</option>
+                        <option value="Weekly">Weekly (Mon)</option><option value="Monthly">Monthly (1st)</option>
+                    </select>
+                </label>
+                <div class="flex gap-2">
+                    <button class="rounded-lg border border-slate-300 px-3 py-1.5" disabled="@_busy" @onclick="() => SaveAsync(true)">Save as new</button>
+                    @if (_selected is { IsOwner: true })
+                    {
+                        <button class="rounded-lg border border-slate-300 px-3 py-1.5" disabled="@_busy" @onclick="() => SaveAsync(false)">Update</button>
+                        <button class="rounded-lg border border-red-200 px-3 py-1.5 text-red-700" disabled="@_busy" @onclick="DeleteAsync">Delete</button>
+                    }
+                </div>
+                @if (_selected?.LastRunAt is { } last) { <p class="text-xs text-slate-500">Last scheduled run: @Presentation.DateTimeWithZone(last)</p> }
+            </div>
+        </div>
+
+        <div class="space-y-4 lg:col-span-2">
+            <div class="rounded-xl border border-slate-200 bg-white p-4">
+                <FilterEditor Fields="_fields" Group="_spec.Filter" OnChanged="StateHasChanged" />
+            </div>
+
+            @if (_result is not null)
+            {
+                @if (_result.Truncated)
+                {
+                    <p class="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">Showing the first @_result.GroupCap groups. Narrow the filter to see the rest.</p>
+                }
+                <div class="rounded-xl border border-slate-200 bg-white p-4">
+                    <ReportChart Result="_result" />
+                </div>
+                <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                    <table class="min-w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                @if (_result.GroupBy is not null) { <th class="px-4 py-2">Group</th> }
+                                @if (_result.TimeField is not null) { <th class="px-4 py-2">Period</th> }
+                                @foreach (var l in _result.MeasureLabels) { <th class="px-4 py-2 text-right">@l</th> }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (_result.Rows.Count == 0) { <tr><td class="px-4 py-6 text-slate-500" colspan="8">No records match.</td></tr> }
+                            @foreach (var r in _result.Rows)
+                            {
+                                <tr class="border-t border-slate-100">
+                                    @if (_result.GroupBy is not null) { <td class="px-4 py-2">@(r.GroupLabel ?? "(blank)")</td> }
+                                    @if (_result.TimeField is not null) { <td class="px-4 py-2">@ReportChart.Period(r.Bucket, _result.TimeGranularity)</td> }
+                                    @foreach (var v in r.Values) { <td class="px-4 py-2 text-right tabular-nums">@(v?.ToString("#,##0.##") ?? "—")</td> }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-xs text-slate-500">Times in @_result.TimeZone. Generated @Presentation.DateTimeShort(_result.GeneratedAt).</p>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _type = "Lead";
+    private List<FieldInfo> _fields = [];
+    private List<ReportDefinition> _reports = [];
+    private ReportDefinition? _selected;
+    private ReportSpec _spec = new() { TimeGranularity = "month" };
+    private ReportResult? _result;
+    private List<string> _problems = [];
+    private string? _error, _notice, _name;
+    private bool _shared, _busy;
+    private string _schedule = "None";
+
+    private IEnumerable<FieldInfo> DateFields => _fields.Where(f => f.Kind is "Instant" or "Date");
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // After the first interactive render: the JWT is unreadable during prerender.
+        if (!firstRender) return;
+        await Presentation.EnsureLoadedAsync();
+        await LoadFieldsAsync();
+        await LoadReportsAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadFieldsAsync()
+    {
+        try { _fields = await Api.GetFromJsonAsync<List<FieldInfo>>($"/api/insights/{_type}/fields") ?? []; }
+        catch (Exception ex) { _error = $"Could not load fields: {ex.Message}"; _fields = []; }
+    }
+
+    private async Task LoadReportsAsync() =>
+        _reports = await Api.GetFromJsonAsync<List<ReportDefinition>>("/api/reports/definitions") ?? [];
+
+    private async Task OnTypeChanged(ChangeEventArgs e)
+    {
+        _type = e.Value?.ToString() ?? "Lead";
+        _spec = new ReportSpec { TimeGranularity = "month" };
+        _result = null;
+        await LoadFieldsAsync();
+    }
+
+    private void OnRangeField(ChangeEventArgs e)
+    {
+        var key = e.Value?.ToString();
+        _spec.DateRange = string.IsNullOrEmpty(key) ? null : new DateRangeSpec { Field = key, Preset = _spec.DateRange?.Preset ?? "thismonth" };
+    }
+
+    private async Task OnPick(ChangeEventArgs e)
+    {
+        _selected = _reports.FirstOrDefault(r => r.Id.ToString() == e.Value?.ToString());
+        _result = null;
+        _problems = _selected?.Problems ?? [];
+        if (_selected is null) { _spec = new ReportSpec { TimeGranularity = "month" }; _name = null; return; }
+
+        _type = _selected.RecordType;
+        await LoadFieldsAsync();
+        _spec = System.Text.Json.JsonSerializer.Deserialize<ReportSpec>(System.Text.Json.JsonSerializer.Serialize(_selected.Spec, InsightUrls.Json), InsightUrls.Json)!;
+        _spec.TimeGranularity ??= "month";
+        _name = _selected.Name;
+        _shared = _selected.IsShared;
+        _schedule = _selected.Schedule;
+        if (_problems.Count == 0) await RunAsync();
+    }
+
+    private ReportSpec Clean()
+    {
+        // Empty selects mean "none"; send nulls rather than empty keys the API would reject.
+        _spec.GroupBy = string.IsNullOrEmpty(_spec.GroupBy) ? null : _spec.GroupBy;
+        _spec.TimeField = string.IsNullOrEmpty(_spec.TimeField) ? null : _spec.TimeField;
+        foreach (var m in _spec.Measures) if (m.Fn == "count") m.Field = null;
+        return _spec;
+    }
+
+    private async Task RunAsync()
+    {
+        _busy = true; _error = null; _problems = [];
+        try
+        {
+            var res = await Api.PostAsJsonAsync("/api/reports/run", new { RecordType = _type, Spec = Clean() });
+            if (res.IsSuccessStatusCode) { _result = await res.Content.ReadFromJsonAsync<ReportResult>(); return; }
+            _result = null;
+            await ShowErrorAsync(res);
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task SaveAsync(bool asNew)
+    {
+        if (string.IsNullOrWhiteSpace(_name)) { _error = "Give the report a name."; return; }
+        _busy = true; _error = null; _problems = [];
+        try
+        {
+            var body = new { Name = _name, RecordType = _type, Spec = Clean(), IsShared = _shared, Schedule = _schedule };
+            var res = asNew || _selected is null
+                ? await Api.PostAsJsonAsync("/api/reports/definitions", body)
+                : await Api.PutAsJsonAsync($"/api/reports/definitions/{_selected.Id}", body);
+            if (!res.IsSuccessStatusCode) { await ShowErrorAsync(res); return; }
+            await LoadReportsAsync();
+            _selected = _reports.FirstOrDefault(r => r.Name == _name && r.IsOwner);
+            _notice = _schedule == "None" ? "Report saved." : $"Report saved and scheduled {_schedule.ToLowerInvariant()}.";
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (_selected is null) return;
+        var res = await Api.DeleteAsync($"/api/reports/definitions/{_selected.Id}");
+        if (!res.IsSuccessStatusCode) { await ShowErrorAsync(res); return; }
+        _selected = null;
+        await LoadReportsAsync();
+    }
+
+    private async Task ExportAsync()
+    {
+        _busy = true; _error = null;
+        try
+        {
+            var res = await Api.PostAsJsonAsync("/api/exports", new { RecordType = _type, Source = "report", ReportSpec = Clean() });
+            if (res.IsSuccessStatusCode)
+                _notice = "Export queued. Collect it from the <a class=\"underline\" href=\"/admin/exports\">Exports</a> page.";
+            else if ((int)res.StatusCode == 403) _error = "You do not have permission to export data.";
+            else await ShowErrorAsync(res);
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task ShowErrorAsync(HttpResponseMessage res)
+    {
+        if ((int)res.StatusCode == 400)
+        {
+            try
+            {
+                var p = await res.Content.ReadFromJsonAsync<QueryProblems>();
+                if (p?.Problems is { Count: > 0 }) { _problems = p.Problems; return; }
+            }
+            catch { }
+        }
+        _error = (int)res.StatusCode == 504 ? "The report took too long. Narrow the filter or date range."
+            : await IronMonkey.Web.Commerce.CommerceLabels.ErrorAsync(res);
+    }
+}

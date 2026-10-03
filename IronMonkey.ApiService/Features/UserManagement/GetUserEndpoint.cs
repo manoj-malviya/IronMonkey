@@ -1,3 +1,4 @@
+using IronMonkey.Common.Auth;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using IronMonkey.ApiService.Common;
@@ -11,7 +12,7 @@ public class GetUserEndpoint : IEndpoint
     public static void Map(IEndpointRouteBuilder app) => app
         .MapGet("/users/{id:guid}", Handle)
         .WithSummary("Get a single user by ID")
-        .RequireAuthorization();
+        .RequireAuthorization(PermissionConstants.UsersRead);
 
     public record UserDetail(Guid Id, string Name, string Email, int RoleId, string RoleName, bool IsActive, DateTime CreatedAt);
 

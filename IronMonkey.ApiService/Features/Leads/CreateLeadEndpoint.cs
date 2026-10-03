@@ -49,6 +49,7 @@ public class CreateLeadEndpoint : IEndpoint
         ITenantDbContextFactory dbContextFactory,
         IDuplicateDetectionService duplicateDetection,
         IWorkflowTriggerDispatcher workflowTriggers,
+        IUserContext userContext,
         CancellationToken cancellationToken)
     {
         if (!Enum.TryParse<LeadSource>(request.Source, ignoreCase: true, out var source))
@@ -100,6 +101,12 @@ public class CreateLeadEndpoint : IEndpoint
         var lead = Lead.Create(tenantId, request.FirstName, request.LastName, request.Mobile, request.Email, source, request.PipelineStageId);
         foreach (var (key, value) in bound.Values)
             lead.CustomFields.Set(key, value);
+
+        // An unassigned lead is visible only under an All scope. A creator with an Own or
+        // Team scope would otherwise lose sight of the lead the moment they saved it, so it is
+        // assigned to them; routing may still reassign it afterwards.
+        if (!db.Visibility.IsUnrestricted(Data.Visibility.VisibilityRecordType.Lead))
+            lead.AssignTo(userContext.UserId);
 
         db.Leads.Add(lead);
         await db.SaveChangesAsync(cancellationToken);

@@ -77,4 +77,38 @@ public readonly record struct DashboardDateRange(DateTime From, DateTime ToExclu
 
     /// <summary>Inclusive last day, for echoing the range back to the UI.</summary>
     public DateTime ToInclusive => ToExclusive.AddDays(-1);
+
+    /// <summary>
+    /// Resolves a range in a tenant's timezone: "this month" is the tenant's month, starting at
+    /// the tenant's local midnight. The preset logic is <see cref="Resolve"/>'s, unchanged — it
+    /// runs over the tenant's wall clock, and the resulting local boundaries are converted to
+    /// UTC instants. Still half-open, <c>[From, ToExclusive)</c>.
+    ///
+    /// <para>Explicit <paramref name="from"/>/<paramref name="to"/> are read as tenant-local
+    /// calendar dates, which is what a date picker means.</para>
+    /// </summary>
+    public static DashboardDateRange ResolveIn(string? preset, DateTime? from, DateTime? to, TimeZoneInfo zone, DateTime? nowUtc = null)
+    {
+        var utcNow = DateTime.SpecifyKind(nowUtc ?? DateTime.UtcNow, DateTimeKind.Utc);
+        var localNow = TimeZoneInfo.ConvertTimeFromUtc(utcNow, zone);
+
+        // Resolve over local wall time, labelled UTC only so Resolve's arithmetic runs.
+        var local = Resolve(preset, from, to, DateTime.SpecifyKind(localNow, DateTimeKind.Utc));
+
+        return new DashboardDateRange(ToUtc(local.From, zone), ToUtc(local.ToExclusive, zone), local.Preset);
+    }
+
+    private static DateTime ToUtc(DateTime localWall, TimeZoneInfo zone)
+    {
+        // MinValue is the all-time lower bound; converting it would underflow.
+        if (localWall <= DateTime.MinValue.AddDays(2)) return DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
+
+        var unspecified = DateTime.SpecifyKind(localWall, DateTimeKind.Unspecified);
+
+        // A local midnight skipped by a DST change does not exist; the first valid instant after
+        // it is the honest boundary.
+        while (zone.IsInvalidTime(unspecified)) unspecified = unspecified.AddMinutes(30);
+
+        return TimeZoneInfo.ConvertTimeToUtc(unspecified, zone);
+    }
 }

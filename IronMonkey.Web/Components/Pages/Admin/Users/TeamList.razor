@@ -1,0 +1,184 @@
+@page "/admin/teams"
+@attribute [Authorize]
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+
+<PageTitle>Teams — IronMonkey</PageTitle>
+
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900">Teams</h1>
+            <p class="text-sm text-slate-500">
+                Teams drive the <strong>Team</strong> visibility scope. Members see each other's records; a team's manager also sees
+                every team beneath it, up to five levels down.
+            </p>
+        </div>
+        <button class="shrink-0 whitespace-nowrap rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500" @onclick="() => Open(null)">+ New team</button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">@_error</div>
+    }
+
+    <div class="grid gap-6 lg:grid-cols-3">
+        <div class="space-y-3 lg:col-span-2">
+            @if (_teams.Count == 0)
+            {
+                <p class="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-500">No teams yet.</p>
+            }
+            @foreach (var team in Ordered())
+            {
+                <div class="rounded-xl border border-slate-200 bg-white p-4" style="margin-left:@(Depth(team) * 24)px">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="font-semibold text-slate-900">@team.Name</span>
+                            <span class="ml-2 text-xs text-slate-500">Manager: @(team.ManagerName ?? "—")</span>
+                        </div>
+                        <div class="flex gap-3 text-sm">
+                            <button class="text-indigo-600 hover:text-indigo-700" @onclick="() => Open(team)">Edit</button>
+                            <button class="text-red-600 hover:text-red-700" @onclick="() => DeleteAsync(team)">Delete</button>
+                        </div>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">@(team.Members.Count == 0 ? "No members" : string.Join(", ", team.Members.Select(m => m.Name)))</p>
+                </div>
+            }
+        </div>
+
+        @if (_form is not null)
+        {
+            <div class="rounded-xl border border-slate-200 bg-white p-5 text-sm">
+                <h2 class="mb-3 font-semibold text-slate-900">@(_editingId is null ? "New team" : "Edit team")</h2>
+                <label class="block text-xs text-slate-600">Name<input @bind="_form.Name" maxlength="100" class="mt-1 w-full rounded border border-slate-300 px-2 py-1" /></label>
+                <label class="mt-2 block text-xs text-slate-600">Manager
+                    <select @bind="_form.Manager" class="mt-1 w-full rounded border border-slate-300 px-2 py-1">
+                        <option value="">None</option>
+                        @foreach (var u in _users) { <option value="@u.Id">@u.Name</option> }
+                    </select>
+                </label>
+                <label class="mt-2 block text-xs text-slate-600">Parent team
+                    <select @bind="_form.Parent" class="mt-1 w-full rounded border border-slate-300 px-2 py-1">
+                        <option value="">None (top level)</option>
+                        @foreach (var t in _teams.Where(t => t.Id != _editingId)) { <option value="@t.Id">@t.Name</option> }
+                    </select>
+                </label>
+                <p class="mt-3 text-xs font-semibold text-slate-600">Members</p>
+                <div class="mt-1 max-h-56 space-y-1 overflow-y-auto">
+                    @foreach (var u in _users)
+                    {
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" checked="@_form.Members.Contains(u.Id)" @onchange="e => Toggle(u.Id, e)" /> @u.Name
+                        </label>
+                    }
+                </div>
+                <div class="mt-4 flex gap-2">
+                    <button class="rounded-lg bg-indigo-600 px-3 py-1.5 font-semibold text-white disabled:opacity-50" disabled="@_busy" @onclick="SaveAsync">Save</button>
+                    <button class="rounded-lg border border-slate-300 px-3 py-1.5" @onclick="() => _form = null">Cancel</button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<TeamItem> _teams = [];
+    private List<UserRef> _users = [];
+    private TeamForm? _form;
+    private Guid? _editingId;
+    private string? _error;
+    private bool _busy;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // After the first interactive render: the JWT is unreadable during prerender.
+        if (!firstRender) return;
+        await LoadAsync();
+        _users = await Api.GetFromJsonAsync<List<UserRef>>("/api/users/assignable") ?? [];
+        StateHasChanged();
+    }
+
+    private async Task LoadAsync()
+    {
+        try { _teams = await Api.GetFromJsonAsync<List<TeamItem>>("/users/teams") ?? []; }
+        catch (Exception ex) { _error = $"Could not load teams: {ex.Message}"; }
+    }
+
+    // Tree order: each team followed by its sub-teams. Bounded by the API's depth cap.
+    private IEnumerable<TeamItem> Ordered()
+    {
+        IEnumerable<TeamItem> Walk(Guid? parent, int depth) => depth > 6 ? [] :
+            _teams.Where(t => t.ParentTeamId == parent).SelectMany(t => new[] { t }.Concat(Walk(t.Id, depth + 1)));
+        var ordered = Walk(null, 0).ToList();
+        return ordered.Concat(_teams.Except(ordered));
+    }
+
+    private int Depth(TeamItem team)
+    {
+        var depth = 0;
+        for (var p = team.ParentTeamId; p is not null && depth < 6; depth++)
+            p = _teams.FirstOrDefault(t => t.Id == p)?.ParentTeamId;
+        return depth;
+    }
+
+    private void Open(TeamItem? team)
+    {
+        _editingId = team?.Id;
+        _form = new TeamForm
+        {
+            Name = team?.Name ?? "",
+            Manager = team?.ManagerUserId?.ToString() ?? "",
+            Parent = team?.ParentTeamId?.ToString() ?? "",
+            Members = team?.Members.Select(m => m.UserId).ToHashSet() ?? []
+        };
+    }
+
+    private void Toggle(Guid id, ChangeEventArgs e)
+    {
+        if (e.Value is true) _form!.Members.Add(id); else _form!.Members.Remove(id);
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_form is null) return;
+        _busy = true;
+        _error = null;
+        try
+        {
+            var body = new
+            {
+                Name = _form.Name,
+                Description = (string?)null,
+                ManagerUserId = Guid.TryParse(_form.Manager, out var m) ? m : (Guid?)null,
+                ParentTeamId = Guid.TryParse(_form.Parent, out var p) ? p : (Guid?)null,
+                MemberUserIds = _form.Members.ToList()
+            };
+            var res = _editingId is null
+                ? await Api.PostAsJsonAsync("/users/teams", body)
+                : await Api.PutAsJsonAsync($"/users/teams/{_editingId}", body);
+            if (!res.IsSuccessStatusCode) { _error = await IronMonkey.Web.Commerce.CommerceLabels.ErrorAsync(res); return; }
+            _form = null;
+            await LoadAsync();
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task DeleteAsync(TeamItem team)
+    {
+        var res = await Api.DeleteAsync($"/users/teams/{team.Id}");
+        if (!res.IsSuccessStatusCode) _error = await IronMonkey.Web.Commerce.CommerceLabels.ErrorAsync(res);
+        await LoadAsync();
+    }
+
+    private sealed class TeamForm
+    {
+        public string Name { get; set; } = "";
+        public string Manager { get; set; } = "";
+        public string Parent { get; set; } = "";
+        public HashSet<Guid> Members { get; set; } = [];
+    }
+
+    private sealed record UserRef(Guid Id, string Name);
+    private sealed record MemberRef(Guid UserId, string Name, string Email);
+    private sealed record TeamItem(Guid Id, string Name, string? Description, Guid? ManagerUserId, string? ManagerName,
+        Guid? ParentTeamId, List<MemberRef> Members);
+}

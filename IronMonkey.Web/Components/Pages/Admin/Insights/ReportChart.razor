@@ -1,0 +1,107 @@
+@* Picks a chart from the shape of the result, for the first measure:
+   no dimensions → a single figure; a grouping → horizontal bars (top 12);
+   a time dimension → columns per period; both → one line per group (top 5). *@
+
+@if (Result.Rows.Count == 0)
+{
+    <p class="text-sm text-slate-500">Nothing to chart.</p>
+}
+else if (Result.GroupBy is null && Result.TimeField is null)
+{
+    <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">@Result.MeasureLabels[0]</p>
+        <p class="mt-1 text-4xl font-bold text-slate-900 tabular-nums">@Fmt(Result.Rows[0].Values[0])</p>
+    </div>
+}
+else if (Result.TimeField is null)
+{
+    var bars = Result.Rows.OrderByDescending(r => r.Values[0] ?? 0).Take(12).ToList();
+    var max = Math.Max(1m, bars.Max(r => r.Values[0] ?? 0));
+    <figure role="img" aria-label="@($"{Result.MeasureLabels[0]} by group")">
+        <figcaption class="mb-2 text-xs font-semibold text-slate-600">@Result.MeasureLabels[0]</figcaption>
+        <div class="space-y-1.5">
+            @foreach (var r in bars)
+            {
+                var pct = (double)((r.Values[0] ?? 0) / max) * 100;
+                <div class="flex items-center gap-2 text-xs">
+                    <span class="w-32 shrink-0 truncate text-slate-600" title="@r.GroupLabel">@(r.GroupLabel ?? "(blank)")</span>
+                    <div class="h-4 flex-1 rounded bg-slate-100">
+                        <div class="h-4 rounded bg-indigo-500" style="width:@(pct.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                    </div>
+                    <span class="w-20 shrink-0 text-right tabular-nums text-slate-800">@Fmt(r.Values[0])</span>
+                </div>
+            }
+        </div>
+    </figure>
+}
+else
+{
+    var periods = Result.Rows.Select(r => r.Bucket).Where(b => b is not null).Distinct().OrderBy(b => b).ToList();
+    List<Series> series = Result.GroupBy is null
+        ? [new Series(Result.MeasureLabels[0], Result.Rows.GroupBy(r => r.Bucket).ToDictionary(g => g.Key, g => g.Sum(r => r.Values[0] ?? 0)))]
+        : Result.Rows.GroupBy(r => r.GroupLabel ?? "(blank)")
+            .OrderByDescending(g => g.Sum(r => r.Values[0] ?? 0)).Take(5)
+            .Select(g => new Series(g.Key, g.GroupBy(r => r.Bucket).ToDictionary(x => x.Key, x => x.Sum(r => r.Values[0] ?? 0)))).ToList();
+    var max = Math.Max(1m, series.SelectMany(s => s.Points.Values).DefaultIfEmpty(0).Max());
+    const int W = 640, H = 220, Pad = 30;
+    var step = periods.Count <= 1 ? 0 : (W - 2.0 * Pad) / (periods.Count - 1);
+    double X(int i) => periods.Count <= 1 ? W / 2.0 : Pad + i * step;
+    double Y(decimal v) => H - Pad - (double)(v / max) * (H - 2 * Pad);
+
+    <figure role="img" aria-label="@($"{Result.MeasureLabels[0]} over time")">
+        <figcaption class="mb-2 text-xs font-semibold text-slate-600">@Result.MeasureLabels[0] by @Result.TimeGranularity</figcaption>
+        <svg viewBox="0 0 @W @H" class="h-56 w-full">
+            <line x1="@Pad" y1="@(H - Pad)" x2="@(W - Pad)" y2="@(H - Pad)" stroke="#cbd5e1" />
+            @for (var si = 0; si < series.Count; si++)
+            {
+                var s = series[si];
+                var color = Palette[si % Palette.Length];
+                var points = string.Join(" ", periods.Select((p, i) => $"{X(i):0.#},{Y(s.Points.GetValueOrDefault(p)):0.#}"));
+                <polyline points="@points" fill="none" stroke="@color" stroke-width="2" />
+                @for (var i = 0; i < periods.Count; i++)
+                {
+                    <circle cx="@X(i).ToString("0.#")" cy="@Y(s.Points.GetValueOrDefault(periods[i])).ToString("0.#")" r="3" fill="@color">
+                        <title>@s.Label, @Period(periods[i], Result.TimeGranularity): @Fmt(s.Points.GetValueOrDefault(periods[i]))</title>
+                    </circle>
+                }
+            }
+            @for (var i = 0; i < periods.Count; i += Math.Max(1, periods.Count / 8))
+            {
+                @SvgText(X(i), H - 10, Period(periods[i], Result.TimeGranularity), "middle")
+            }
+            @SvgText(4, Pad - 8, Fmt(max), "start")
+        </svg>
+        @if (series.Count > 1)
+        {
+            <div class="mt-2 flex flex-wrap gap-3 text-xs">
+                @for (var si = 0; si < series.Count; si++)
+                {
+                    <span class="flex items-center gap-1"><span class="inline-block h-2 w-3 rounded" style="background:@Palette[si % Palette.Length]"></span>@series[si].Label</span>
+                }
+            </div>
+        }
+    </figure>
+}
+
+@code {
+    [Parameter, EditorRequired] public ReportResult Result { get; set; } = null!;
+
+    private sealed record Series(string Label, Dictionary<DateTime?, decimal> Points);
+
+    // Razor treats <text> as its own directive, so SVG text nodes are emitted as encoded markup.
+    private static MarkupString SvgText(double x, double y, string label, string anchor) =>
+        new($"<text x=\"{x.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)}\" y=\"{y.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)}\" " +
+            $"font-size=\"10\" text-anchor=\"{anchor}\" fill=\"#64748b\">{System.Net.WebUtility.HtmlEncode(label)}</text>");
+
+    private static readonly string[] Palette = ["#4f46e5", "#0891b2", "#d97706", "#059669", "#db2777"];
+
+    private static string Fmt(decimal? v) => v?.ToString("#,##0.##", System.Globalization.CultureInfo.InvariantCulture) ?? "—";
+
+    public static string Period(DateTime? bucket, string? granularity) => bucket is not { } b ? "—" : granularity switch
+    {
+        "year" => b.ToString("yyyy"),
+        "quarter" => $"Q{(b.Month - 1) / 3 + 1} {b:yyyy}",
+        "month" => b.ToString("MMM yyyy"),
+        _ => b.ToString("d MMM yyyy")
+    };
+}

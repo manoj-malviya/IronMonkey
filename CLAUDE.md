@@ -304,6 +304,91 @@ dotnet ef migrations add <Name> --project IronMonkey.Data --startup-project Iron
   tests invoke the real handler, so the aggregation under test is the aggregation that ships —
   unlike the older dashboard tests, which re-implement the LINQ they claim to cover.
 
+### Search, Saved Views, Report Builder, Exports (`/admin/search`, `/admin/views/{type}`, `/admin/reports/builder`, `/admin/exports`)
+- **One query engine: `Features/Insights/QueryCompiler`** compiles view filters, sorts and report
+  definitions to **parameterised SQL**. Field SQL comes only from `RecordCatalog` (built-ins are
+  constants; custom fields are `custom_field_values->'Values'->>@p` with the definition id bound as a
+  parameter). Unknown fields/operators are rejected before SQL exists; every value is an
+  `NpgsqlParameter`. Filters cap depth (3), conditions (30), list sizes (100), strings (500).
+- **Raw SQL bypasses the EF query filters**, so the compiler and `SearchService` restate them:
+  explicit `TenantId` + `IsDeleted` and the caller's owner sets from `db.Visibility` (tasks also check
+  the parent lead). **Any new raw-SQL insight path must do the same** — the EF filter will not save it.
+- **Every insight statement runs in a READ ONLY transaction with `SET LOCAL statement_timeout`**
+  (`InsightSql`): 3 s search, 10 s interactive, 60 s export/scheduled. A timeout is PostgreSQL
+  cancelling server-side (57014 → `QueryTimeoutException` → 504), not a client abandoning it.
+- **Time boundaries go through `DashboardDateRange.ResolveIn(preset, from, to, zone, now)`** — the
+  same preset logic run on the tenant's wall clock, converted to UTC instants, still half-open.
+  Time buckets use `date_trunc(@gran, col AT TIME ZONE @tz)`. Custom Date fields compare as
+  tenant-local dates. The four fixed reports were left on their own endpoints, unchanged.
+- **Search** is PostgreSQL trigram (`pg_trgm`, GIN indexes from the `SearchViewsReports` migration),
+  not an external engine. Phones match via the stored generated `MobileDigits` column and
+  `SearchNormalizer.PhoneTail` (strip non-digits, drop trunk zeros, keep the last 10) — so
+  "07700 900123" finds "+447700900123". Custom fields are searched only when `IsSearchable`
+  (indexed jsonb-text prefilter + exact-key EXISTS). Per-type caps, counts capped at 100, and only
+  types the caller holds `*:read` for are searched at all.
+- **Saved views store a question, not an answer**: a shared view runs under each viewer's own
+  visibility. Only the owner edits/deletes. Stored definitions are re-validated on every read, so a
+  view on a deleted custom field reports itself broken instead of returning an empty list.
+  `/admin/views/{type}` keeps state in the URL (`view`, `f` = base64url definition, `page`), so
+  Back/Forward works; `returnUrl` goes through `ListReturn.Resolve`. Every sort ends `, t."Id"`.
+- **Reports** cap groups at 200 (fetch 201 to flag truncation). Scheduling uses a Hangfire recurring
+  job per report (`report-{tenant}-{id}`, `tenant` queue) that runs **as the report's owner**:
+  background jobs have no ambient visibility, so `ActingAs.OpenAsync` resolves and enters the user's
+  visibility explicitly — the same applies to exports. Stored runs are owner-only.
+- **Exports** need `data:export` (id 23, Admin by default) plus the type's read permission, are built
+  by `DataExportJob` on the `tenant` queue (≤ 50,000 rows), re-check permission at run time, and
+  download only for the requester until they expire (7 days). The `export_jobs` row is the audit
+  record and is never deleted; completion and each download also write `ActivityLog`. CSV cells
+  starting `= + - @` are apostrophe-prefixed (formula injection: lead names come from public forms).
+- **Impersonation picks an arbitrary Admin** when a tenant has several (pre-existing), so two
+  impersonation tokens for one tenant can be different users — exports, views and defaults are
+  per-user and will not follow.
+
+### Record Visibility, Teams and Roles (`/admin/roles`, `/admin/teams`)
+- **Visibility is enforced in the `TenantDbContext` global query filters**, beside `TenantId`.
+  `RecordVisibilityMiddleware` (after `UseAuthorization`) resolves the caller's scope and makes it
+  ambient (`RecordVisibility.Enter`, an `AsyncLocal`); every context constructed in that request
+  captures it into the filter fields. So lists, `TotalCount`, detail lookups (an invisible id is a
+  plain 404), dashboard aggregates, duplicate checks, merges and reports all inherit it with no
+  per-endpoint code. Contexts with no ambient visibility — background jobs, provisioning, the
+  public quote page — are `Unrestricted`, which is what lets routing assign to anyone.
+- **`IgnoreQueryFilters()` on Leads/Contacts/Opportunities now bypasses visibility, not just
+  soft-delete.** Duplicate detection's fuzzy-name path did exactly that and reported invisible leads
+  as duplicates. Use it only on non-record tables (Users, numbering).
+- **Ambient visibility only flows downward.** Setting it inside an awaited helper reverts when the
+  helper returns; resolve first, then `using (RecordVisibility.Enter(await ...))` in the caller.
+- **Scopes:** `Own` (owner = me), `Team` (me + teammates + everyone in teams I manage and their
+  sub-teams), `All`. Per role, per record type (Lead, Contact, Opportunity, Task) in
+  `role_record_scopes`; **no row = All**, so existing tenants are unchanged until an Admin narrows
+  one. A user's scope is the broadest across their roles. **Unowned records are visible only under
+  All.** Owner = `Lead.AssignedToUserId`, `LeadTask.AssignedToUserId`, and the new
+  `Contact/Opportunity.OwnerUserId` (backfilled from the converting lead; set to the creator on
+  create). A lead created by a narrowed user with no assignee is assigned to them, or they would
+  lose sight of it on save. A task is visible only if its own assignee is in scope AND its lead is.
+- **Derived records follow their parent's visibility in the filter:** `ActivityLog` (by subject),
+  `WorkflowExecutionLog` (by lead), `Message` (by lead/contact), `Quote` (by opportunity).
+- **Teams nest via `ParentTeamId`; depth ≤ `TeamHierarchy.MaxDepth` (5) and cycles are rejected at
+  write time**; the resolver's walk is also capped and cycle-safe as a backstop.
+- **Visibility is cached 5 min per user behind a tenant-wide version stamp**
+  (`IRecordVisibilityCache.InvalidateTenantAsync`), bumped on every role-scope, role-assignment and
+  team change — Team scope for one user depends on other users' memberships. Changes apply on the
+  caller's next API request; the Blazor circuit only holds a token, so it cannot outlive a revocation.
+- **Permissions are now enforced on CRM records:** groups built with `RequireRecordPermissions(read,
+  write)` gate GET on `*:read` and everything else on `*:write` (delete included — no tenant role
+  holds `*:delete`, and requiring it would remove a capability Admins have today). The migration
+  granted CRM read/write to every existing role except SuperAdmin, which is exactly the access each
+  had in effect before. **Role and team management require `users:write`** — before this, any
+  signed-in user could create a role with every permission and assign it to themselves.
+- **`PrivilegeGuard`: nobody grants what they don't hold.** Adding a permission to a role, or
+  assigning a role, requires the actor to hold every permission involved; a role scope can't be set
+  wider than the actor's own. The Admin role must keep `users:read`/`users:write` (lockout guard,
+  alongside `AdminSafetyGuard`'s last-Admin rule). `admin:access` and SuperAdmin stay hidden and
+  ungrantable via `TenantRoleRules`.
+- **`GET /api/users/assignable`** (id + name, any tenant user) is the assignment picker source —
+  `GET /users` needs `users:read`, and assignment must reach users whose records you can't see.
+- **Privilege changes are audited in `ActivityLog`** (`PermissionAudit`: RoleCreated,
+  RolePermissionsChanged, RoleScopesChanged, RoleDeleted, Team*), with before/after values.
+
 ### Products, Quotes and Deal Economics (`/admin/products`, `/admin/quotes/{id}`, `/admin/reports/revenue`)
 - **Deal value is computed from line items, never stored as a free decimal.** `Opportunity.Amount`
   is still a column (dashboards aggregate it in SQL) but only `RecalculateTotals()` writes it, via

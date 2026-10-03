@@ -65,6 +65,9 @@ public class FieldItem
     public string AppliesTo { get; set; } = "Lead";
     public int DisplayOrder { get; set; }
     public bool IsRequired { get; set; }
+
+    /// <summary>Whether global search matches this field's values.</summary>
+    public bool IsSearchable { get; set; }
     public List<string> Options { get; set; } = [];
     public string? HelpText { get; set; }
     public string? DefaultValue { get; set; }

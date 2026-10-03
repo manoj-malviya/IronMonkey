@@ -1,0 +1,365 @@
+@page "/admin/views/{RecordType}"
+@attribute [Authorize]
+@implements IDisposable
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject TenantPresentationService Presentation
+@inject NavigationManager Nav
+
+<PageTitle>@Title — IronMonkey</PageTitle>
+
+@* Filter state lives in the URL: ?view= names a saved view, ?f= carries an unsaved definition,
+   ?page= the page. Applying a change navigates, so Back/Forward steps through filter states and
+   a copied link reproduces exactly this view. *@
+<div class="space-y-5">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <a href="@BackUrl" class="text-sm text-indigo-600 hover:text-indigo-700">&larr; Back</a>
+            <h1 class="text-2xl font-bold text-slate-900">@Title</h1>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <select value="@(View?.ToString() ?? "")" @onchange="OnPickView" aria-label="Saved view"
+                    class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                <option value="">Unsaved view</option>
+                @foreach (var v in _views)
+                {
+                    <option value="@v.Id">@v.Name@(v.IsShared ? " (shared)" : "")@(v.IsDefault ? " ★" : "")@(v.Problems.Count > 0 ? " — broken" : "")</option>
+                }
+            </select>
+            <button class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" @onclick="() => _showEditor = !_showEditor">
+                @(_showEditor ? "Hide filters" : "Filters & columns")
+            </button>
+            <button class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" disabled="@_busy" @onclick="ExportAsync">Export CSV</button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_notice))
+    {
+        <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">@((MarkupString)_notice)</div>
+    }
+    @if (_problems.Count > 0)
+    {
+        @* A broken filter is shown as broken — never as an empty list. *@
+        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+            <p class="font-semibold">This filter cannot be run as written.</p>
+            <ul class="mt-1 list-disc pl-5">@foreach (var p in _problems) { <li>@p</li> }</ul>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">@_error</div>
+    }
+
+    @if (_showEditor && _draft is not null)
+    {
+        <div class="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+            <FilterEditor Fields="_fields" Group="_draft.Filter" OnChanged="StateHasChanged" />
+
+            <div>
+                <p class="mb-1 text-xs font-semibold text-slate-600">Columns</p>
+                <div class="flex flex-wrap gap-x-4 gap-y-1">
+                    @foreach (var f in _fields)
+                    {
+                        <label class="flex items-center gap-1 text-sm">
+                            <input type="checkbox" checked="@_draft.Columns.Contains(f.Key)" @onchange="e => ToggleColumn(f.Key, e)" /> @f.Label
+                        </label>
+                    }
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 text-sm">
+                <span class="text-xs font-semibold text-slate-600">Sort by</span>
+                <select value="@(_draft.Sort?.Field ?? "")" @onchange="OnSortField" class="rounded border border-slate-300 px-2 py-1" aria-label="Sort field">
+                    <option value="">Newest first</option>
+                    @foreach (var f in _fields.Where(f => f.Sortable)) { <option value="@f.Key">@f.Label</option> }
+                </select>
+                @if (_draft.Sort is not null)
+                {
+                    <label class="flex items-center gap-1"><input type="checkbox" checked="@_draft.Sort.Descending" @onchange="e => _draft.Sort.Descending = e.Value is true" /> Descending</label>
+                }
+                <button class="ml-auto rounded-lg bg-indigo-600 px-4 py-1.5 font-semibold text-white" @onclick="Apply">Apply</button>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-sm">
+                <input @bind="_saveName" placeholder="View name" maxlength="100" class="rounded border border-slate-300 px-2 py-1" />
+                <label class="flex items-center gap-1"><input type="checkbox" @bind="_saveShared" /> Share with the team</label>
+                <button class="rounded-lg border border-slate-300 px-3 py-1.5" disabled="@_busy" @onclick="() => SaveAsync(asNew: true)">Save as new</button>
+                @if (Current is { IsOwner: true })
+                {
+                    <button class="rounded-lg border border-slate-300 px-3 py-1.5" disabled="@_busy" @onclick="() => SaveAsync(asNew: false)">Update “@Current.Name”</button>
+                    <button class="rounded-lg border border-red-200 px-3 py-1.5 text-red-700" disabled="@_busy" @onclick="DeleteAsync">Delete</button>
+                }
+                @if (Current is not null)
+                {
+                    <button class="rounded-lg border border-slate-300 px-3 py-1.5" disabled="@_busy" @onclick="ToggleDefaultAsync">
+                        @(Current.IsDefault ? "Clear default" : "Make my default")
+                    </button>
+                }
+                <span class="text-xs text-slate-500">Shared views show each person only the records they are allowed to see.</span>
+            </div>
+        </div>
+    }
+
+    @if (_result is not null)
+    {
+        <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <table class="min-w-full text-sm">
+                <thead>
+                    <tr class="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        @foreach (var c in _result.Columns) { <th class="px-4 py-2">@c.Label</th> }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (_result.Rows.Count == 0)
+                    {
+                        <tr><td class="px-4 py-6 text-slate-500" colspan="@Math.Max(1, _result.Columns.Count)">No records match this filter.</td></tr>
+                    }
+                    @foreach (var row in _result.Rows)
+                    {
+                        <tr class="cursor-pointer border-t border-slate-100 hover:bg-slate-50" @onclick="() => Open(row)">
+                            @for (var i = 0; i < row.Values.Count; i++)
+                            {
+                                <td class="px-4 py-2">@Format(_result.Columns[i], row.Values[i])</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="flex items-center justify-between text-sm text-slate-600">
+            <span>@(_result.TotalCount == 0 ? "0 records" : $"{(_result.Page - 1) * _result.PageSize + 1}–{(_result.Page - 1) * _result.PageSize + _result.Rows.Count} of {_result.TotalCount}")</span>
+            <div class="flex gap-2">
+                <button class="rounded border border-slate-300 px-3 py-1 disabled:opacity-40" disabled="@(_result.Page <= 1)" @onclick="() => GoPage(_result.Page - 1)">Previous</button>
+                <button class="rounded border border-slate-300 px-3 py-1 disabled:opacity-40" disabled="@(_result.Page >= _result.TotalPages)" @onclick="() => GoPage(_result.Page + 1)">Next</button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string RecordType { get; set; } = "Lead";
+    [SupplyParameterFromQuery] public Guid? View { get; set; }
+    [SupplyParameterFromQuery(Name = "f")] public string? F { get; set; }
+    [SupplyParameterFromQuery] public int? Page { get; set; }
+    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+    private List<FieldInfo> _fields = [];
+    private List<SavedView> _views = [];
+    private ViewDefinition? _draft;
+    private ViewResult? _result;
+    private List<string> _problems = [];
+    private string? _error, _notice, _saveName;
+    private bool _saveShared, _showEditor, _busy, _ready;
+    private string? _loadedKey;
+
+    private SavedView? Current => _views.FirstOrDefault(v => v.Id == View);
+
+    private string Title => RecordType.ToLowerInvariant() switch
+    {
+        "lead" => Presentation.Terms(TerminologyTerm.Lead),
+        "contact" => Presentation.Terms(TerminologyTerm.Contact),
+        "opportunity" => Presentation.Terms(TerminologyTerm.Opportunity),
+        _ => "Tasks"
+    };
+
+    // A returnUrl is validated as a same-origin relative path before it is used: echoing it
+    // unchecked would make this page an open redirect.
+    private string BackUrl => ListReturn.Resolve(ReturnUrl, RecordType.ToLowerInvariant() switch
+    {
+        "contact" => "/admin/contacts", "opportunity" => "/admin/opportunities", _ => "/admin/leads"
+    });
+
+    protected override void OnInitialized() => Nav.LocationChanged += OnLocationChanged;
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+
+    // Back/Forward changes the query string without re-initialising the page.
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>
+        _ = InvokeAsync(async () => { await RefreshAsync(); StateHasChanged(); });
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // After the first interactive render: the JWT is unreadable during prerender.
+        if (!firstRender) return;
+        await Presentation.EnsureLoadedAsync();
+        try
+        {
+            _fields = await Api.GetFromJsonAsync<List<FieldInfo>>($"/api/insights/{RecordType}/fields") ?? [];
+            await LoadViewsAsync();
+            _ready = true;
+
+            // No view and no filter in the URL: open the user's default view, if any.
+            if (View is null && F is null && _views.FirstOrDefault(v => v.IsDefault) is { } def)
+            {
+                Navigate(def.Id, null, 1, replace: true);
+                return;
+            }
+            await RefreshAsync();
+        }
+        catch (Exception ex) { _error = $"Could not load this list: {ex.Message}"; }
+        StateHasChanged();
+    }
+
+    private async Task LoadViewsAsync() =>
+        _views = await Api.GetFromJsonAsync<List<SavedView>>($"/api/views?recordType={RecordType}") ?? [];
+
+    private async Task RefreshAsync()
+    {
+        if (!_ready) return;
+        var key = $"{View}|{F}|{Page}";
+        if (key == _loadedKey) return;
+        _loadedKey = key;
+
+        _draft = Clone(InsightUrls.Decode(F) ?? Current?.Definition ?? DefaultDefinition());
+        if (_draft.Columns.Count == 0) _draft.Columns = DefaultDefinition().Columns;
+        _saveName = Current?.Name;
+        _saveShared = Current?.IsShared ?? false;
+        await RunAsync();
+    }
+
+    private async Task RunAsync()
+    {
+        _problems = [];
+        _error = null;
+        var res = await Api.PostAsJsonAsync($"/api/insights/{RecordType}/query", new { Definition = _draft, Page = Page ?? 1, PageSize = 25 });
+        if (res.IsSuccessStatusCode) { _result = await res.Content.ReadFromJsonAsync<ViewResult>(); return; }
+
+        _result = null;
+        if ((int)res.StatusCode == 400 && await TryProblemsAsync(res) is { } problems) _problems = problems;
+        else _error = await IronMonkey.Web.Commerce.CommerceLabels.ErrorAsync(res);
+    }
+
+    private static async Task<List<string>?> TryProblemsAsync(HttpResponseMessage res)
+    {
+        try { return (await res.Content.ReadFromJsonAsync<QueryProblems>())?.Problems; }
+        catch { return null; }
+    }
+
+    // The columns a list shows before anyone chooses: the ones that identify a record.
+    private static readonly Dictionary<string, string[]> PreferredColumns = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["lead"] = ["firstName", "lastName", "email", "mobile", "stage", "createdAt"],
+        ["contact"] = ["name", "email", "mobile", "owner", "createdAt"],
+        ["opportunity"] = ["title", "stage", "amount", "owner", "expectedCloseDate"],
+        ["task"] = ["title", "status", "priority", "assignedTo", "dueDate"]
+    };
+
+    private ViewDefinition DefaultDefinition()
+    {
+        var preferred = PreferredColumns.GetValueOrDefault(RecordType, []);
+        var columns = preferred.Where(k => _fields.Any(f => f.Key == k)).ToList();
+        if (columns.Count == 0) columns = _fields.Where(f => !f.Key.StartsWith("cf:")).Take(5).Select(f => f.Key).ToList();
+        return new ViewDefinition { Columns = columns };
+    }
+
+    private static ViewDefinition Clone(ViewDefinition d) =>
+        System.Text.Json.JsonSerializer.Deserialize<ViewDefinition>(System.Text.Json.JsonSerializer.Serialize(d, InsightUrls.Json), InsightUrls.Json)!;
+
+    private void Apply() => Navigate(null, InsightUrls.Encode(_draft!), 1);
+
+    private void GoPage(int page) => Navigate(View, F, page);
+
+    private void OnPickView(ChangeEventArgs e) =>
+        Navigate(Guid.TryParse(e.Value?.ToString(), out var id) ? id : null, null, 1);
+
+    private void Navigate(Guid? view, string? f, int page, bool replace = false)
+    {
+        var query = new Dictionary<string, object?>
+        {
+            ["view"] = view?.ToString(), ["f"] = f, ["page"] = page == 1 ? null : page, ["returnUrl"] = ReturnUrl
+        };
+        Nav.NavigateTo(Nav.GetUriWithQueryParameters($"/admin/views/{RecordType}", query), replace: replace);
+    }
+
+    private void Open(ViewRow row)
+    {
+        // Tasks have no page of their own; their lead is reached from the lead list.
+        if (RecordType.Equals("task", StringComparison.OrdinalIgnoreCase)) return;
+
+        // The detail page can return to exactly this list state.
+        var here = Nav.ToBaseRelativePath(Nav.Uri);
+        var detail = InsightUrls.DetailUrl(RecordType switch { "lead" or "Lead" => "Lead", "contact" or "Contact" => "Contact", "opportunity" or "Opportunity" => "Opportunity", _ => "Lead" }, row.Id);
+        Nav.NavigateTo($"{detail}?returnUrl={Uri.EscapeDataString("/" + here)}");
+    }
+
+    private void ToggleColumn(string key, ChangeEventArgs e)
+    {
+        if (e.Value is true) { if (!_draft!.Columns.Contains(key)) _draft.Columns.Add(key); }
+        else _draft!.Columns.Remove(key);
+    }
+
+    private void OnSortField(ChangeEventArgs e)
+    {
+        var key = e.Value?.ToString();
+        _draft!.Sort = string.IsNullOrEmpty(key) ? null : new SortSpec { Field = key, Descending = _draft.Sort?.Descending ?? false };
+    }
+
+    private async Task SaveAsync(bool asNew)
+    {
+        if (string.IsNullOrWhiteSpace(_saveName)) { _error = "Give the view a name."; return; }
+        _busy = true;
+        try
+        {
+            var body = new { Name = _saveName, RecordType, Definition = _draft, IsShared = _saveShared };
+            var res = asNew || Current is null
+                ? await Api.PostAsJsonAsync("/api/views", body)
+                : await Api.PutAsJsonAsync($"/api/views/{Current.Id}", body);
+            if (!res.IsSuccessStatusCode)
+            {
+                if (await TryProblemsAsync(res) is { } p) _problems = p; else _error = await IronMonkey.Web.Commerce.CommerceLabels.ErrorAsync(res);
+                return;
+            }
+
+            var id = asNew || Current is null
+                ? (await res.Content.ReadFromJsonAsync<CreatedId>())!.Id
+                : Current.Id;
+            await LoadViewsAsync();
+            _notice = "View saved.";
+            _loadedKey = null;
+            Navigate(id, null, 1);
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (Current is null) return;
+        var res = await Api.DeleteAsync($"/api/views/{Current.Id}");
+        if (!res.IsSuccessStatusCode) { _error = await IronMonkey.Web.Commerce.CommerceLabels.ErrorAsync(res); return; }
+        await LoadViewsAsync();
+        Navigate(null, null, 1);
+    }
+
+    private async Task ToggleDefaultAsync()
+    {
+        if (Current is null) return;
+        var res = Current.IsDefault
+            ? await Api.DeleteAsync($"/api/views/default/{RecordType}")
+            : await Api.PutAsJsonAsync($"/api/views/{Current.Id}/default", new { });
+        if (!res.IsSuccessStatusCode) { _error = await IronMonkey.Web.Commerce.CommerceLabels.ErrorAsync(res); return; }
+        await LoadViewsAsync();
+    }
+
+    private async Task ExportAsync()
+    {
+        _busy = true;
+        try
+        {
+            var res = await Api.PostAsJsonAsync("/api/exports", new { RecordType, Source = "view", Definition = _draft });
+            _notice = res.IsSuccessStatusCode
+                ? "Export queued. It will be ready on the <a class=\"underline\" href=\"/admin/exports\">Exports</a> page shortly."
+                : null;
+            if (!res.IsSuccessStatusCode)
+                _error = (int)res.StatusCode == 403 ? "You do not have permission to export data." : await IronMonkey.Web.Commerce.CommerceLabels.ErrorAsync(res);
+        }
+        finally { _busy = false; }
+    }
+
+    private string Format(ViewColumn column, string? value)
+    {
+        if (value is null) return "—";
+        if (column.Kind == "Instant" && DateTime.TryParse(value, out var d)) return d.ToString("d MMM yyyy HH:mm");
+        if (column.Kind == "Bool") return value == "true" ? "Yes" : "No";
+        return value;
+    }
+
+    private sealed record CreatedId(Guid Id);
+}

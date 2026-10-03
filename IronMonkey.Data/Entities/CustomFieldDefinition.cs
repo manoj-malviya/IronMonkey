@@ -56,6 +56,14 @@ public sealed class CustomFieldDefinition : BaseTenantEntity
     /// </summary>
     public bool IsArchived { get; private set; }
 
+    /// <summary>
+    /// Whether global search matches this field's values. Opt-in per field: searching every
+    /// custom value would turn a phone-number lookup into a scan of every free-text note.
+    /// </summary>
+    public bool IsSearchable { get; private set; }
+
+    public void SetSearchable(bool searchable) => IsSearchable = searchable;
+
     /// <summary>The record this field is captured on. Defaults to Lead so fields defined
     /// before this existed keep their original meaning.</summary>
     public CustomFieldEntity AppliesTo { get; private set; } = CustomFieldEntity.Lead;

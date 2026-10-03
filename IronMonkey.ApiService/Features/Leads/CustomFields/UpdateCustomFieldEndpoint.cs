@@ -31,7 +31,9 @@ public class UpdateCustomFieldEndpoint : IEndpoint
         string? FieldKey = null,
         string? HelpText = null,
         string? DefaultValue = null,
-        string? MigrationStrategy = null);
+        string? MigrationStrategy = null,
+        /// <summary>Null leaves global-search inclusion unchanged.</summary>
+        bool? IsSearchable = null);
 
     public record Response(Guid Id, string FieldName, string FieldKey, string FieldType, bool IsRequired,
         List<string> Options, string AppliesTo, int DisplayOrder, string? HelpText,
@@ -153,6 +155,7 @@ public class UpdateCustomFieldEndpoint : IEndpoint
         field.Update(name, fieldType, request.IsRequired, options, scope, request.DisplayOrder,
             key, Trim(request.HelpText), Trim(request.DefaultValue));
 
+        if (request.IsSearchable is { } searchable) field.SetSearchable(searchable);
         await db.SaveChangesAsync(cancellationToken);
 
         return TypedResults.Ok(new Response(field.Id, field.FieldName, field.FieldKey,

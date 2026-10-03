@@ -29,6 +29,7 @@ public sealed class Permission
     public static readonly Permission MessagesRead = new(20, PermissionConstants.MessagesRead);
     public static readonly Permission QuotesApprove = new(21, PermissionConstants.QuotesApprove);
     public static readonly Permission CatalogWrite = new(22, PermissionConstants.CatalogWrite);
+    public static readonly Permission DataExport = new(23, PermissionConstants.DataExport);
 
     private Permission(int id, string name)
     {

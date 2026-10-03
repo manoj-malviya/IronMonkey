@@ -40,7 +40,8 @@ public class UpdateUserEndpoint : IEndpoint
         IUserContext userContext,
         AuthorizationService authorizationService,
         CentralDbContext centralDb,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IRecordVisibilityCache? visibilityCache = null)
     {
         var tenantId = tenantService.GetCurrentTenantId();
         var connectionString = await tenantService.GetConnectionStringAsync(cancellationToken);
@@ -67,6 +68,11 @@ public class UpdateUserEndpoint : IEndpoint
         var role = await db.Roles.FirstOrDefaultAsync(r => r.Id == request.RoleId, cancellationToken);
         if (role is null)
             return TypedResults.NotFound();
+
+        // Assigning a role grants its permissions. Refused when the role holds anything the
+        // actor does not — otherwise a user-manager could hand out (or take) more than they have.
+        if (request.RoleId != user.Roles.FirstOrDefault()?.Id && await IronMonkey.ApiService.Features.RoleManagement.PrivilegeGuard.CheckCanAssignRoleAsync(db, userContext.UserId, role.Id, cancellationToken) is { } escalation)
+            return new ValidationError(escalation);
 
         var previousRole = user.Roles.FirstOrDefault();
         var roleChanged = previousRole?.Id != request.RoleId;
@@ -131,6 +137,8 @@ public class UpdateUserEndpoint : IEndpoint
 
         if (roleChanged)
             await authorizationService.InvalidatePermissionsAsync(user.Id, tenantId, cancellationToken);
+            // A role change can change the user's record scope, and Team scope for others.
+            if (visibilityCache is not null) await visibilityCache.InvalidateTenantAsync(tenantId, cancellationToken);
 
         if (emailChanged)
         {

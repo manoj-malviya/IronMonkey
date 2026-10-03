@@ -1,0 +1,19 @@
+@* One entry point for finding any record. Submits to the search page, whose URL carries the
+   query, so Back returns to the results and a link reproduces them. *@
+@inject NavigationManager Nav
+
+<form class="mb-5 flex max-w-xl gap-2" role="search" @onsubmit="Go">
+    <input type="search" @bind="_q" placeholder="Search name, email, phone…" aria-label="Search records"
+           class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+    <button type="submit" class="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-white">Search</button>
+</form>
+
+@code {
+    private string? _q;
+
+    private void Go()
+    {
+        if (string.IsNullOrWhiteSpace(_q) || _q.Trim().Length < 2) return;
+        Nav.NavigateTo($"/admin/search?q={Uri.EscapeDataString(_q.Trim())}");
+    }
+}

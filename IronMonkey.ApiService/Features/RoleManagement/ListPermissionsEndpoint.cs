@@ -17,7 +17,7 @@ public class ListPermissionsEndpoint : IEndpoint
         .MapGet("/permissions", Handle)
         .WithSummary("List the permissions a tenant can grant, grouped by resource")
         .WithTags("Role Management")
-        .RequireAuthorization();
+        .RequireAuthorization(PermissionConstants.UsersRead);
 
     public record PermissionItem(int Id, string Name, string Group, string Action);
 

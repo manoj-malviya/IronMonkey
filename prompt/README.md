@@ -24,9 +24,9 @@ plus market research on what a multi-industry CRM is expected to have in 2026.
 | 07 | Communications hub — email, SMS, WhatsApp | Core CRM gap | written |
 | 08 | Configurable opportunity pipelines | **Adaptability** | written |
 | 09 | Custom objects and relationships | **Adaptability** | written |
-| 10 | Granular permissions and record visibility | Security | written |
+| 10 | Granular permissions and record visibility | Security | shipped |
 | 11 | Privacy, consent and data retention | Compliance | written |
-| 12 | Global search, saved views, report builder | **Adaptability** | written |
+| 12 | Global search, saved views, report builder | **Adaptability** | shipped |
 | 13 | Integration platform, public API, SSO | Enterprise | written |
 | 14 | Products, quotes and deal economics | Core CRM gap | shipped |
 | 15 | AI assistance and lead scoring | Differentiation | written |

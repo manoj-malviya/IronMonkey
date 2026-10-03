@@ -21,7 +21,7 @@ public class GetLeadEndpoint : IEndpoint
         Guid? AssignedToUserId, DateTime CreatedAt,
         Dictionary<string, object?> CustomFields);
 
-    private static async Task<Results<Ok<Response>, NotFound>> Handle(
+    internal static async Task<Results<Ok<Response>, NotFound>> Handle(
         Guid id,
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,

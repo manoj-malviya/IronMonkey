@@ -37,7 +37,7 @@ public class GetActivityTimelineEndpoint : IEndpoint
         int TotalCount,
         int Page);
 
-    private static async Task<Results<Ok<TimelineResponse>, BadRequest<string>>> Handle(
+    internal static async Task<Results<Ok<TimelineResponse>, BadRequest<string>>> Handle(
         string subjectType,
         Guid subjectId,
         int? page,

@@ -71,6 +71,16 @@ public static class PermissionConstants
     /// </summary>
     public const string CatalogWrite = "catalog:write";
 
+    /// <summary>
+    /// Export lists, saved views and reports to a file.
+    ///
+    /// Its own permission because export is the highest-volume disclosure path in a CRM — the
+    /// one a departing employee reaches for. Reading a record on screen and taking the whole
+    /// book home in a CSV are different acts. Granted to Admin by default; every export is
+    /// audited whoever runs it.
+    /// </summary>
+    public const string DataExport = "data:export";
+
     /// <summary>Platform administration: approve/reject signups, provision tenants.</summary>
     public const string AdminAccess = "admin:access";
 
@@ -94,7 +104,7 @@ public static class PermissionConstants
         SettingsRead, SettingsWrite,
         WorkflowLogsRead,
         MessagesSend, MessagesRead,
-        QuotesApprove, CatalogWrite,
+        QuotesApprove, CatalogWrite, DataExport,
         AdminAccess
     };
 }

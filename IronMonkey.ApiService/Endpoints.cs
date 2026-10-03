@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using IronMonkey.ApiService.Authentication.Endpoints;
 using IronMonkey.ApiService.Common;
+using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.Common.Auth;
 using IronMonkey.ApiService.Features.Leads;
 using IronMonkey.ApiService.Features.Leads.CustomFields;
@@ -39,6 +40,7 @@ using IronMonkey.ApiService.Features.Onboarding;
 using IronMonkey.ApiService.Features.Commerce;
 using IronMonkey.ApiService.Features.Quotes;
 using IronMonkey.ApiService.Features.Reports.Revenue;
+using IronMonkey.ApiService.Features.Insights;
 
 namespace IronMonkey.ApiService;
 
@@ -73,6 +75,7 @@ public static class Endpoints
         endpoints.MapOnboardingEndpoints();
         endpoints.MapCommunicationEndpoints();
         endpoints.MapCommerceEndpoints();
+        endpoints.MapInsightEndpoints();
     }
 
     extension(IEndpointRouteBuilder app)
@@ -196,7 +199,15 @@ public static class Endpoints
                 .MapEndpoint<ListPermissionsEndpoint>()
                 .MapEndpoint<CreateRoleEndpoint>()
                 .MapEndpoint<UpdateRoleEndpoint>()
-                .MapEndpoint<DeleteRoleEndpoint>();
+                .MapEndpoint<DeleteRoleEndpoint>()
+                .MapEndpoint<GetRoleScopesEndpoint>()
+                .MapEndpoint<SetRoleScopesEndpoint>()
+                .MapEndpoint<TeamEndpoints>();
+
+            // Assignment pickers: any tenant user may list who records can be assigned to,
+            // without users:read — routing and assignment must reach users whose records the
+            // caller cannot see.
+            AssignableUsersEndpoint.Map(app);
         }
 
         private void MapLeadsEndpoints()
@@ -213,26 +224,35 @@ public static class Endpoints
             DeletePipelineStageEndpoint.Map(app);
             ReorderPipelineStagesEndpoint.Map(app);
             GetPipelineStageImpactEndpoint.Map(app);
-            CreateLeadEndpoint.Map(app);
-            CheckDuplicatesEndpoint.Map(app);
-            MergeLeadsEndpoint.Map(app);
-            CreateTaskEndpoint.Map(app);
-            ListTasksEndpoint.Map(app);
-            UpdateTaskEndpoint.Map(app);
             ConfigureRoutingEndpoint.Map(app);
             GetRoutingConfigEndpoint.Map(app);
             ConfigureTransitionsEndpoint.Map(app);
             ListTransitionsEndpoint.Map(app);
-            GetKanbanBoardEndpoint.Map(app);
-            MoveLeadEndpoint.Map(app);
+
+            // Lead records and everything that reads or changes them: leads:read for GETs,
+            // leads:write for the rest. Record visibility is enforced separately, in the
+            // TenantDbContext query filter, so these gates decide "may this user use leads at
+            // all" and the filter decides "which leads". Delete is gated on leads:write rather
+            // than leads:delete, which no tenant role holds — requiring it would remove a
+            // capability every Admin has today.
+            var leads = app.MapGroup(string.Empty)
+                .RequireRecordPermissions(PermissionConstants.LeadsRead, PermissionConstants.LeadsWrite);
+            CreateLeadEndpoint.Map(leads);
+            CheckDuplicatesEndpoint.Map(leads);
+            MergeLeadsEndpoint.Map(leads);
+            CreateTaskEndpoint.Map(leads);
+            ListTasksEndpoint.Map(leads);
+            UpdateTaskEndpoint.Map(leads);
+            GetKanbanBoardEndpoint.Map(leads);
+            MoveLeadEndpoint.Map(leads);
 
             // Lead CRUD. CreateLeadEndpoint already existed; without these the leads the
             // API could create were unreachable — nothing could list, open or edit them.
-            ListLeadsEndpoint.Map(app);
-            GetLeadEndpoint.Map(app);
-            UpdateLeadEndpoint.Map(app);
-            DeleteLeadEndpoint.Map(app);
-            ConvertLeadEndpoint.Map(app);
+            ListLeadsEndpoint.Map(leads);
+            GetLeadEndpoint.Map(leads);
+            UpdateLeadEndpoint.Map(leads);
+            DeleteLeadEndpoint.Map(leads);
+            ConvertLeadEndpoint.Map(leads);
         }
 
         private void MapCommunicationEndpoints()
@@ -285,20 +305,26 @@ public static class Endpoints
 
         private void MapContactEndpoints()
         {
-            ListContactsEndpoint.Map(app);
-            GetContactEndpoint.Map(app);
-            CreateContactEndpoint.Map(app);
-            UpdateContactEndpoint.Map(app);
-            DeleteContactEndpoint.Map(app);
+            var contacts = app.MapGroup(string.Empty)
+                .RequireRecordPermissions(PermissionConstants.ContactsRead, PermissionConstants.ContactsWrite);
+            ListContactsEndpoint.Map(contacts);
+            GetContactEndpoint.Map(contacts);
+            CreateContactEndpoint.Map(contacts);
+            UpdateContactEndpoint.Map(contacts);
+            DeleteContactEndpoint.Map(contacts);
+            RecordOwnerEndpoints.MapContact(contacts);
         }
 
         private void MapOpportunityEndpoints()
         {
-            ListOpportunitiesEndpoint.Map(app);
-            GetOpportunityEndpoint.Map(app);
-            CreateOpportunityEndpoint.Map(app);
-            UpdateOpportunityEndpoint.Map(app);
-            DeleteOpportunityEndpoint.Map(app);
+            var opportunities = app.MapGroup(string.Empty)
+                .RequireRecordPermissions(PermissionConstants.OpportunitiesRead, PermissionConstants.OpportunitiesWrite);
+            ListOpportunitiesEndpoint.Map(opportunities);
+            GetOpportunityEndpoint.Map(opportunities);
+            CreateOpportunityEndpoint.Map(opportunities);
+            UpdateOpportunityEndpoint.Map(opportunities);
+            DeleteOpportunityEndpoint.Map(opportunities);
+            RecordOwnerEndpoints.MapOpportunity(opportunities);
 
             // Opportunity stages, mirroring the lead pipeline-stage endpoints rule for rule.
             ListOpportunityStagesEndpoint.Map(app);
@@ -389,24 +415,41 @@ public static class Endpoints
             CreatePriceListEndpoint.Map(app);
             UpdatePriceListEndpoint.Map(app);
 
-            GetDealEconomicsEndpoint.Map(app);
-            AddLineItemEndpoint.Map(app);
-            UpdateLineItemEndpoint.Map(app);
-            RemoveLineItemEndpoint.Map(app);
-            SetDealEconomicsEndpoint.Map(app);
+            // Deal lines and quotes are part of the opportunity record.
+            var deals = app.MapGroup(string.Empty)
+                .RequireRecordPermissions(PermissionConstants.OpportunitiesRead, PermissionConstants.OpportunitiesWrite);
+            GetDealEconomicsEndpoint.Map(deals);
+            AddLineItemEndpoint.Map(deals);
+            UpdateLineItemEndpoint.Map(deals);
+            RemoveLineItemEndpoint.Map(deals);
+            SetDealEconomicsEndpoint.Map(deals);
 
-            ListQuotesEndpoint.Map(app);
-            GetQuoteEndpoint.Map(app);
-            GetQuoteDocumentEndpoint.Map(app);
-            CreateQuoteEndpoint.Map(app);
-            UpdateQuoteEndpoint.Map(app);
-            QuoteActionEndpoints.Map(app);
-            SendQuoteEndpoint.Map(app);
-            RespondQuoteEndpoint.Map(app);
-            QuoteShareLinkEndpoints.Map(app);
+            ListQuotesEndpoint.Map(deals);
+            GetQuoteEndpoint.Map(deals);
+            GetQuoteDocumentEndpoint.Map(deals);
+            CreateQuoteEndpoint.Map(deals);
+            UpdateQuoteEndpoint.Map(deals);
+            QuoteActionEndpoints.Map(deals);
+            SendQuoteEndpoint.Map(deals);
+            RespondQuoteEndpoint.Map(deals);
+            QuoteShareLinkEndpoints.Map(deals);
             QuoteSettingsEndpoints.Map(app);
 
             PublicQuoteEndpoints.Map(app);
+        }
+
+        /// <summary>
+        /// Search, saved views, the report builder and exports. Each checks the record type's
+        /// read permission itself (the type is a route/body value, so a group gate cannot), and
+        /// all of them apply record visibility in their SQL. Export also needs data:export.
+        /// </summary>
+        private void MapInsightEndpoints()
+        {
+            SearchEndpoint.Map(app);
+            InsightQueryEndpoints.Map(app);
+            SavedViewEndpoints.Map(app);
+            ReportBuilderEndpoints.Map(app);
+            ExportEndpoints.Map(app);
         }
 
         private void MapReportEndpoints()

@@ -10,6 +10,9 @@ internal sealed class LeadConfiguration : IEntityTypeConfiguration<Lead>
     {
         builder.ToTable("leads");
 
+        builder.Property(lead => lead.MobileDigits)
+            .HasComputedColumnSql(@"regexp_replace(""Mobile"", '[^0-9]', '', 'g')", stored: true);
+
         builder.HasKey(lead => lead.Id);
 
         builder.Property(lead => lead.FirstName)

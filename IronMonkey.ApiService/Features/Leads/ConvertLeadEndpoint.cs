@@ -106,6 +106,8 @@ public class ConvertLeadEndpoint : IEndpoint
             // Id, so the lead's key has to be translated to the contact field's key.
             await CopyMatchingCustomFieldsAsync(db, lead, contact, cancellationToken);
 
+            // Ownership follows the lead: whoever worked it keeps the customer and the deal.
+            contact.AssignOwner(lead.AssignedToUserId ?? userContext.UserId);
             db.Contacts.Add(contact);
         }
 
@@ -123,6 +125,7 @@ public class ConvertLeadEndpoint : IEndpoint
             // A lump-sum figure becomes one free-text line: deal value is computed from lines.
             if (request.Amount > 0m)
                 opportunity.SetAmount(request.Amount);
+            opportunity.AssignOwner(lead.AssignedToUserId ?? userContext.UserId);
             db.Opportunities.Add(opportunity);
 
             // The deal's first placement, recorded like any other move so its time in the
