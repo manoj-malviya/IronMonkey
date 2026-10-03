@@ -4,6 +4,7 @@
 @using System.ComponentModel.DataAnnotations
 @inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
 @inject NavigationManager Nav
+@inject TenantPresentationService Presentation
 
 <PageTitle>@(IsEdit ? "Edit Contact" : "New Contact") — IronMonkey</PageTitle>
 
@@ -63,7 +64,7 @@
                         {
                             <li class="flex items-center justify-between text-sm">
                                 <span class="text-slate-700">@o.Title</span>
-                                <span class="text-slate-500">@o.Stage · @o.Amount.ToString("N0")</span>
+                                <span class="text-slate-500">@o.Stage · @Presentation.MoneyExact(o.Amount, o.CurrencyCode)</span>
                             </li>
                         }
                     </ul>
@@ -162,5 +163,6 @@
         public string Title { get; set; } = "";
         public string Stage { get; set; } = "";
         public decimal Amount { get; set; }
+        public string? CurrencyCode { get; set; }
     }
 }

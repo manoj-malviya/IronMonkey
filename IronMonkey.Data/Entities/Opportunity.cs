@@ -1,4 +1,5 @@
 using IronMonkey.Data.Abstractions;
+using IronMonkey.Data.Commerce;
 
 namespace IronMonkey.Data.Entities;
 
@@ -37,7 +38,48 @@ public sealed class Opportunity : BaseTenantEntity
     public Guid PipelineId { get; private set; }
 
     public string? LossReason { get; private set; }
+
+    /// <summary>
+    /// The deal's total value: the sum of its line totals, computed by
+    /// <see cref="LineCalculator"/>. Persisted so dashboards can aggregate in SQL, but never
+    /// written directly — only <see cref="RecalculateTotals"/> sets it. Before line items this
+    /// was a free decimal; the <c>ProductsAndQuotes</c> migration moved every such value onto
+    /// a single line so no deal lost its value.
+    /// </summary>
     public decimal Amount { get; private set; } = 0m;
+
+    /// <summary>Total of one-off lines. With <see cref="RecurringAmount"/>, sums to <see cref="Amount"/>.</summary>
+    public decimal OneOffAmount { get; private set; }
+
+    /// <summary>Total contract value of recurring lines (unit price × quantity × periods).</summary>
+    public decimal RecurringAmount { get; private set; }
+
+    public decimal DiscountAmount { get; private set; }
+    public decimal TaxAmount { get; private set; }
+
+    /// <summary>
+    /// ISO 4217 code of every monetary value on this deal. <b>Null means the tenant's own
+    /// currency</b> — which is what every deal created before currencies existed meant, and
+    /// what lets them keep aggregating with each other unchanged. A deal in any other currency
+    /// is only ever summed with the tenant's figures through <see cref="ExchangeRate"/>.
+    /// </summary>
+    public string? CurrencyCode { get; private set; }
+
+    /// <summary>
+    /// Units of the tenant base currency per one unit of <see cref="CurrencyCode"/>, as
+    /// recorded by a user. Null = no conversion recorded, so reports exclude this deal from
+    /// cross-currency totals and say so, rather than adding it at face value.
+    /// </summary>
+    public decimal? ExchangeRate { get; private set; }
+
+    /// <summary>The date the recorded rate applies to — a rate without its date cannot be audited.</summary>
+    public DateOnly? ExchangeRateDate { get; private set; }
+
+    /// <summary>Price list chosen for this deal (an agreement or segment). Null = tenant default.</summary>
+    public Guid? PriceListId { get; private set; }
+
+    private readonly List<OpportunityLineItem> _lineItems = [];
+    public IReadOnlyCollection<OpportunityLineItem> LineItems => _lineItems;
 
     // Navigation properties
     public Contact Contact { get; private set; } = null!;
@@ -95,5 +137,71 @@ public sealed class Opportunity : BaseTenantEntity
     /// </summary>
     public void ClearLossReason() => LossReason = null;
 
-    public void SetAmount(decimal amount) => Amount = amount;
+    /// <summary>
+    /// Replaces the deal's lines with one free-text one-off line worth <paramref name="amount"/>.
+    /// This is the lump-sum path — a caller with a single figure (lead conversion, a quick
+    /// create) still gets a deal whose value is computed from lines, never a bare decimal.
+    /// </summary>
+    public void SetAmount(decimal amount, string description = "Deal value")
+    {
+        _lineItems.Clear();
+        _lineItems.Add(OpportunityLineItem.LumpSum(TenantId, Id, amount, description));
+        RecalculateTotals();
+    }
+
+    public OpportunityLineItem AddLine(LineDetails details)
+    {
+        var position = _lineItems.Count == 0 ? 1 : _lineItems.Max(l => l.Position) + 1;
+        var line = OpportunityLineItem.Create(TenantId, Id, position, details);
+        _lineItems.Add(line);
+        RecalculateTotals();
+        return line;
+    }
+
+    public bool RemoveLine(Guid lineId)
+    {
+        var line = _lineItems.FirstOrDefault(l => l.Id == lineId);
+        if (line is null) return false;
+
+        _lineItems.Remove(line);
+        var position = 1;
+        foreach (var remaining in _lineItems.OrderBy(l => l.Position)) remaining.MoveTo(position++);
+        RecalculateTotals();
+        return true;
+    }
+
+    /// <summary>
+    /// Recomputes every line and the deal totals through <see cref="LineCalculator"/>. Called
+    /// by every method that changes a line, so the stored totals cannot drift from the lines.
+    /// </summary>
+    public DealTotals RecalculateTotals()
+    {
+        var totals = LineCalculator.Sum(_lineItems.Select(l => (l.Recalculate(CurrencyCode), l.ChargeType)));
+
+        Amount = totals.Total;
+        OneOffAmount = totals.OneOffTotal;
+        RecurringAmount = totals.RecurringTotal;
+        DiscountAmount = totals.Discount;
+        TaxAmount = totals.Tax;
+        return totals;
+    }
+
+    /// <summary>
+    /// Sets the deal's currency and re-rounds the lines to its minor unit. The endpoint
+    /// refuses the change while catalog-priced lines exist, because their prices came from
+    /// a price list in the old currency; this method only records the code.
+    /// </summary>
+    public void SetCurrency(string? currencyCode)
+    {
+        CurrencyCode = currencyCode;
+        RecalculateTotals();
+    }
+
+    public void SetExchangeRate(decimal? rate, DateOnly? rateDate)
+    {
+        ExchangeRate = rate;
+        ExchangeRateDate = rate is null ? null : rateDate;
+    }
+
+    public void SetPriceList(Guid? priceListId) => PriceListId = priceListId;
 }

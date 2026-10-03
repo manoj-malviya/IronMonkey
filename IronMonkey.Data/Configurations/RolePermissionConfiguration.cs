@@ -34,6 +34,8 @@ internal sealed class RolePermissionConfiguration : IEntityTypeConfiguration<Rol
             new RolePermission { RoleId = Role.SuperAdmin.Id, PermissionId = Permission.WorkflowLogsRead.Id },
             new RolePermission { RoleId = Role.SuperAdmin.Id, PermissionId = Permission.MessagesSend.Id },
             new RolePermission { RoleId = Role.SuperAdmin.Id, PermissionId = Permission.MessagesRead.Id },
+            new RolePermission { RoleId = Role.SuperAdmin.Id, PermissionId = Permission.QuotesApprove.Id },
+            new RolePermission { RoleId = Role.SuperAdmin.Id, PermissionId = Permission.CatalogWrite.Id },
             // Admin is the per-tenant administrator: full CRM access, no platform admin or delete rights
             new RolePermission { RoleId = Role.Admin.Id, PermissionId = Permission.UsersRead.Id },
             new RolePermission { RoleId = Role.Admin.Id, PermissionId = Permission.UsersWrite.Id },
@@ -54,6 +56,12 @@ internal sealed class RolePermissionConfiguration : IEntityTypeConfiguration<Rol
             // sending from a role that may still edit records.
             new RolePermission { RoleId = Role.Admin.Id, PermissionId = Permission.MessagesSend.Id },
             new RolePermission { RoleId = Role.Admin.Id, PermissionId = Permission.MessagesRead.Id },
+            // Quote discount approval: the tenant administrator is the default approver. A
+            // tenant that wants a Sales Manager to approve grants this to that role instead.
+            new RolePermission { RoleId = Role.Admin.Id, PermissionId = Permission.QuotesApprove.Id },
+            // Catalog and quote settings: everyday sales administration, which a tenant Admin
+            // must be able to run — Admin does not hold settings:write.
+            new RolePermission { RoleId = Role.Admin.Id, PermissionId = Permission.CatalogWrite.Id },
             // Owner has read access
             new RolePermission { RoleId = Role.Owner.Id, PermissionId = Permission.UsersRead.Id }
         ]);

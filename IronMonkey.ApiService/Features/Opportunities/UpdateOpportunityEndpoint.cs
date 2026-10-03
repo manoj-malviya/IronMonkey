@@ -21,9 +21,15 @@ public class UpdateOpportunityEndpoint : IEndpoint
         .RequireAuthorization()
         .WithRequestValidation<Request>();
 
+    /// <param name="Amount">
+    /// Optional, and only honoured for a lump-sum deal — one with no lines, or a single
+    /// free-text line. Deal value is otherwise computed from line items and edited through
+    /// <c>/api/opportunities/{id}/lines</c>; a differing amount on a line-item deal is refused
+    /// rather than silently overwriting the computed total.
+    /// </param>
     public record Request(
         string Title, Guid ContactId, Guid StageId,
-        decimal Amount, DateTime ExpectedCloseDate, string? LossReason);
+        decimal? Amount, DateTime ExpectedCloseDate, string? LossReason);
 
     public record Response(Guid Id, string Message);
 
@@ -34,11 +40,11 @@ public class UpdateOpportunityEndpoint : IEndpoint
             RuleFor(x => x.Title).NotEmpty().WithMessage("Title is required.");
             RuleFor(x => x.ContactId).NotEmpty().WithMessage("A contact is required.");
             RuleFor(x => x.StageId).NotEmpty().WithMessage("A stage is required.");
-            RuleFor(x => x.Amount).GreaterThanOrEqualTo(0).WithMessage("Amount cannot be negative.");
+            RuleFor(x => x.Amount).GreaterThanOrEqualTo(0).When(x => x.Amount is not null).WithMessage("Amount cannot be negative.");
         }
     }
 
-    private static async Task<Results<Ok<Response>, ValidationError, NotFound>> Handle(
+    internal static async Task<Results<Ok<Response>, ValidationError, NotFound>> Handle(
         Guid id,
         Request request,
         ITenantService tenantService,
@@ -51,7 +57,11 @@ public class UpdateOpportunityEndpoint : IEndpoint
 
         await using var db = dbContextFactory.CreateForTenant(connectionString, tenantId);
 
-        var opportunity = await db.Opportunities.SingleOrDefaultAsync(o => o.Id == id, cancellationToken);
+        // Lines are loaded because an amount edit may rewrite the lump-sum line, and any
+        // recalculation over an unloaded collection would zero the deal.
+        var opportunity = await db.Opportunities
+            .Include(o => o.LineItems)
+            .SingleOrDefaultAsync(o => o.Id == id, cancellationToken);
         if (opportunity is null)
             return TypedResults.NotFound();
 
@@ -89,7 +99,24 @@ public class UpdateOpportunityEndpoint : IEndpoint
             request.Title.Trim(), request.ContactId,
             DateTime.SpecifyKind(request.ExpectedCloseDate, DateTimeKind.Utc),
             stage.Id);
-        opportunity.SetAmount(request.Amount);
+        if (request.Amount is { } amount && amount != opportunity.Amount)
+        {
+            var lines = opportunity.LineItems.ToList();
+            var isLumpSum = lines.Count == 0
+                            || (lines.Count == 1 && lines[0].ProductId is null && lines[0].Quantity == 1m
+                                && lines[0].DiscountPercent == 0m && lines[0].TaxRatePercent == 0m
+                                && lines[0].ChargeType == Data.Commerce.ChargeType.OneOff);
+
+            if (!isLumpSum)
+                return new ValidationError(
+                    "This deal's value is computed from its line items. Edit the lines to change it.");
+
+            if (lines.Count == 1)
+                opportunity.SetAmount(amount, lines[0].Description == OpportunityLineItem.MigratedDescription
+                    ? "Deal value" : lines[0].Description);
+            else if (amount > 0m)
+                opportunity.SetAmount(amount);
+        }
 
         if (isLost)
         {

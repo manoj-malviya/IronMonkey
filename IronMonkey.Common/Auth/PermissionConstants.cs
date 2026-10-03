@@ -52,6 +52,25 @@ public static class PermissionConstants
     /// </summary>
     public const string MessagesRead = "messages:read";
 
+    /// <summary>
+    /// Approve a quote whose discount exceeds the tenant's approval threshold.
+    ///
+    /// The threshold lives in tenant quote settings; who may approve is decided here, through
+    /// the role model, rather than by a hardcoded role name — so a tenant grants it to a Sales
+    /// Manager role without code changing. Granted to Admin by default.
+    /// </summary>
+    public const string QuotesApprove = "quotes:approve";
+
+    /// <summary>
+    /// Manage the product catalog, price lists, price versions and quote settings (numbering,
+    /// terms, the discount approval threshold).
+    ///
+    /// Separate from settings:write because the tenant Admin role does not hold that one, and
+    /// the catalog is everyday sales administration a tenant must be able to run itself.
+    /// Granted to Admin by default; a tenant may give it to a pricing role instead.
+    /// </summary>
+    public const string CatalogWrite = "catalog:write";
+
     /// <summary>Platform administration: approve/reject signups, provision tenants.</summary>
     public const string AdminAccess = "admin:access";
 
@@ -75,6 +94,7 @@ public static class PermissionConstants
         SettingsRead, SettingsWrite,
         WorkflowLogsRead,
         MessagesSend, MessagesRead,
+        QuotesApprove, CatalogWrite,
         AdminAccess
     };
 }

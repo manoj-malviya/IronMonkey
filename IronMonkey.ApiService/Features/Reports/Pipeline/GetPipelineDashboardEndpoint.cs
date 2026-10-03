@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
+using IronMonkey.ApiService.Features.Commerce;
 using IronMonkey.ApiService.Features.Pipelines;
 using IronMonkey.Data;
+using IronMonkey.Data.Commerce;
 using IronMonkey.Data.Entities;
 
 namespace IronMonkey.ApiService.Features.Reports.Pipeline;
@@ -64,9 +66,11 @@ public class GetPipelineDashboardEndpoint : IEndpoint
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
         IPipelineScopeResolver scopeResolver,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ITenantCommerceContextResolver? commerce = null)
     {
         var tenantId = tenantService.GetCurrentTenantId();
+        var baseCurrency = commerce is null ? null : (await commerce.ResolveAsync(tenantId, cancellationToken)).BaseCurrency;
         var connectionString = await tenantService.GetConnectionStringAsync(cancellationToken);
         await using var db = dbContextFactory.CreateForTenant(connectionString, tenantId);
 
@@ -107,7 +111,7 @@ public class GetPipelineDashboardEndpoint : IEndpoint
 
             // Per D-10: total deal value = sum of Opportunity.Amount for converted leads in this stage
             // Leads without a converted opportunity contribute $0
-            var dealValue = await db.Leads
+            var dealValues = await db.Leads
                 .Where(l => l.PipelineStageId == stage.Id
                             && l.ConvertedOpportunityId != null
                             && (!dateFrom.HasValue || l.CreatedAt >= dateFrom.Value)
@@ -115,8 +119,13 @@ public class GetPipelineDashboardEndpoint : IEndpoint
                 .Join(db.Opportunities,
                     lead => lead.ConvertedOpportunityId,
                     opp => opp.Id,
-                    (lead, opp) => opp.Amount)
-                .SumAsync(amount => (decimal?)amount, cancellationToken) ?? 0m;
+                    (lead, opp) => new { opp.Amount, opp.CurrencyCode, opp.ExchangeRate })
+                .ToListAsync(cancellationToken);
+
+            // Summed through MoneyAggregator, never a bare SQL SUM: deals in a foreign
+            // currency count only through their recorded rate, and are left out otherwise.
+            var dealValue = MoneyAggregator.Sum(
+                dealValues.Select(v => new MoneyValue(v.Amount, v.CurrencyCode, v.ExchangeRate)), baseCurrency).Total;
 
             var conversionRate = leadCount > 0 ? (decimal)convertedCount / leadCount : 0m;
 

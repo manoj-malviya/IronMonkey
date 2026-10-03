@@ -1,0 +1,90 @@
+@* Every quote and version generated for one deal. A quote is a frozen snapshot of the
+   deal's lines at generation time, so editing the deal afterwards never changes one. *@
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject TenantPresentationService Presentation
+@inject NavigationManager Nav
+
+<div class="rounded-xl border border-slate-200 bg-white p-5">
+    <div class="mb-3 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-slate-900">Quotes</h2>
+        <button type="button" disabled="@_busy" @onclick="GenerateAsync"
+                class="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50">
+            Generate quote
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">@_error</div>
+    }
+
+    @if (_quotes is null)
+    {
+        <p class="text-sm text-slate-500">Loading…</p>
+    }
+    else if (_quotes.Count == 0)
+    {
+        <p class="text-sm text-slate-500">No quotes yet. Generating one snapshots the current line items.</p>
+    }
+    else
+    {
+        <ul class="divide-y divide-slate-100">
+            @foreach (var q in _quotes)
+            {
+                <li class="flex items-center justify-between gap-3 py-2">
+                    <button type="button" class="text-left" @onclick='() => Nav.NavigateTo($"/admin/quotes/{q.Id}")'>
+                        <span class="font-medium text-indigo-700">@q.Number v@(q.Version)</span>
+                        <span class="ml-2 text-sm text-slate-600">@q.Title</span>
+                        <span class="block text-xs text-slate-500">Valid until @q.ValidUntil.ToString("d MMM yyyy")</span>
+                    </button>
+                    <div class="flex items-center gap-2 text-sm">
+                        @if (q.IsAwaitingApproval)
+                        {
+                            <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">Needs approval</span>
+                        }
+                        <span class="rounded-full px-2 py-0.5 text-xs font-semibold @CommerceLabels.StatusClass(q.Status)">@q.Status</span>
+                        <span class="font-medium">@Presentation.MoneyExact(q.Total, q.CurrencyCode)</span>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Guid OpportunityId { get; set; }
+
+    private List<QuoteSummary>? _quotes;
+    private string? _error;
+    private bool _busy;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        await Presentation.EnsureLoadedAsync();
+        await LoadAsync();
+        StateHasChanged();
+    }
+
+    public async Task LoadAsync()
+    {
+        try { _quotes = await Api.GetFromJsonAsync<List<QuoteSummary>>($"/api/opportunities/{OpportunityId}/quotes") ?? []; }
+        catch (Exception ex) { _error = $"Could not load quotes: {ex.Message}"; _quotes = []; }
+    }
+
+    private async Task GenerateAsync()
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            var response = await Api.PostAsJsonAsync("/api/quotes", new CreateQuoteRequest(OpportunityId, null, null, null));
+            if (!response.IsSuccessStatusCode) { _error = await CommerceLabels.ErrorAsync(response); return; }
+
+            var quote = await response.Content.ReadFromJsonAsync<Quote>();
+            if (quote is not null) Nav.NavigateTo($"/admin/quotes/{quote.Id}");
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _busy = false; }
+    }
+}

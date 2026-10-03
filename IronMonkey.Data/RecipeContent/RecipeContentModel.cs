@@ -65,6 +65,54 @@ public sealed class RecipeContentModel
     /// </para>
     /// </summary>
     public List<PipelineDefinition>? Pipelines { get; set; }
+
+    /// <summary>
+    /// A starter product catalog and quote template for the vertical — so an Automobile
+    /// tenant arrives with vehicles, finance and add-ons already shaped, and a university
+    /// with per-term tuition. Copied into the tenant at provisioning like every other recipe
+    /// artifact; the tenant then edits its own rows, never the template.
+    ///
+    /// Null on every recipe stored before this existed, following the same precedent as
+    /// <see cref="Presentation"/>: those documents must keep deserializing and provisioning
+    /// unchanged, to a tenant with an empty catalog.
+    /// </summary>
+    public RecipeCatalogDefinition? Catalog { get; set; }
+}
+
+public sealed class RecipeCatalogDefinition
+{
+    public List<RecipeProductDefinition> Products { get; set; } = [];
+    public RecipeQuoteTemplateDefinition? QuoteTemplate { get; set; }
+}
+
+/// <summary>A product a recipe seeds. Mirrors <c>Product</c> plus its opening list price.</summary>
+public sealed class RecipeProductDefinition
+{
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? Category { get; set; }
+
+    /// <summary>"OneOff" or "Recurring", mirroring <c>ChargeType</c>.</summary>
+    public string ChargeType { get; set; } = "OneOff";
+
+    /// <summary>"None", "Monthly", "Quarterly", "PerTerm" or "Annually", mirroring <c>BillingFrequency</c>.</summary>
+    public string BillingFrequency { get; set; } = "None";
+    public int DefaultPeriods { get; set; } = 1;
+    public string? UnitOfMeasure { get; set; }
+    public decimal DefaultTaxRatePercent { get; set; }
+
+    /// <summary>Opening price in the tenant's default price list. Null seeds the product unpriced.</summary>
+    public decimal? ListPrice { get; set; }
+    public decimal? ListCost { get; set; }
+}
+
+public sealed class RecipeQuoteTemplateDefinition
+{
+    public string? NumberPrefix { get; set; }
+    public int? ValidityDays { get; set; }
+    public string? Terms { get; set; }
+    public decimal? ApprovalDiscountThresholdPercent { get; set; }
 }
 
 /// <summary>
@@ -118,6 +166,14 @@ public sealed class CustomFieldDefinitionDto
     public string FieldType { get; set; } = "Text"; // mirrors CustomFieldType enum: Text, Number, Date, Dropdown, MultiSelect, Currency, Boolean
     public bool IsRequired { get; set; }
     public List<string> Options { get; set; } = [];
+
+    /// <summary>
+    /// "Lead" (default), "Contact" or "Product", mirroring <c>CustomFieldEntity</c>. Absent on
+    /// recipes stored before it existed, which therefore keep seeding lead fields exactly as
+    /// before. "Product" is how a vertical gives its catalog vertical attributes through the
+    /// one custom-field system.
+    /// </summary>
+    public string? AppliesTo { get; set; }
 }
 
 public sealed class WorkflowRuleDefinition

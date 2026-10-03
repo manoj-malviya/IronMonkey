@@ -24,9 +24,14 @@ public class CreateOpportunityEndpoint : IEndpoint
     /// Optional. Omitted lands the deal in the tenant's default entry stage, so a caller that
     /// does not care about stages does not have to fetch the list first.
     /// </param>
+    /// <param name="Amount">
+    /// Optional lump-sum value. Deal value is computed from line items, so a positive amount
+    /// becomes a single free-text one-off line rather than a stored decimal; omit it (or send
+    /// 0) to start with no lines and build the deal from the catalog.
+    /// </param>
     public record Request(
         string Title, Guid ContactId, Guid? StageId,
-        decimal Amount, DateTime ExpectedCloseDate);
+        decimal? Amount, DateTime ExpectedCloseDate);
 
     public record Response(Guid Id, string Title, Guid StageId, string Stage, decimal Amount);
 
@@ -36,7 +41,7 @@ public class CreateOpportunityEndpoint : IEndpoint
         {
             RuleFor(x => x.Title).NotEmpty().WithMessage("Title is required.");
             RuleFor(x => x.ContactId).NotEmpty().WithMessage("A contact is required.");
-            RuleFor(x => x.Amount).GreaterThanOrEqualTo(0).WithMessage("Amount cannot be negative.");
+            RuleFor(x => x.Amount).GreaterThanOrEqualTo(0).When(x => x.Amount is not null).WithMessage("Amount cannot be negative.");
         }
     }
 
@@ -80,7 +85,8 @@ public class CreateOpportunityEndpoint : IEndpoint
             // unspecified and would otherwise throw on save.
             DateTime.SpecifyKind(request.ExpectedCloseDate, DateTimeKind.Utc),
             stage.Id);
-        opportunity.SetAmount(request.Amount);
+        if (request.Amount is > 0m)
+            opportunity.SetAmount(request.Amount.Value);
 
         db.Opportunities.Add(opportunity);
 

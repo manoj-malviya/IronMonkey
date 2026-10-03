@@ -39,7 +39,9 @@ public class GetDashboardActivityEndpoint : IEndpoint
         Guid? OpportunityId,
         string? OpportunityTitle,
         decimal? Amount,
-        DateTime ConvertedAt);
+        DateTime ConvertedAt,
+        /// <summary>The deal's currency; null means the tenant's own.</summary>
+        string? CurrencyCode = null);
 
     public record DashboardActivityResponse(
         DateTime RangeFrom,
@@ -102,7 +104,7 @@ public class GetDashboardActivityEndpoint : IEndpoint
                 l.UpdatedAt,
                 Opportunity = db.Opportunities
                     .Where(o => o.Id == l.ConvertedOpportunityId)
-                    .Select(o => new { o.Title, o.Amount })
+                    .Select(o => new { o.Title, o.Amount, o.CurrencyCode })
                     .FirstOrDefault()
             })
             .ToListAsync(cancellationToken);
@@ -118,7 +120,8 @@ public class GetDashboardActivityEndpoint : IEndpoint
                 c.ConvertedOpportunityId,
                 c.Opportunity?.Title,
                 c.Opportunity?.Amount,
-                c.UpdatedAt)).ToList(),
+                c.UpdatedAt,
+                c.Opportunity?.CurrencyCode)).ToList(),
             conversionCount,
             DateTime.UtcNow));
     }

@@ -5,7 +5,23 @@ namespace IronMonkey.Data.Entities;
 public enum CustomFieldType { Text, Number, Date, Dropdown, MultiSelect, Currency, Boolean }
 
 /// <summary>Which record a custom field is captured on. A field belongs to exactly one.</summary>
-public enum CustomFieldEntity { Lead = 0, Contact = 1 }
+public enum CustomFieldEntity { Lead = 0, Contact = 1, Product = 2 }
+
+public static class CustomFieldEntityTables
+{
+    /// <summary>
+    /// The table whose <c>custom_field_values</c> column holds a scope's values. A switch, not
+    /// a two-way ternary: when Product was added, the ternaries this replaced would have sent
+    /// product-field SQL to the contacts table.
+    /// </summary>
+    public static string TableName(this CustomFieldEntity scope) => scope switch
+    {
+        CustomFieldEntity.Lead => "leads",
+        CustomFieldEntity.Contact => "contacts",
+        CustomFieldEntity.Product => "products",
+        _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, "No table for this custom field scope.")
+    };
+}
 
 public sealed class CustomFieldDefinition : BaseTenantEntity
 {

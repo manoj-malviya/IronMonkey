@@ -618,6 +618,60 @@ async function roleFlow(chrome, email, password) {
   await chrome.shot(`${OUT}/roles-final.png`);
 }
 
+
+// Products, line items, quotes and revenue, driven through SuperAdmin impersonation so no
+// tenant credential is needed. Requires a provisioned tenant with at least one opportunity.
+async function commerceFlow(chrome, email, password) {
+  console.log(`\nCommerce flow (${email}, via impersonation)`);
+  const clickText = (sel, text) => chrome.eval(`(() => {
+    const el = [...document.querySelectorAll(${JSON.stringify(sel)})]
+      .find(x => (x.textContent||'').replace(/\\s+/g,' ').trim().startsWith(${JSON.stringify(text)}));
+    if (!el) return 'missing'; el.click(); return 'ok'; })()`);
+  const clickHref = (href) => chrome.eval(`(() => {
+    const a = [...document.querySelectorAll('a')].find(x => x.getAttribute('href') === ${JSON.stringify(href)});
+    if (!a) return 'missing'; a.click(); return 'ok'; })()`);
+
+  await chrome.goto(`${WEB}/login`);
+  await chrome.fillByLabel('Email', email);
+  await chrome.fillByLabel('Password', password);
+  await chrome.clickSelector('button[type="submit"]');
+  await sleep(6000);
+  ok('tenants link', (await clickHref('/admin/tenants')) === 'ok');
+  await sleep(4000);
+  ok('impersonate opened', (await clickText('button', 'Impersonate')) === 'ok');
+  await sleep(1500);
+  ok('impersonation started', (await clickText('button', 'Start impersonation')) === 'ok');
+  await sleep(7000);
+
+  ok('products link', (await clickHref('/admin/products')) === 'ok');
+  await sleep(5000);
+  const products = (await chrome.text()) || '';
+  ok('catalog renders', /Products & pricing/.test(products), products.slice(0, 80));
+  await chrome.shot(`${OUT}/commerce-products.png`);
+
+  ok('opportunities link', (await clickHref('/admin/opportunities')) === 'ok');
+  await sleep(5000);
+  await chrome.eval(`(() => { const r = document.querySelector('tbody tr'); if (r) r.click();
+    const b = document.querySelector('tbody tr button, tbody tr a'); if (b) b.click(); })()`);
+  await sleep(6000);
+  const detail = (await chrome.text()) || '';
+  ok('line items panel', /Line items/.test(detail));
+  ok('quotes panel', /Quotes/.test(detail));
+  await chrome.shot(`${OUT}/commerce-opportunity.png`);
+
+  if ((await clickText('button', 'Q-')) === 'ok') {
+    await sleep(6000);
+    const quote = (await chrome.text()) || '';
+    ok('quote detail', /History/.test(quote), (await chrome.url()) || '');
+    await chrome.shot(`${OUT}/commerce-quote.png`);
+  }
+
+  ok('revenue link', (await clickHref('/admin/reports/revenue')) === 'ok');
+  await sleep(6000);
+  ok('revenue renders', /By product/.test((await chrome.text()) || ''));
+  await chrome.shot(`${OUT}/commerce-revenue.png`);
+}
+
 async function counterFlow(chrome) {
   console.log('\nInteractivity check (@onclick)');
   await chrome.goto(`${WEB}/counter`);
@@ -858,10 +912,10 @@ if (cmd === 'shot') {
 if (cmd === 'smoke') {
   await smoke();
 } else {
-  const needsBrowser = ['signup', 'login', 'counter', 'all', 'signin', 'crmflow', 'customfields', 'cfsubmit', 'detailflow', 'roleflow', 'configflow'].includes(cmd);
+  const needsBrowser = ['signup', 'login', 'counter', 'all', 'signin', 'crmflow', 'customfields', 'cfsubmit', 'detailflow', 'roleflow', 'configflow', 'commerceflow'].includes(cmd);
   if (!needsBrowser) {
     console.error(`unknown command: ${cmd}`);
-    console.error('use: smoke | signup | login | counter | signin <email> <pw> [path ...] | configflow <email> <pw> | all | shot <url> [file]');
+    console.error('use: smoke | signup | login | counter | signin <email> <pw> [path ...] | configflow <email> <pw> | commerceflow <email> <pw> | all | shot <url> [file]');
     process.exit(2);
   }
   if (cmd === 'all') await smoke();
@@ -893,6 +947,10 @@ if (cmd === 'smoke') {
     if (cmd === 'configflow') {
       const [, , , email, password] = process.argv;
       await configFlow(chrome, email, password);
+    }
+    if (cmd === 'commerceflow') {
+      const [, , , email, password] = process.argv;
+      await commerceFlow(chrome, email, password);
     }
     if (cmd === 'signin') {
       const [, , , email, password, ...paths] = process.argv;

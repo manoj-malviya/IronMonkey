@@ -2,7 +2,7 @@ using IronMonkey.Data.Abstractions;
 
 namespace IronMonkey.Data.Entities;
 
-public enum WorkflowTrigger { FieldChange = 0, StatusChange = 1, TimeElapsed = 2 }
+public enum WorkflowTrigger { FieldChange = 0, StatusChange = 1, TimeElapsed = 2, QuoteSent = 3, QuoteAccepted = 4, QuoteRejected = 5 }
 
 public sealed class WorkflowRule : BaseTenantEntity
 {

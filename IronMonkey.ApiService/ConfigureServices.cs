@@ -259,6 +259,13 @@ public static class ConfigureServices
             builder.Services.AddScoped<IMessagingPolicyService, MessagingPolicyService>();
             builder.Services.AddScoped<IMessageDispatcher, MessageDispatcher>();
 
+            // Products, quotes and deal economics. The commerce context reads the tenant's
+            // base currency from the same central row the UI formats with.
+            builder.Services.AddScoped<IronMonkey.ApiService.Features.Commerce.ITenantCommerceContextResolver,
+                IronMonkey.ApiService.Features.Commerce.TenantCommerceContextResolver>();
+            builder.Services.AddScoped<IronMonkey.ApiService.Features.Quotes.IQuoteService,
+                IronMonkey.ApiService.Features.Quotes.QuoteService>();
+
             // Invitation delivery. Goes through IMessageDispatcher like every other outbound
             // message, so an invitation cannot bypass consent or channel rules.
             builder.Services.AddScoped<IronMonkey.ApiService.Features.UserManagement.Invitations.IInvitationService,

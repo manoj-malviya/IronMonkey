@@ -304,6 +304,70 @@ dotnet ef migrations add <Name> --project IronMonkey.Data --startup-project Iron
   tests invoke the real handler, so the aggregation under test is the aggregation that ships —
   unlike the older dashboard tests, which re-implement the LINQ they claim to cover.
 
+### Products, Quotes and Deal Economics (`/admin/products`, `/admin/quotes/{id}`, `/admin/reports/revenue`)
+- **Deal value is computed from line items, never stored as a free decimal.** `Opportunity.Amount`
+  is still a column (dashboards aggregate it in SQL) but only `RecalculateTotals()` writes it, via
+  `LineCalculator`. **Load `LineItems` before calling anything that recalculates** — the sum is
+  over the in-memory collection, so a deal loaded without `.Include(o => o.LineItems)` recomputes
+  to zero and overwrites its stored value. `DealEconomics.LoadAsync` does this for the endpoints.
+  `SetAmount(x)` survives as the lump-sum path: it replaces the lines with one free-text line.
+- **The `ProductsAndQuotes` migration gave every existing opportunity exactly one migrated line**,
+  including `Amount = 0` (the old schema could not tell zero from unset), flagged `IsMigrated`.
+  `PUT /api/opportunities/{id}` still accepts `Amount`, but only for a lump-sum deal (no lines, or
+  one free-text one-off line); on a catalog-built deal a differing amount is refused.
+- **One rounding rule, in `MoneyMath`/`LineCalculator`:** round to the currency's minor unit
+  (0 for JPY, 3 for KWD, else 2), midpoint **away from zero**, applied **per line** (gross →
+  discount → tax on the discounted net); deal and quote totals are plain sums of rounded lines and
+  are never rounded again, so a printed quote adds up when checked by hand. Display uses
+  `TenantFormatting.Money(value, currency)` (UI: `Presentation.MoneyExact`) — the same formatter
+  the quote document uses. The UI never multiplies or rounds; it formats API figures.
+- **Currency: `CurrencyCode == null` means the tenant's own currency.** That is what every
+  pre-existing deal meant, and it keeps them aggregating together. A deal in another currency is
+  summed with tenant figures only through the `ExchangeRate` (+ `ExchangeRateDate`) recorded on it;
+  with no rate, `MoneyAggregator` **excludes and reports** it (`UnconvertedCount`), never adds it at
+  face value. Any SQL `SUM(Amount)` must group by currency and rate and go through
+  `MoneyAggregator` — see `GetDashboardOpportunitiesEndpoint`. A price list prices in one currency
+  and a line from a list in another currency is refused.
+- **Prices are versioned, append-only `ProductPrice` rows** effective over `[From, To)`. A change
+  inserts a version and closes the previous one; `UnitPrice` is never rewritten, and back-dating
+  before the current version is refused. Precedence is fixed (`PriceResolver`): line's price list →
+  deal's price list → tenant default — first one holding an effective price wins, no cheapest-price
+  search. Lines copy the unit price and record the `ProductPriceId` they came from.
+- **Quotes are snapshots and immutable once sent.** Lines and totals are copied into `quote_lines`
+  at draft time (or "refresh"); every mutator refuses a non-draft. Changing a sent quote is
+  `revise` → a new version (same number), and **sending** it marks every other open version of that
+  number `Superseded` and revokes their links. `(TenantId, Number, Version)` is unique. Expiry is
+  enforced lazily whenever a quote is read or responded to — use `TenantCommerceContext.TodayAt(now)`
+  with the injected `TimeProvider`, not `Today`, or expiry is untestable.
+- **Discount approval = tenant threshold (`QuoteSettings.ApprovalDiscountThresholdPercent`) +
+  the `quotes:approve` permission** (seeded to Admin and SuperAdmin; permission id 21). `MarkSent`
+  refuses an unapproved quote server-side; refreshing a draft clears its approval. There is no
+  manager hierarchy in the model yet, so "who approves" is purely the permission.
+- **Catalog, price-list, price-version and quote-settings writes need `catalog:write`** (id 22,
+  seeded to Admin and SuperAdmin) — **not `settings:write`, which the tenant Admin role does not
+  hold.** Gating on `settings:write` made the whole catalog unwritable for every tenant user; the
+  bug only showed up driving the real app.
+- **The `/q/{routingToken}/{token}` customer page is anonymous attack surface.** Tenant from the
+  HMAC routing token (same derivation as webhooks, `IWebhookTenantResolver`), quote from the
+  SHA-256 of a 256-bit token — only the hash is stored, the URL is shown once. Unknown/expired/
+  revoked/cross-tenant links all return the same 404 page. The page shows only the quote (no deal
+  title, no unit cost), with CSP `default-src 'none'`, `no-referrer` (the token is in the URL),
+  `no-store`. Set `Quotes:PublicBaseUrl` in production; it falls back to the request host.
+- **Quote events go through the existing rails**: delivery via `IMessageDispatcher` (idempotency
+  key `quote:{id}:sent`), and `QuoteSent`/`QuoteAccepted`/`QuoteRejected` workflow triggers dispatched
+  on the lead the deal was converted from. A deal created directly has no lead, so no rule runs —
+  logged, not invented.
+- **Product attributes are custom fields with `CustomFieldEntity.Product`** through the same
+  binder. Raw SQL over a scope's values must use `CustomFieldEntityTables.TableName()` — the old
+  two-way `Lead ? "leads" : "contacts"` ternaries would have sent product SQL to `contacts`.
+- **Recipes may carry `Catalog`** (products, opening list prices, quote template); null on every
+  recipe stored before it, which provisions to an empty catalog. The `RecipeStarterCatalogs` central
+  migration adds catalogs to Automobile/Education only where the key is absent, so admin edits are
+  never overwritten. A recipe custom field's optional `AppliesTo` defaults to Lead.
+- **Child entities added through a parent's collection need `ValueGeneratedNever()` on their Guid
+  key** (line items, quote lines, status changes). By convention EF treats a discovered child with a
+  preset key as an existing row and issues an UPDATE that affects nothing.
+
 ### List Pages
 - **`GET /api/leads` returns a page object, not an array** — `{Items, TotalCount, Page, PageSize,
   TotalPages}`. The total is counted *before* paging so "1–25 of 240" is honest, and a page past

@@ -130,6 +130,13 @@ public sealed class TenantPresentationService(
 
     public string MoneyCompact(decimal value) => Formatting.Compact(value);
 
+    /// <summary>
+    /// An exact figure in a named currency, to its minor unit — line items, quote totals.
+    /// The same <see cref="TenantFormatting.Money"/> the API's quote document uses, so the
+    /// screen and the customer's document cannot disagree. Null currency = the tenant's own.
+    /// </summary>
+    public string MoneyExact(decimal value, string? currencyCode) => Formatting.Money(value, currencyCode);
+
     public string Date(DateTime utc) => Formatting.Date(utc);
 
     public string DateTimeShort(DateTime utc) => Formatting.DateTimeShort(utc);

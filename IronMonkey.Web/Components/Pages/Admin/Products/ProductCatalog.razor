@@ -1,0 +1,355 @@
+@page "/admin/products"
+@attribute [Authorize]
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject TenantPresentationService Presentation
+
+<PageTitle>Products — IronMonkey</PageTitle>
+
+<div class="space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900">Products &amp; pricing</h1>
+            <p class="text-sm text-slate-500">What you sell, how it is charged, and what it costs in each price list.</p>
+        </div>
+        <div class="flex gap-2 text-sm">
+            <button class="@TabClass("products")" @onclick='() => _tab = "products"'>Products</button>
+            <button class="@TabClass("lists")" @onclick='() => _tab = "lists"'>Price lists</button>
+            <button class="@TabClass("settings")" @onclick='() => _tab = "settings"'>Quote settings</button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">@_error</div>
+    }
+    @if (!string.IsNullOrEmpty(_notice))
+    {
+        <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">@_notice</div>
+    }
+
+    @if (_tab == "products")
+    {
+        <div class="grid gap-6 lg:grid-cols-3">
+            <div class="lg:col-span-2 rounded-xl border border-slate-200 bg-white">
+                <div class="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+                    <label class="flex items-center gap-2 text-sm text-slate-600">
+                        <input type="checkbox" @bind="_includeInactive" @bind:after="LoadProductsAsync" /> Show inactive
+                    </label>
+                    <button class="text-sm font-semibold text-indigo-600 hover:text-indigo-700" @onclick="NewProduct">+ New product</button>
+                </div>
+                @if (_products.Count == 0)
+                {
+                    <p class="px-5 py-6 text-sm text-slate-500">No products yet.</p>
+                }
+                else
+                {
+                    <table class="min-w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th class="px-5 py-2">Product</th><th class="px-2">Category</th><th class="px-2">Charged</th><th class="px-5 text-right">List price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in _products)
+                            {
+                                <tr class="cursor-pointer border-t border-slate-100 hover:bg-slate-50 @(p.IsActive ? "" : "opacity-50")" @onclick="() => Edit(p)">
+                                    <td class="px-5 py-2"><span class="font-medium text-slate-900">@p.Name</span> <span class="text-xs text-slate-500">@p.Code</span></td>
+                                    <td class="px-2 text-slate-600">@(p.Category ?? "—")</td>
+                                    <td class="px-2 text-slate-600">@CommerceLabels.Recurrence(p.ChargeType, p.BillingFrequency, p.DefaultPeriods)</td>
+                                    <td class="px-5 text-right">@(p.ListPrice is { } lp ? Presentation.MoneyExact(lp, p.ListCurrencyCode) : "Unpriced")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+
+            @if (_form is not null)
+            {
+                <div class="rounded-xl border border-slate-200 bg-white p-5">
+                    <h2 class="mb-3 text-sm font-semibold text-slate-900">@(_editing is null ? "New product" : "Edit product")</h2>
+                    <div class="space-y-2 text-sm">
+                        <label class="block text-xs text-slate-600">Code<input @bind="_form.Code" maxlength="64" class="mt-1 w-full rounded border border-slate-300 px-2 py-1" /></label>
+                        <label class="block text-xs text-slate-600">Name<input @bind="_form.Name" maxlength="200" class="mt-1 w-full rounded border border-slate-300 px-2 py-1" /></label>
+                        <label class="block text-xs text-slate-600">Category<input @bind="_form.Category" maxlength="100" class="mt-1 w-full rounded border border-slate-300 px-2 py-1" /></label>
+                        <label class="block text-xs text-slate-600">Description<textarea @bind="_form.Description" rows="2" class="mt-1 w-full rounded border border-slate-300 px-2 py-1"></textarea></label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="block text-xs text-slate-600">Charged
+                                <select @bind="_form.ChargeType" class="mt-1 w-full rounded border border-slate-300 px-2 py-1">
+                                    <option value="OneOff">One-off</option><option value="Recurring">Recurring</option>
+                                </select>
+                            </label>
+                            @if (_form.ChargeType == "Recurring")
+                            {
+                                <label class="block text-xs text-slate-600">Every
+                                    <select @bind="_form.BillingFrequency" class="mt-1 w-full rounded border border-slate-300 px-2 py-1">
+                                        <option value="Monthly">Month</option><option value="Quarterly">Quarter</option>
+                                        <option value="PerTerm">Term</option><option value="Annually">Year</option>
+                                    </select>
+                                </label>
+                                <label class="block text-xs text-slate-600">Default periods<input type="number" min="1" @bind="_form.DefaultPeriods" class="mt-1 w-full rounded border border-slate-300 px-2 py-1" /></label>
+                            }
+                            <label class="block text-xs text-slate-600">Unit<input @bind="_form.UnitOfMeasure" placeholder="unit" class="mt-1 w-full rounded border border-slate-300 px-2 py-1" /></label>
+                            <label class="block text-xs text-slate-600">Default tax %<input type="number" step="0.01" min="0" max="100" @bind="_form.DefaultTaxRatePercent" class="mt-1 w-full rounded border border-slate-300 px-2 py-1" /></label>
+                        </div>
+                        @if (_editing is null)
+                        {
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="block text-xs text-slate-600">List price<input type="number" step="0.01" min="0" @bind="_form.ListPrice" class="mt-1 w-full rounded border border-slate-300 px-2 py-1" /></label>
+                                <label class="block text-xs text-slate-600">Cost<input type="number" step="0.01" min="0" @bind="_form.ListCost" class="mt-1 w-full rounded border border-slate-300 px-2 py-1" /></label>
+                            </div>
+                        }
+                        else
+                        {
+                            <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" @bind="_form.IsActive" /> Active (inactive products cannot be added to deals)</label>
+                        }
+                        <div class="flex gap-2 pt-2">
+                            <button class="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50" disabled="@_busy" @onclick="SaveProductAsync">Save</button>
+                            <button class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm" @onclick="() => { _form = null; _editing = null; }">Close</button>
+                        </div>
+                    </div>
+
+                    @if (_editing is not null)
+                    {
+                        <h3 class="mb-2 mt-6 text-sm font-semibold text-slate-900">Price history</h3>
+                        <p class="mb-2 text-xs text-slate-500">
+                            A price change is a new version from a date — never an edit. Deals and quotes keep the price they were given.
+                        </p>
+                        <ul class="mb-3 space-y-1 text-xs">
+                            @foreach (var v in _editing.Prices)
+                            {
+                                <li class="flex justify-between @(v.IsCurrent ? "font-semibold text-slate-900" : "text-slate-500")">
+                                    <span>@v.PriceListName · from @Presentation.Date(v.EffectiveFrom)@(v.EffectiveTo is { } to ? $" to {Presentation.Date(to)}" : "")</span>
+                                    <span>@Presentation.MoneyExact(v.UnitPrice, v.CurrencyCode)</span>
+                                </li>
+                            }
+                        </ul>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <select @bind="_priceListForVersion" class="col-span-2 rounded border border-slate-300 px-2 py-1" aria-label="Price list">
+                                @foreach (var list in _priceLists) { <option value="@list.Id">@list.Name</option> }
+                            </select>
+                            <input type="number" step="0.01" min="0" @bind="_newVersionPrice" placeholder="New price" class="rounded border border-slate-300 px-2 py-1" />
+                            <input type="date" @bind="_newVersionFrom" class="rounded border border-slate-300 px-2 py-1" aria-label="Effective from" />
+                            <button class="col-span-2 rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-semibold text-white" disabled="@_busy" @onclick="AddVersionAsync">Add price version</button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else if (_tab == "lists")
+    {
+        <div class="rounded-xl border border-slate-200 bg-white p-5">
+            <p class="mb-3 text-sm text-slate-600">
+                Price precedence: a list chosen on the line, then the deal's list, then the default. Each list prices in one currency.
+            </p>
+            <table class="mb-4 min-w-full text-sm">
+                <tbody>
+                    @foreach (var list in _priceLists)
+                    {
+                        <tr class="border-t border-slate-100">
+                            <td class="py-2 font-medium">@list.Name @if (list.IsDefault) { <span class="ml-1 rounded bg-indigo-100 px-1.5 text-xs text-indigo-800">default</span> }</td>
+                            <td class="text-slate-600">@(list.CurrencyCode ?? "Tenant currency")</td>
+                            <td class="text-slate-600">@(list.IsActive ? "Active" : "Inactive")</td>
+                            <td class="text-right">
+                                @if (!list.IsDefault)
+                                {
+                                    <button class="text-indigo-600 hover:text-indigo-700" disabled="@_busy" @onclick="() => MakeDefaultAsync(list)">Make default</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <div class="grid gap-2 sm:grid-cols-4">
+                <input @bind="_newListName" placeholder="Name, e.g. Fleet" class="rounded border border-slate-300 px-2 py-1 text-sm" />
+                <input @bind="_newListCurrency" maxlength="3" placeholder="Currency (blank = tenant)" class="rounded border border-slate-300 px-2 py-1 text-sm uppercase" />
+                <input @bind="_newListDescription" placeholder="Description" class="rounded border border-slate-300 px-2 py-1 text-sm" />
+                <button class="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white" disabled="@_busy" @onclick="CreateListAsync">Add price list</button>
+            </div>
+        </div>
+    }
+    else if (_settings is not null)
+    {
+        <div class="max-w-xl space-y-3 rounded-xl border border-slate-200 bg-white p-5 text-sm">
+            <label class="block text-xs text-slate-600">Number prefix<input @bind="_settings.NumberPrefix" maxlength="20" class="mt-1 w-full rounded border border-slate-300 px-2 py-1" /></label>
+            <label class="block text-xs text-slate-600">Default validity (days)<input type="number" min="1" max="365" @bind="_settings.DefaultValidityDays" class="mt-1 w-full rounded border border-slate-300 px-2 py-1" /></label>
+            <label class="block text-xs text-slate-600">Share links last (days)<input type="number" min="1" max="90" @bind="_settings.ShareLinkLifetimeDays" class="mt-1 w-full rounded border border-slate-300 px-2 py-1" /></label>
+            <label class="block text-xs text-slate-600">Discount above which approval is required (%) — blank for no rule
+                <input type="number" step="0.01" min="0" max="100" @bind="_settings.ApprovalDiscountThresholdPercent" class="mt-1 w-full rounded border border-slate-300 px-2 py-1" />
+            </label>
+            <p class="text-xs text-slate-500">Approvers are users whose role holds the <code>quotes:approve</code> permission.</p>
+            <label class="block text-xs text-slate-600">Default terms<textarea @bind="_settings.DefaultTerms" rows="5" class="mt-1 w-full rounded border border-slate-300 px-2 py-1"></textarea></label>
+            <button class="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white" disabled="@_busy" @onclick="SaveSettingsAsync">Save settings</button>
+        </div>
+    }
+</div>
+
+@code {
+    private string _tab = "products";
+    private List<ProductItem> _products = [];
+    private List<PriceListItem> _priceLists = [];
+    private ProductForm? _form;
+    private ProductItem? _editing;
+    private SettingsForm? _settings;
+    private bool _includeInactive;
+    private bool _busy;
+    private string? _error, _notice;
+
+    private string _priceListForVersion = "";
+    private decimal? _newVersionPrice;
+    private DateTime? _newVersionFrom;
+    private string? _newListName, _newListCurrency, _newListDescription;
+
+    private string TabClass(string tab) => tab == _tab
+        ? "rounded-lg bg-indigo-50 px-3 py-1.5 font-semibold text-indigo-700"
+        : "rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-50";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // After the first interactive render: the JWT is unreadable during prerender.
+        if (!firstRender) return;
+        await Presentation.EnsureLoadedAsync();
+        await LoadProductsAsync();
+        await LoadListsAsync();
+        var s = await Api.GetFromJsonAsync<QuoteSettings>("/api/quote-settings");
+        if (s is not null) _settings = new SettingsForm(s);
+        StateHasChanged();
+    }
+
+    private async Task LoadProductsAsync() =>
+        _products = await Api.GetFromJsonAsync<List<ProductItem>>($"/api/products?includeInactive={_includeInactive.ToString().ToLowerInvariant()}") ?? [];
+
+    private async Task LoadListsAsync()
+    {
+        _priceLists = await Api.GetFromJsonAsync<List<PriceListItem>>("/api/price-lists") ?? [];
+        _priceListForVersion = _priceLists.FirstOrDefault(l => l.IsDefault)?.Id.ToString() ?? "";
+    }
+
+    private void NewProduct()
+    {
+        _editing = null;
+        _form = new ProductForm();
+    }
+
+    private void Edit(ProductItem p)
+    {
+        _editing = p;
+        _form = new ProductForm
+        {
+            Code = p.Code, Name = p.Name, Category = p.Category, Description = p.Description,
+            ChargeType = p.ChargeType, BillingFrequency = p.BillingFrequency == "None" ? "Monthly" : p.BillingFrequency,
+            DefaultPeriods = p.DefaultPeriods, UnitOfMeasure = p.UnitOfMeasure,
+            DefaultTaxRatePercent = p.DefaultTaxRatePercent, IsActive = p.IsActive,
+            CustomFields = p.CustomFields
+        };
+    }
+
+    private async Task SaveProductAsync()
+    {
+        if (_form is null) return;
+        var request = new SaveProductRequest(_form.Code, _form.Name, _form.Description, _form.Category,
+            _form.ChargeType, _form.ChargeType == "Recurring" ? _form.BillingFrequency : null,
+            _form.DefaultPeriods, _form.UnitOfMeasure, _form.DefaultTaxRatePercent,
+            _form.ListPrice, _form.ListCost, _form.IsActive, _form.CustomFields);
+
+        var saved = await Call<ProductItem>(() => _editing is null
+            ? Api.PostAsJsonAsync("/api/products", request)
+            : Api.PutAsJsonAsync($"/api/products/{_editing.Id}", request));
+        if (saved is null) return;
+
+        _notice = "Product saved.";
+        await LoadProductsAsync();
+        await LoadListsAsync();
+        Edit(saved);
+    }
+
+    private async Task AddVersionAsync()
+    {
+        if (_editing is null || _newVersionPrice is null) { _error = "Enter a price."; return; }
+        var from = _newVersionFrom is { } d ? DateTime.SpecifyKind(d, DateTimeKind.Utc) : (DateTime?)null;
+        var saved = await Call<ProductItem>(() => Api.PostAsJsonAsync($"/api/products/{_editing.Id}/prices",
+            new AddPriceRequest(Guid.TryParse(_priceListForVersion, out var id) ? id : null, _newVersionPrice.Value, null, from)));
+        if (saved is null) return;
+
+        _notice = "Price version added. Existing deals and quotes are unchanged.";
+        _newVersionPrice = null;
+        _newVersionFrom = null;
+        await LoadProductsAsync();
+        Edit(saved);
+    }
+
+    private async Task CreateListAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newListName)) { _error = "Enter a name."; return; }
+        var created = await Call<PriceListItem>(() => Api.PostAsJsonAsync("/api/price-lists",
+            new SavePriceListRequest(_newListName, _newListDescription, string.IsNullOrWhiteSpace(_newListCurrency) ? null : _newListCurrency, false, true)));
+        if (created is null) return;
+        _newListName = _newListCurrency = _newListDescription = null;
+        _notice = "Price list added.";
+        await LoadListsAsync();
+    }
+
+    private async Task MakeDefaultAsync(PriceListItem list)
+    {
+        if (await Call<PriceListItem>(() => Api.PutAsJsonAsync($"/api/price-lists/{list.Id}",
+                new SavePriceListRequest(list.Name, list.Description, null, true, true))) is not null)
+        {
+            _notice = $"'{list.Name}' is now the default price list.";
+            await LoadListsAsync();
+        }
+    }
+
+    private async Task SaveSettingsAsync()
+    {
+        if (_settings is null) return;
+        var saved = await Call<QuoteSettings>(() => Api.PutAsJsonAsync("/api/quote-settings", _settings.ToRequest()));
+        if (saved is null) return;
+        _settings = new SettingsForm(saved);
+        _notice = "Quote settings saved.";
+    }
+
+    private async Task<T?> Call<T>(Func<Task<HttpResponseMessage>> call) where T : class
+    {
+        _busy = true;
+        _error = null;
+        _notice = null;
+        try
+        {
+            var response = await call();
+            if (!response.IsSuccessStatusCode) { _error = await CommerceLabels.ErrorAsync(response); return null; }
+            return await response.Content.ReadFromJsonAsync<T>();
+        }
+        catch (Exception ex) { _error = ex.Message; return null; }
+        finally { _busy = false; }
+    }
+
+    private sealed class ProductForm
+    {
+        public string Code { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string? Category { get; set; }
+        public string? Description { get; set; }
+        public string ChargeType { get; set; } = "OneOff";
+        public string BillingFrequency { get; set; } = "Monthly";
+        public int DefaultPeriods { get; set; } = 12;
+        public string? UnitOfMeasure { get; set; }
+        public decimal DefaultTaxRatePercent { get; set; }
+        public decimal? ListPrice { get; set; }
+        public decimal? ListCost { get; set; }
+        public bool IsActive { get; set; } = true;
+        public Dictionary<string, object?>? CustomFields { get; set; }
+    }
+
+    private sealed class SettingsForm(QuoteSettings s)
+    {
+        public string NumberPrefix { get; set; } = s.NumberPrefix;
+        public int DefaultValidityDays { get; set; } = s.DefaultValidityDays;
+        public string? DefaultTerms { get; set; } = s.DefaultTerms;
+        public decimal? ApprovalDiscountThresholdPercent { get; set; } = s.ApprovalDiscountThresholdPercent;
+        public int ShareLinkLifetimeDays { get; set; } = s.ShareLinkLifetimeDays;
+
+        public QuoteSettings ToRequest() =>
+            new(NumberPrefix, DefaultValidityDays, DefaultTerms, ApprovalDiscountThresholdPercent, ShareLinkLifetimeDays);
+    }
+}

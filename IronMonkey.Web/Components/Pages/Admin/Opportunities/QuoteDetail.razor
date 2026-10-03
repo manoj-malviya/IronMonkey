@@ -1,0 +1,334 @@
+@page "/admin/quotes/{Id:guid}"
+@attribute [Authorize]
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject TenantPresentationService Presentation
+@inject NavigationManager Nav
+
+<PageTitle>Quote — IronMonkey</PageTitle>
+
+<div class="space-y-6">
+    @if (_quote is not null)
+    {
+        <button type="button" @onclick='() => Nav.NavigateTo($"/admin/opportunities/{_quote.OpportunityId}")'
+                class="text-sm text-indigo-600 hover:text-indigo-700">&larr; Back to @Presentation.Term(TerminologyTerm.Opportunity)</button>
+    }
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">@_error</div>
+    }
+    @if (!string.IsNullOrEmpty(_notice))
+    {
+        <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">@_notice</div>
+    }
+    @if (!string.IsNullOrEmpty(_shareUrl))
+    {
+        <div class="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
+            <p class="font-semibold">Customer link — copy it now, it is shown only once.</p>
+            <input readonly value="@_shareUrl" class="mt-2 w-full rounded border border-indigo-200 bg-white px-2 py-1 font-mono text-xs" />
+        </div>
+    }
+
+    @if (_quote is null)
+    {
+        <p class="text-sm text-slate-500">Loading…</p>
+    }
+    else
+    {
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">@_quote.Number <span class="text-slate-400">v@(_quote.Version)</span></h1>
+                <p class="mt-1 text-sm text-slate-500">
+                    <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold @CommerceLabels.StatusClass(_quote.Status)">@_quote.Status</span>
+                    <span class="ml-2">for @_quote.RecipientName</span>
+                    <span class="ml-2">· valid until @_quote.ValidUntil.ToString("d MMM yyyy")</span>
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                @if (_quote.Status == "Draft")
+                {
+                    <button class="btn-secondary rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                            disabled="@_busy" @onclick="RefreshAsync">Refresh from deal</button>
+                    @if (_quote.IsAwaitingApproval)
+                    {
+                        <button class="rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-400"
+                                disabled="@_busy" @onclick="ApproveAsync">Approve discount</button>
+                    }
+                    <button class="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                            disabled="@(_busy || _quote.IsAwaitingApproval)" @onclick="SendAsync"
+                            title="@(_quote.IsAwaitingApproval ? "Needs approval before it can be sent" : "")">Send to customer</button>
+                }
+                @if (_quote.Status is "Sent" or "Rejected" or "Expired" or "Superseded")
+                {
+                    <button class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                            disabled="@_busy" @onclick="ReviseAsync">Create new version</button>
+                }
+                <button class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                        @onclick="TogglePreviewAsync">@(_documentHtml is null ? "Preview document" : "Hide preview")</button>
+            </div>
+        </div>
+
+        @if (_quote.IsAwaitingApproval)
+        {
+            <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                The largest discount on this quote (@_quote.MaxDiscountPercent.ToString("0.##")%) exceeds the approval threshold.
+                Someone with the <code>quotes:approve</code> permission must approve it before it can be sent.
+            </div>
+        }
+        @if (_quote.SupersededByQuoteId is { } newer)
+        {
+            <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                This version has been superseded.
+                <button class="text-indigo-600 hover:text-indigo-700" @onclick='() => Go(newer)'>Open the newer version</button>
+            </div>
+        }
+
+        <div class="grid gap-6 lg:grid-cols-3">
+            <div class="space-y-6 lg:col-span-2">
+                <div class="rounded-xl border border-slate-200 bg-white p-5">
+                    @if (_quote.IsEditable)
+                    {
+                        <div class="mb-4 grid gap-3 sm:grid-cols-3">
+                            <label class="text-xs text-slate-600 sm:col-span-2">Title
+                                <input @bind="_title" maxlength="200" class="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm" />
+                            </label>
+                            <label class="text-xs text-slate-600">Valid until
+                                <input type="date" @bind="_validUntil" class="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm" />
+                            </label>
+                            <label class="text-xs text-slate-600 sm:col-span-3">Terms
+                                <textarea @bind="_terms" rows="3" class="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm"></textarea>
+                            </label>
+                            <button class="justify-self-start rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-semibold text-white"
+                                    disabled="@_busy" @onclick="SaveDraftAsync">Save draft</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <h2 class="mb-2 font-semibold text-slate-900">@_quote.Title</h2>
+                        <p class="mb-3 text-xs text-slate-500">Sent quotes are frozen. To change what is offered, create a new version.</p>
+                    }
+
+                    <table class="min-w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th class="py-2 pr-2">Item</th><th class="px-2 text-right">Qty</th><th class="px-2 text-right">Unit</th>
+                                <th class="px-2 text-right">Disc</th><th class="px-2 text-right">Tax</th><th class="pl-2 text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var l in _quote.Lines)
+                            {
+                                <tr class="border-b border-slate-100">
+                                    <td class="py-2 pr-2">@l.Description <span class="block text-xs text-slate-500">@CommerceLabels.Recurrence(l.ChargeType, l.BillingFrequency, l.Periods)</span></td>
+                                    <td class="whitespace-nowrap px-2 text-right">@l.Quantity.ToString("0.####")</td>
+                                    <td class="whitespace-nowrap px-2 text-right">@Money(l.UnitPrice)</td>
+                                    <td class="whitespace-nowrap px-2 text-right">@(l.DiscountAmount == 0 ? "—" : $"{l.DiscountPercent:0.##}%")</td>
+                                    <td class="whitespace-nowrap px-2 text-right">@(l.TaxAmount == 0 ? "—" : Money(l.TaxAmount))</td>
+                                    <td class="whitespace-nowrap pl-2 text-right font-medium">@Money(l.TotalAmount)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <dl class="ml-auto mt-3 w-full max-w-xs space-y-1 text-sm">
+                        <div class="flex justify-between"><dt class="text-slate-500">Subtotal</dt><dd>@Money(_quote.Subtotal)</dd></div>
+                        @if (_quote.DiscountTotal != 0) { <div class="flex justify-between"><dt class="text-slate-500">Discount</dt><dd>−@Money(_quote.DiscountTotal)</dd></div> }
+                        @if (_quote.TaxTotal != 0) { <div class="flex justify-between"><dt class="text-slate-500">Tax</dt><dd>@Money(_quote.TaxTotal)</dd></div> }
+                        <div class="flex justify-between border-t border-slate-300 pt-1 font-semibold"><dt>Total</dt><dd>@Money(_quote.Total)</dd></div>
+                    </dl>
+                </div>
+
+                @if (_documentHtml is not null)
+                {
+                    @* srcdoc in a sandboxed frame: the document is rendered by the API with every
+                       value encoded, and the empty sandbox stops it running anything regardless. *@
+                    <iframe sandbox="" srcdoc="@_documentHtml" title="Quote document preview"
+                            class="h-[900px] w-full rounded-xl border border-slate-200 bg-white"></iframe>
+                }
+            </div>
+
+            <div class="space-y-6">
+                @if (_quote.Status == "Sent")
+                {
+                    <div class="rounded-xl border border-slate-200 bg-white p-5">
+                        <h2 class="mb-2 text-sm font-semibold text-slate-900">Record a response</h2>
+                        <p class="mb-2 text-xs text-slate-500">For a response received by phone or email. Customers can also respond through their link.</p>
+                        <input @bind="_responder" placeholder="Customer name" class="mb-2 w-full rounded border border-slate-300 px-2 py-1 text-sm" />
+                        <textarea @bind="_responseNote" rows="2" placeholder="Note (optional)" class="mb-2 w-full rounded border border-slate-300 px-2 py-1 text-sm"></textarea>
+                        <button class="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white" disabled="@_busy" @onclick="() => RespondAsync(true)">Accepted</button>
+                        <button class="ml-2 rounded-lg bg-red-100 px-3 py-1.5 text-sm font-semibold text-red-800" disabled="@_busy" @onclick="() => RespondAsync(false)">Rejected</button>
+                    </div>
+                }
+
+                @if (_quote.Status is "Sent" or "Accepted" or "Rejected")
+                {
+                    <div class="rounded-xl border border-slate-200 bg-white p-5">
+                        <div class="mb-2 flex items-center justify-between">
+                            <h2 class="text-sm font-semibold text-slate-900">Share links</h2>
+                            <button class="text-sm text-indigo-600 hover:text-indigo-700" disabled="@_busy" @onclick="NewLinkAsync">New link</button>
+                        </div>
+                        @foreach (var link in _quote.ShareLinks)
+                        {
+                            <div class="flex items-center justify-between border-t border-slate-100 py-2 text-xs">
+                                <div>
+                                    <div>Created @Presentation.DateTimeShort(link.CreatedAt)</div>
+                                    <div class="text-slate-500">
+                                        @(link.RevokedAt is not null ? "Revoked" : link.IsUsable ? $"Expires {Presentation.Date(link.ExpiresAt)}" : "Expired")
+                                        · @link.ViewCount view@(link.ViewCount == 1 ? "" : "s")
+                                    </div>
+                                </div>
+                                @if (link.IsUsable)
+                                {
+                                    <button class="text-red-600 hover:text-red-700" disabled="@_busy" @onclick="() => RevokeAsync(link)">Revoke</button>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+
+                <div class="rounded-xl border border-slate-200 bg-white p-5">
+                    <h2 class="mb-2 text-sm font-semibold text-slate-900">History</h2>
+                    <ol class="space-y-2 text-xs">
+                        @foreach (var h in _quote.History)
+                        {
+                            <li>
+                                <span class="font-semibold">@(h.FromStatus is null ? h.ToStatus : h.FromStatus == h.ToStatus ? h.Note : $"{h.FromStatus} → {h.ToStatus}")</span>
+                                <span class="block text-slate-500">
+                                    @Presentation.DateTimeShort(h.ChangedAt)
+                                    @(h.ChangedByName is not null ? $"· by {h.ChangedByName}" : h.ChangedByUserId is null ? "· system" : "")
+                                </span>
+                                @if (h.Note is not null && h.FromStatus != h.ToStatus) { <span class="block text-slate-600">@h.Note</span> }
+                            </li>
+                        }
+                    </ol>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private Quote? _quote;
+    private string? _error, _notice, _shareUrl, _documentHtml;
+    private bool _busy;
+    private string _title = "";
+    private DateOnly _validUntil;
+    private string? _terms;
+    private string? _responder, _responseNote;
+
+    private string Money(decimal v) => Presentation.MoneyExact(v, _quote?.CurrencyCode);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Navigating between versions reuses this component; reset the one-time link banner.
+        _shareUrl = null;
+        _documentHtml = null;
+        if (_quote is not null && _quote.Id != Id) await LoadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        await Presentation.EnsureLoadedAsync();
+        await LoadAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadAsync()
+    {
+        try { Apply(await Api.GetFromJsonAsync<Quote>($"/api/quotes/{Id}")); }
+        catch (Exception ex) { _error = $"Could not load the quote: {ex.Message}"; }
+    }
+
+    private void Apply(Quote? quote)
+    {
+        _quote = quote;
+        if (quote is null) return;
+        _title = quote.Title;
+        _validUntil = quote.ValidUntil;
+        _terms = quote.Terms;
+    }
+
+    private void Go(Guid id) => Nav.NavigateTo($"/admin/quotes/{id}");
+
+    private Task SaveDraftAsync() => Run(() => Api.PutAsJsonAsync($"/api/quotes/{Id}", new UpdateQuoteRequest(_title, _validUntil, _terms)), "Draft saved.");
+    private Task RefreshAsync() => Run(() => Api.PostAsync($"/api/quotes/{Id}/refresh", null), "Lines refreshed from the deal.");
+    private Task ApproveAsync() => Run(() => Api.PostAsync($"/api/quotes/{Id}/approve", null), "Approved.");
+
+    private async Task ReviseAsync()
+    {
+        var revised = await Call<Quote>(() => Api.PostAsync($"/api/quotes/{Id}/revise", null));
+        if (revised is not null) Go(revised.Id);
+    }
+
+    private async Task SendAsync()
+    {
+        var sent = await Call<SendQuoteResponse>(() => Api.PostAsJsonAsync($"/api/quotes/{Id}/send", new SendQuoteRequest(true)));
+        if (sent is null) return;
+
+        Apply(sent.Quote);
+        _shareUrl = sent.ShareUrl;
+        _notice = sent.DeliveryStatus switch
+        {
+            null => "Quote sent. No email address on file — share the link below.",
+            "Rejected" => $"Quote sent, but the email was not delivered: {sent.DeliveryError}. Share the link below instead.",
+            _ => $"Quote sent. Email {sent.DeliveryStatus!.ToLowerInvariant()}."
+        };
+    }
+
+    private async Task RespondAsync(bool accept)
+    {
+        if (string.IsNullOrWhiteSpace(_responder)) { _error = "Enter the customer's name."; return; }
+        await Run(() => Api.PostAsJsonAsync($"/api/quotes/{Id}/respond", new RespondQuoteRequest(accept, _responder, _responseNote)),
+            accept ? "Recorded as accepted." : "Recorded as rejected.");
+    }
+
+    private async Task NewLinkAsync()
+    {
+        var created = await Call<ShareLinkCreated>(() => Api.PostAsync($"/api/quotes/{Id}/share-links", null));
+        if (created is null) return;
+        _shareUrl = created.Url;
+        await LoadAsync();
+    }
+
+    private async Task RevokeAsync(QuoteShareLink link)
+    {
+        if (await Call<QuoteShareLink>(() => Api.PostAsync($"/api/quotes/{Id}/share-links/{link.Id}/revoke", null)) is not null)
+        {
+            _notice = "Link revoked. It stops working immediately.";
+            await LoadAsync();
+        }
+    }
+
+    private async Task TogglePreviewAsync()
+    {
+        if (_documentHtml is not null) { _documentHtml = null; return; }
+        var response = await Api.GetAsync($"/api/quotes/{Id}/document");
+        _documentHtml = response.IsSuccessStatusCode ? await response.Content.ReadAsStringAsync() : null;
+        if (_documentHtml is null) _error = await CommerceLabels.ErrorAsync(response);
+    }
+
+    private async Task Run(Func<Task<HttpResponseMessage>> call, string notice)
+    {
+        var quote = await Call<Quote>(call);
+        if (quote is null) return;
+        Apply(quote);
+        _notice = notice;
+    }
+
+    private async Task<T?> Call<T>(Func<Task<HttpResponseMessage>> call) where T : class
+    {
+        _busy = true;
+        _error = null;
+        _notice = null;
+        try
+        {
+            var response = await call();
+            if (!response.IsSuccessStatusCode) { _error = await CommerceLabels.ErrorAsync(response); return null; }
+            return await response.Content.ReadFromJsonAsync<T>();
+        }
+        catch (Exception ex) { _error = ex.Message; return null; }
+        finally { _busy = false; }
+    }
+}
