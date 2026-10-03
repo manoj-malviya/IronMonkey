@@ -19,6 +19,15 @@ public sealed class Opportunity : BaseTenantEntity
     }
 
     public string Title { get; private set; } = string.Empty;
+
+    /// <summary>
+    /// The user who owns this record, for record-level visibility. Null means unowned, which
+    /// only an All scope can see. Backfilled from the converting lead's assignee by the
+    /// <c>RecordVisibility</c> migration; set to the creator on create.
+    /// </summary>
+    public Guid? OwnerUserId { get; private set; }
+
+    public void AssignOwner(Guid? ownerUserId) => OwnerUserId = ownerUserId;
     public Guid ContactId { get; private set; }
     public DateTime ExpectedCloseDate { get; private set; }
 

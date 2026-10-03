@@ -17,7 +17,9 @@ public class CreateRoleEndpoint : IEndpoint
         .MapPost("/users/roles", Handle)
         .WithSummary("Create a role in the current tenant with the given permissions")
         .WithTags("Role Management")
-        .RequireAuthorization()
+        // users:write, not bare authentication: role management decides what every other user
+        // may do. Before this, any signed-in user could create a role and grant it anything.
+        .RequireAuthorization(PermissionConstants.UsersWrite)
         .WithRequestValidation<Request>();
 
     public record Request(string Name, List<int> PermissionIds);
@@ -33,10 +35,11 @@ public class CreateRoleEndpoint : IEndpoint
         }
     }
 
-    private static async Task<Results<Created<Response>, ValidationError>> Handle(
+    internal static async Task<Results<Created<Response>, ValidationError>> Handle(
         Request request,
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
+        IUserContext userContext,
         CancellationToken cancellationToken)
     {
         var tenantId = tenantService.GetCurrentTenantId();
@@ -59,6 +62,9 @@ public class CreateRoleEndpoint : IEndpoint
         if (permissions is null)
             return new ValidationError("One or more selected permissions are invalid.");
 
+        if (await PrivilegeGuard.CheckCanGrantAsync(db, userContext.UserId, permissions.Select(p => p.Name), cancellationToken) is { } escalation)
+            return new ValidationError(escalation);
+
         // Roles have a non-generated int key, so the id is allocated here. Custom roles start
         // above the seeded band (1..302) so they can never collide with a future seeded role.
         var maxId = await db.Roles
@@ -71,6 +77,9 @@ public class CreateRoleEndpoint : IEndpoint
             role.AddPermission(permission);
 
         db.Roles.Add(role);
+        PermissionAudit.Record(db, tenantId, userContext.UserId, PermissionAudit.RoleSubject,
+            PermissionAudit.RoleSubjectId(role.Id), "RoleCreated", role.Id.ToString(), null,
+            new() { ["Name"] = role.Name, ["Permissions"] = permissions.Select(p => p.Name).OrderBy(n => n).ToList() });
         await db.SaveChangesAsync(cancellationToken);
 
         return TypedResults.Created(

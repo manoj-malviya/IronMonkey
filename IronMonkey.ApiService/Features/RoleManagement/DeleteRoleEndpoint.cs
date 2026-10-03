@@ -15,15 +15,16 @@ public class DeleteRoleEndpoint : IEndpoint
         .MapDelete("/users/roles/{roleId:int}", Handle)
         .WithSummary("Delete a custom role that has no users assigned")
         .WithTags("Role Management")
-        .RequireAuthorization();
+        .RequireAuthorization(PermissionConstants.UsersWrite);
 
     public record Response(string Message);
 
-    private static async Task<Results<Ok<Response>, ValidationError, NotFound>> Handle(
+    internal static async Task<Results<Ok<Response>, ValidationError, NotFound>> Handle(
         int roleId,
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
         ICacheService cacheService,
+        IUserContext userContext,
         CancellationToken cancellationToken)
     {
         if (!TenantRoleRules.IsVisibleToTenant(roleId))
@@ -54,6 +55,10 @@ public class DeleteRoleEndpoint : IEndpoint
         if (assignedCount > 0)
             return new ValidationError(
                 $"{assignedCount} user{(assignedCount == 1 ? " is" : "s are")} assigned to '{role.Name}'. Reassign them first.");
+
+        PermissionAudit.Record(db, tenantId, userContext.UserId, PermissionAudit.RoleSubject,
+            PermissionAudit.RoleSubjectId(roleId), "RoleDeleted", roleId.ToString(),
+            new() { ["Name"] = role.Name, ["Permissions"] = role.Permissions.Select(p => p.Name).Order().ToList() }, null);
 
         role.Permissions.Clear();
         db.Roles.Remove(role);

@@ -146,6 +146,29 @@
                 }
             </div>
 
+            @* Record visibility per record type. Enforced by the API's query layer, not here:
+               these controls only choose the setting. All is the default for every role. *@
+            <div class="mt-5 rounded-lg border border-slate-200 p-3">
+                <p class="mb-1 text-sm font-semibold text-slate-900">Record visibility</p>
+                <p class="mb-3 text-xs text-slate-500">
+                    Own: records assigned to the user. Team: also teammates' records, and every team the user manages.
+                    All: every record. Unassigned records are visible only with All.
+                </p>
+                <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    @foreach (var type in ScopeTypes)
+                    {
+                        <label class="text-xs text-slate-600">@type
+                            <select value="@_scopes[type]" @onchange="e => SetScope(type, e)"
+                                    class="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm">
+                                <option value="Own">Own</option>
+                                <option value="Team">Team</option>
+                                <option value="All">All</option>
+                            </select>
+                        </label>
+                    }
+                </div>
+            </div>
+
             <div class="mt-6 flex justify-end gap-3">
                 <button type="button" @onclick="CloseEditor" class="px-4 py-2 text-sm font-medium text-slate-700">Cancel</button>
                 <button type="button" @onclick="SaveAsync" disabled="@_isSaving"
@@ -190,6 +213,9 @@
     private bool _isSaving;
     private string? _editorError;
 
+    private static readonly string[] ScopeTypes = ["Lead", "Contact", "Opportunity", "Task"];
+    private Dictionary<string, string> _scopes = ScopeTypes.ToDictionary(t => t, _ => "All");
+
     private RoleItem? _deleting;
     private bool _isDeleting;
 
@@ -219,10 +245,11 @@
         _editorName = "";
         _selected = [];
         _editorError = null;
+        _scopes = ScopeTypes.ToDictionary(t => t, _ => "All");
         _showEditor = true;
     }
 
-    private void OpenEdit(RoleItem role)
+    private async Task OpenEdit(RoleItem role)
     {
         _editingRoleId = role.RoleId;
         _isEditingSystemRole = role.IsSystemRole;
@@ -230,7 +257,15 @@
         // The role carries permission names; the editor works in ids.
         _selected = _permissions.Where(p => role.Permissions.Contains(p.Name)).Select(p => p.Id).ToHashSet();
         _editorError = null;
+        _scopes = ScopeTypes.ToDictionary(t => t, _ => "All");
         _showEditor = true;
+        try
+        {
+            var current = await Api.GetFromJsonAsync<ScopesPayload>($"/users/roles/{role.RoleId}/scopes");
+            if (current is not null)
+                foreach (var t in ScopeTypes) _scopes[t] = current.Scopes.GetValueOrDefault(t, "All");
+        }
+        catch (Exception ex) { _editorError = $"Could not load visibility: {ex.Message}"; }
     }
 
     private void CloseEditor()
@@ -268,6 +303,19 @@
 
             if (res.IsSuccessStatusCode)
             {
+                var roleId = _editingRoleId
+                    ?? (await res.Content.ReadFromJsonAsync<CreatedRole>())?.RoleId;
+                if (roleId is not null)
+                {
+                    var scopeRes = await Api.PutAsJsonAsync($"/users/roles/{roleId}/scopes", new { Scopes = _scopes });
+                    if (!scopeRes.IsSuccessStatusCode)
+                    {
+                        _editorError = "Permissions saved, but visibility was not: " + await ExtractDetailAsync(scopeRes);
+                        await LoadRolesAsync();
+                        return;
+                    }
+                }
+
                 _successBanner = _editingRoleId is null ? "Role created." : "Role updated.";
                 _showEditor = false;
                 await LoadRolesAsync();
@@ -312,6 +360,11 @@
         catch (System.Text.Json.JsonException) { }
         return string.IsNullOrWhiteSpace(body) ? $"Request failed ({(int)res.StatusCode})." : body;
     }
+
+    private void SetScope(string type, ChangeEventArgs e) => _scopes[type] = e.Value?.ToString() ?? "All";
+
+    private sealed class ScopesPayload { public Dictionary<string, string> Scopes { get; set; } = []; }
+    private sealed class CreatedRole { public int RoleId { get; set; } }
 
     private class RoleItem
     {

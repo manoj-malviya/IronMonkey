@@ -1,0 +1,110 @@
+@page "/admin/search"
+@attribute [Authorize]
+@inject IronMonkey.Web.HttpHandlers.AdminApiClient Api
+@inject TenantPresentationService Presentation
+@inject NavigationManager Nav
+
+<PageTitle>Search — IronMonkey</PageTitle>
+
+<div class="space-y-5">
+    <h1 class="text-2xl font-bold text-slate-900">Search results <span class="text-slate-400">for “@Q”</span></h1>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">@_error</div>
+    }
+
+    @if (_result is null)
+    {
+        <p class="text-sm text-slate-500">@(_error is null ? "Searching…" : "")</p>
+    }
+    else
+    {
+        @if (_result.TimedOut)
+        {
+            <p class="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">Some results took too long and were skipped. Try a more specific search.</p>
+        }
+        @if (_result.Groups.All(g => g.Hits.Count == 0))
+        {
+            <p class="text-sm text-slate-500">Nothing matched. Search covers names, emails, phone numbers in any format, and custom fields marked searchable.</p>
+        }
+        @foreach (var group in _result.Groups.Where(g => g.Hits.Count > 0))
+        {
+            <section class="rounded-xl border border-slate-200 bg-white">
+                <header class="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+                    <h2 class="text-sm font-semibold text-slate-900">@Label(group.Type)</h2>
+                    <span class="text-xs text-slate-500">@group.Count@(group.CountIsCapped ? "+" : "") match@(group.Count == 1 ? "" : "es")</span>
+                </header>
+                <ul class="divide-y divide-slate-100">
+                    @foreach (var hit in group.Hits)
+                    {
+                        <li>
+                            <a href="@InsightUrls.DetailUrl(hit.Type, hit.Id, hit.Matched)" class="block px-5 py-2.5 hover:bg-slate-50">
+                                <span class="font-medium text-indigo-700">@hit.Title</span>
+                                @if (!string.IsNullOrWhiteSpace(hit.Subtitle))
+                                {
+                                    <span class="ml-2 text-sm text-slate-500">@hit.Subtitle</span>
+                                }
+                                @if (hit.Type is "Lead" or "Contact" && !string.IsNullOrWhiteSpace(hit.Matched))
+                                {
+                                    <span class="ml-2 text-xs text-slate-400">@hit.Matched</span>
+                                }
+                            </a>
+                        </li>
+                    }
+                </ul>
+                @if (group.HasMore)
+                {
+                    <div class="border-t border-slate-100 px-5 py-2 text-right">
+                        <button class="text-sm text-indigo-600 hover:text-indigo-700" @onclick="() => MoreAsync(group)">Show more @Label(group.Type).ToLowerInvariant()</button>
+                    </div>
+                }
+            </section>
+        }
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery] public string? Q { get; set; }
+
+    private SearchResult? _result;
+    private string? _error;
+    private string? _loadedFor;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // After the first interactive render (the JWT is unreadable during prerender), and
+        // again whenever the query in the URL changes.
+        if (Q == _loadedFor) return;
+        _loadedFor = Q;
+        await Presentation.EnsureLoadedAsync();
+        await LoadAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadAsync()
+    {
+        _error = null;
+        _result = null;
+        if (string.IsNullOrWhiteSpace(Q) || Q.Trim().Length < 2) { _error = "Type at least two characters."; return; }
+        try { _result = await Api.GetFromJsonAsync<SearchResult>($"/api/search?q={Uri.EscapeDataString(Q)}&limit=5"); }
+        catch (Exception ex) { _error = $"Search failed: {ex.Message}"; }
+    }
+
+    private async Task MoreAsync(SearchGroup group)
+    {
+        var more = await Api.GetFromJsonAsync<SearchResult>(
+            $"/api/search?q={Uri.EscapeDataString(Q!)}&type={group.Type}&limit=25&page=1");
+        var replacement = more?.Groups.SingleOrDefault();
+        if (_result is null || replacement is null) return;
+        _result = _result with { Groups = _result.Groups.Select(g => g.Type == group.Type ? replacement : g).ToList() };
+    }
+
+    private string Label(string type) => type switch
+    {
+        "Lead" => Presentation.Terms(TerminologyTerm.Lead),
+        "Contact" => Presentation.Terms(TerminologyTerm.Contact),
+        "Opportunity" => Presentation.Terms(TerminologyTerm.Opportunity),
+        _ => "Tasks"
+    };
+}

@@ -34,7 +34,8 @@ internal sealed class PermissionConfiguration : IEntityTypeConfiguration<Permiss
             Permission.MessagesSend,
             Permission.MessagesRead,
             Permission.QuotesApprove,
-            Permission.CatalogWrite
+            Permission.CatalogWrite,
+            Permission.DataExport
         ]);
     }
 }

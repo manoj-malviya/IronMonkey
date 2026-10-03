@@ -237,8 +237,12 @@ public class PlatformAdminTests : IClassFixture<PostgreSqlFixture>
 
         var telePermissions = await sut.GetPermissionsForUserAsync(telecaller.Id.ToString(), tenant.Id);
 
-        Assert.DoesNotContain(PermissionConstants.LeadsWrite, telePermissions);
+        // TeleCaller holds CRM record access in its own right (made explicit when record
+        // permissions started being enforced), so the inheritance check uses grants only the
+        // Admin role carries.
+        Assert.DoesNotContain(PermissionConstants.UsersWrite, telePermissions);
         Assert.DoesNotContain(PermissionConstants.UsersRead, telePermissions);
+        Assert.DoesNotContain(PermissionConstants.QuotesApprove, telePermissions);
     }
 
     [Fact]

@@ -20,6 +20,9 @@ public static class ConfigureApp
         app.UseHttpsRedirection();
         app.UseAuthentication();
         app.UseAuthorization();
+        // After authentication, before any endpoint: every TenantDbContext the request
+        // creates captures the caller's record visibility into its query filters.
+        app.UseMiddleware<IronMonkey.ApiService.Common.Auth.RecordVisibilityMiddleware>();
         app.UseRateLimiter();
         app.MapEndpoints();
 

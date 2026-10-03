@@ -88,6 +88,8 @@ public class CreateOpportunityEndpoint : IEndpoint
         if (request.Amount is > 0m)
             opportunity.SetAmount(request.Amount.Value);
 
+        // The creator owns the deal, so a narrowed scope still shows it to them.
+        opportunity.AssignOwner(userContext.UserId);
         db.Opportunities.Add(opportunity);
 
         // The first placement is history too: without it the time a deal spent in its entry

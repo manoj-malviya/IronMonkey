@@ -187,6 +187,7 @@ public static class ConfigureServices
             builder.Services.AddScoped<AuthorizationService>();
 
             builder.Services.AddTransient<IAuthorizationHandler, PermissionAuthorizationHandler>();
+            builder.Services.AddSingleton<IRecordVisibilityCache, RecordVisibilityCache>();
 
             builder.Services.AddTransient<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
         }
@@ -265,6 +266,12 @@ public static class ConfigureServices
                 IronMonkey.ApiService.Features.Commerce.TenantCommerceContextResolver>();
             builder.Services.AddScoped<IronMonkey.ApiService.Features.Quotes.IQuoteService,
                 IronMonkey.ApiService.Features.Quotes.QuoteService>();
+
+            // Search, saved views, report builder and exports.
+            builder.Services.AddScoped<IronMonkey.ApiService.Features.Insights.InsightService>();
+            builder.Services.AddScoped<IronMonkey.ApiService.Features.Insights.SearchService>();
+            builder.Services.AddScoped<IronMonkey.ApiService.Features.Insights.DataExportJob>();
+            builder.Services.AddScoped<IronMonkey.ApiService.Features.Insights.ScheduledReportJob>();
 
             // Invitation delivery. Goes through IMessageDispatcher like every other outbound
             // message, so an invitation cannot bypass consent or channel rules.

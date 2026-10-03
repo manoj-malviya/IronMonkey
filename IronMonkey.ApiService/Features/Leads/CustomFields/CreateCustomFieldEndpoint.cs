@@ -27,7 +27,8 @@ public class CreateCustomFieldEndpoint : IEndpoint
         int DisplayOrder = 0,
         string? FieldKey = null,
         string? HelpText = null,
-        string? DefaultValue = null);
+        string? DefaultValue = null,
+        bool IsSearchable = false);
 
     public record Response(Guid Id, string FieldName, string FieldKey, string FieldType, bool IsRequired,
         List<string> Options, string AppliesTo, int DisplayOrder, string? HelpText,
@@ -104,6 +105,7 @@ public class CreateCustomFieldEndpoint : IEndpoint
         var field = CustomFieldDefinition.Create(tenantId, name, fieldType, request.IsRequired,
             options, scope, displayOrder, key, Trim(request.HelpText), Trim(request.DefaultValue));
 
+        field.SetSearchable(request.IsSearchable);
         db.CustomFieldDefinitions.Add(field);
         await db.SaveChangesAsync(cancellationToken);
 

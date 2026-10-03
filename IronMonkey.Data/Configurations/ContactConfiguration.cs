@@ -10,7 +10,13 @@ internal sealed class ContactConfiguration : IEntityTypeConfiguration<Contact>
     {
         builder.ToTable("contacts");
 
+        builder.Property(contact => contact.MobileDigits)
+            .HasComputedColumnSql(@"regexp_replace(""Mobile"", '[^0-9]', '', 'g')", stored: true);
+
         builder.HasKey(contact => contact.Id);
+
+        // Owner-scoped visibility filters on this column for every Own/Team query.
+        builder.HasIndex(contact => new { contact.TenantId, contact.OwnerUserId });
 
         builder.Property(contact => contact.Name)
             .IsRequired()

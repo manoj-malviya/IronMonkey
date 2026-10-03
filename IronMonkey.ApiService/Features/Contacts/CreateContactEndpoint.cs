@@ -37,6 +37,7 @@ public class CreateContactEndpoint : IEndpoint
         Request request,
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
+        IUserContext userContext,
         CancellationToken cancellationToken)
     {
         var tenantId = tenantService.GetCurrentTenantId();
@@ -64,6 +65,9 @@ public class CreateContactEndpoint : IEndpoint
         foreach (var (key, value) in bound.Values)
             contact.CustomFields.Set(key, value);
 
+        // The creator owns what they create, so a user with an Own or Team scope can still see
+        // the contact they just added.
+        contact.AssignOwner(userContext.UserId);
         db.Contacts.Add(contact);
         await db.SaveChangesAsync(cancellationToken);
 

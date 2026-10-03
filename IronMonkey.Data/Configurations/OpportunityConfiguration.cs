@@ -12,6 +12,9 @@ internal sealed class OpportunityConfiguration : IEntityTypeConfiguration<Opport
 
         builder.HasKey(opportunity => opportunity.Id);
 
+        // Owner-scoped visibility filters on this column for every Own/Team query.
+        builder.HasIndex(opportunity => new { opportunity.TenantId, opportunity.OwnerUserId });
+
         builder.Property(opportunity => opportunity.Title)
             .IsRequired()
             .HasMaxLength(200);

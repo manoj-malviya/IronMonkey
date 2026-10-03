@@ -229,6 +229,13 @@
                 <span>Required</span>
             </label>
 
+            <label class="flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" checked="@_draft.IsSearchable"
+                       @onchange="e => _draft.IsSearchable = (bool)(e.Value ?? false)"
+                       class="rounded border-slate-300" />
+                <span>Searchable <span class="text-xs text-slate-500">— global search matches this field's values</span></span>
+            </label>
+
             @* Preview — the same control shape the form components render, so the Admin can
                see what they are configuring before saving it. *@
             <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
@@ -508,6 +515,7 @@
             AppliesTo = field.AppliesTo,
             DisplayOrder = field.DisplayOrder,
             IsRequired = field.IsRequired,
+            IsSearchable = field.IsSearchable,
             HelpText = field.HelpText,
             DefaultValue = field.DefaultValue,
             IsArchived = field.IsArchived
@@ -607,6 +615,7 @@
                 FieldKey = key,
                 _draft.FieldType,
                 _draft.IsRequired,
+                _draft.IsSearchable,
                 Options = options,
                 _draft.AppliesTo,
                 HelpText = string.IsNullOrWhiteSpace(_draft.HelpText) ? null : _draft.HelpText.Trim(),

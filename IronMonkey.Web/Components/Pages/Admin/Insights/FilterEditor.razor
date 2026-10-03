@@ -1,0 +1,148 @@
+@* Edits a filter tree. Every group states its own AND/OR, so precedence is always explicit.
+   Recursive for nested groups, to the API's depth limit. The API validates everything again —
+   this editor only builds the definition. *@
+
+<div class="space-y-2 rounded-lg border @(Depth == 1 ? "border-slate-200 bg-white" : "border-dashed border-slate-300 bg-slate-50") p-3">
+    <div class="flex flex-wrap items-center gap-2 text-xs">
+        <span class="text-slate-500">Match</span>
+        <select value="@Group.Logic" @onchange="SetLogic"
+                class="rounded border border-slate-300 px-2 py-1" aria-label="Group logic">
+            <option value="and">all of (AND)</option>
+            <option value="or">any of (OR)</option>
+        </select>
+        <button type="button" class="text-indigo-600 hover:text-indigo-700" @onclick="AddCondition">+ Condition</button>
+        @if (Depth < MaxDepth)
+        {
+            <button type="button" class="text-indigo-600 hover:text-indigo-700" @onclick="AddGroup">+ Group</button>
+        }
+        @if (OnRemove.HasDelegate)
+        {
+            <button type="button" class="ml-auto text-red-600" @onclick="OnRemove">Remove group</button>
+        }
+    </div>
+
+    @foreach (var c in Group.Conditions.ToList())
+    {
+        var field = Fields.FirstOrDefault(f => f.Key == c.Field);
+        <div class="flex flex-wrap items-center gap-2">
+            <select value="@c.Field" @onchange="e => SetField(c, e.Value?.ToString())" class="rounded border border-slate-300 px-2 py-1 text-sm" aria-label="Field">
+                @if (field is null) { <option value="@c.Field">(missing field)</option> }
+                @foreach (var f in Fields) { <option value="@f.Key">@f.Label</option> }
+            </select>
+            <select value="@c.Op" @onchange="e => SetOp(c, field, e.Value?.ToString())" class="rounded border border-slate-300 px-2 py-1 text-sm" aria-label="Operator">
+                @foreach (var op in field?.Operators ?? []) { <option value="@op">@OpLabel(op)</option> }
+            </select>
+            @if (NeedsValue(c.Op))
+            {
+                @if (c.Op == "in_range")
+                {
+                    <select value="@InsightUrls.TextFor(c.Value)" @onchange="e => SetValue(c, field, e.Value?.ToString())"
+                            class="rounded border border-slate-300 px-2 py-1 text-sm" aria-label="Date range">
+                        @foreach (var p in Presets) { <option value="@p.Key">@p.Value</option> }
+                    </select>
+                }
+                else if (field?.Options is { Count: > 0 } options && c.Op is "eq" or "neq" or "contains")
+                {
+                    <select value="@InsightUrls.TextFor(c.Value)" @onchange="e => SetValue(c, field, e.Value?.ToString())"
+                            class="rounded border border-slate-300 px-2 py-1 text-sm" aria-label="Value">
+                        <option value=""></option>
+                        @foreach (var o in options) { <option value="@o">@o</option> }
+                    </select>
+                }
+                else
+                {
+                    <input value="@InsightUrls.TextFor(c.Value)" @onchange="e => SetValue(c, field, e.Value?.ToString())"
+                           placeholder="@Placeholder(c.Op, field)" class="w-48 rounded border border-slate-300 px-2 py-1 text-sm" aria-label="Value" />
+                }
+            }
+            <button type="button" class="text-xs text-red-600" @onclick="() => { Group.Conditions.Remove(c); Changed(); }" aria-label="Remove condition">✕</button>
+        </div>
+    }
+
+    @foreach (var g in Group.Groups.ToList())
+    {
+        <FilterEditor Fields="Fields" Group="g" Depth="Depth + 1" OnChanged="OnChanged"
+                      OnRemove="() => { Group.Groups.Remove(g); Changed(); }" />
+    }
+</div>
+
+@code {
+    private const int MaxDepth = 3;
+
+    [Parameter, EditorRequired] public List<FieldInfo> Fields { get; set; } = [];
+    [Parameter, EditorRequired] public FilterGroup Group { get; set; } = new();
+    [Parameter] public int Depth { get; set; } = 1;
+    [Parameter] public EventCallback OnChanged { get; set; }
+    [Parameter] public EventCallback OnRemove { get; set; }
+
+    private static readonly Dictionary<string, string> Presets = new()
+    {
+        ["today"] = "Today", ["last7days"] = "Last 7 days", ["last30days"] = "Last 30 days",
+        ["thismonth"] = "This month", ["thisquarter"] = "This quarter", ["thisyear"] = "This year", ["alltime"] = "All time"
+    };
+
+    private void Changed() => OnChanged.InvokeAsync();
+
+    private void SetLogic(ChangeEventArgs e)
+    {
+        Group.Logic = e.Value?.ToString() ?? "and";
+        Changed();
+    }
+
+    private void AddCondition()
+    {
+        var first = Fields.FirstOrDefault();
+        if (first is null) return;
+        Group.Conditions.Add(new FilterCondition { Field = first.Key, Op = first.Operators.First() });
+        Changed();
+    }
+
+    private void AddGroup()
+    {
+        Group.Groups.Add(new FilterGroup { Logic = Group.Logic == "and" ? "or" : "and" });
+        Changed();
+    }
+
+    private void SetField(FilterCondition c, string? key)
+    {
+        var f = Fields.FirstOrDefault(x => x.Key == key);
+        if (f is null) return;
+        c.Field = f.Key;
+        c.Op = f.Operators.First();
+        c.Value = InsightUrls.ValueFor(f.Kind, c.Op, null);
+        Changed();
+    }
+
+    private void SetOp(FilterCondition c, FieldInfo? f, string? op)
+    {
+        c.Op = op ?? "";
+        c.Value = InsightUrls.ValueFor(f?.Kind ?? "Text", c.Op, InsightUrls.TextFor(c.Value));
+        Changed();
+    }
+
+    private void SetValue(FilterCondition c, FieldInfo? f, string? text)
+    {
+        c.Value = InsightUrls.ValueFor(f?.Kind ?? "Text", c.Op, text);
+        Changed();
+    }
+
+    private static bool NeedsValue(string op) => op is not ("is_empty" or "is_not_empty" or "is_true" or "is_false" or "is_me");
+
+    private static string Placeholder(string op, FieldInfo? f) => op switch
+    {
+        "in" => "a, b, c",
+        "between" => "min-max",
+        "before" or "after" => "YYYY-MM-DD",
+        _ => f?.Kind == "Number" ? "number" : "value"
+    };
+
+    private static string OpLabel(string op) => op switch
+    {
+        "eq" => "is", "neq" => "is not", "contains" => "contains", "not_contains" => "does not contain",
+        "starts_with" => "starts with", "in" => "is one of", "is_empty" => "is empty", "is_not_empty" => "is not empty",
+        "gt" => ">", "gte" => "≥", "lt" => "<", "lte" => "≤", "between" => "between",
+        "in_range" => "in", "before" => "before", "after" => "on or after",
+        "is_true" => "is yes", "is_false" => "is no", "is_me" => "is me",
+        _ => op
+    };
+}

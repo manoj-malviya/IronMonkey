@@ -42,6 +42,13 @@ public sealed class Lead : BaseTenantEntity
     public Guid PipelineId { get; private set; }
 
     public CustomFieldValues CustomFields { get; private set; } = new();
+
+    /// <summary>
+    /// The mobile number reduced to digits, maintained by PostgreSQL as a stored generated
+    /// column and trigram-indexed, so search can match "07700 900123" against "+447700900123"
+    /// without normalising every row at query time. Read-only to the application.
+    /// </summary>
+    public string MobileDigits { get; private set; } = string.Empty;
     public PipelineStage Stage { get; private set; } = null!;
     public Pipeline Pipeline { get; private set; } = null!;
     public Guid? ConvertedAccountId { get; private set; }
