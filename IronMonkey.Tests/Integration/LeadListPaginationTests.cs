@@ -47,13 +47,19 @@ public class LeadListPaginationTests(PostgreSqlFixture fixture) : IClassFixture<
         return (connectionString, stage.Id);
     }
 
-    private static Task<Microsoft.AspNetCore.Http.HttpResults.Ok<ListLeadsEndpoint.LeadPage>> Fetch(
+    /// <summary>
+    /// Calls the list handler with no pipeline id, which resolves to the tenant's default —
+    /// for a single-pipeline tenant, the only one there is. These tests therefore assert the
+    /// unchanged single-pipeline behaviour, which is exactly what they were written for.
+    /// </summary>
+    private static async Task<ListLeadsEndpoint.LeadPage> Fetch(
         Guid tenantId, string connectionString, TenantDbContextFactory factory,
         string? search = null, Guid? stageId = null, string? sort = null,
         int? page = null, int? pageSize = null)
-        => ListLeadsEndpoint.Handle(
-            search, stageId, sort, page, pageSize,
-            new FixedTenantService(tenantId, connectionString), factory, CancellationToken.None);
+        => (await ListLeadsEndpoint.Handle(
+            search, stageId, sort, page, pageSize, null,
+            new FixedTenantService(tenantId, connectionString), factory,
+            PipelineTestHelpers.Scope(), CancellationToken.None)).Ok();
 
     [Fact]
     public async Task ReturnsFirstPage_WithTotalReflectingEveryMatch()
@@ -63,13 +69,13 @@ public class LeadListPaginationTests(PostgreSqlFixture fixture) : IClassFixture<
 
         var result = await Fetch(tenantId, connectionString, _factory, pageSize: 10);
 
-        Assert.Equal(10, result.Value!.Items.Count);
+        Assert.Equal(10, result.Items.Count);
 
         // The total counts every match, not the page — otherwise "1–10 of 10" would be
         // shown for a 30-row result.
-        Assert.Equal(30, result.Value!.TotalCount);
-        Assert.Equal(3, result.Value!.TotalPages);
-        Assert.Equal(1, result.Value!.Page);
+        Assert.Equal(30, result.TotalCount);
+        Assert.Equal(3, result.TotalPages);
+        Assert.Equal(1, result.Page);
     }
 
     [Fact]
@@ -82,7 +88,7 @@ public class LeadListPaginationTests(PostgreSqlFixture fixture) : IClassFixture<
         for (var page = 1; page <= 3; page++)
         {
             var result = await Fetch(tenantId, connectionString, _factory, page: page, pageSize: 10);
-            seen.AddRange(result.Value!.Items.Select(i => i.Id));
+            seen.AddRange(result.Items.Select(i => i.Id));
         }
 
         // Every lead exactly once: a sort without a unique tiebreak would let rows repeat
@@ -101,9 +107,9 @@ public class LeadListPaginationTests(PostgreSqlFixture fixture) : IClassFixture<
 
         // A stale deep link returns the last real page rather than an empty list that
         // would read as "no leads".
-        Assert.Equal(2, result.Value!.Page);
-        Assert.Equal(2, result.Value!.Items.Count);
-        Assert.Equal(12, result.Value!.TotalCount);
+        Assert.Equal(2, result.Page);
+        Assert.Equal(2, result.Items.Count);
+        Assert.Equal(12, result.TotalCount);
     }
 
     [Fact]
@@ -114,8 +120,8 @@ public class LeadListPaginationTests(PostgreSqlFixture fixture) : IClassFixture<
 
         var result = await Fetch(tenantId, connectionString, _factory, pageSize: 100_000);
 
-        Assert.True(result.Value!.PageSize <= 200);
-        Assert.Equal(40, result.Value!.TotalCount);
+        Assert.True(result.PageSize <= 200);
+        Assert.Equal(40, result.TotalCount);
     }
 
     [Fact]
@@ -127,9 +133,9 @@ public class LeadListPaginationTests(PostgreSqlFixture fixture) : IClassFixture<
         // Matches exactly one seeded lead.
         var result = await Fetch(tenantId, connectionString, _factory, search: "Lead007");
 
-        Assert.Equal(1, result.Value!.TotalCount);
-        Assert.Equal(1, result.Value!.TotalPages);
-        Assert.Equal("Lead007", result.Value!.Items.Single().FirstName);
+        Assert.Equal(1, result.TotalCount);
+        Assert.Equal(1, result.TotalPages);
+        Assert.Equal("Lead007", result.Items.Single().FirstName);
     }
 
     [Fact]
@@ -141,8 +147,8 @@ public class LeadListPaginationTests(PostgreSqlFixture fixture) : IClassFixture<
         var ascending = await Fetch(tenantId, connectionString, _factory, sort: "name", pageSize: 5);
         var descending = await Fetch(tenantId, connectionString, _factory, sort: "name_desc", pageSize: 5);
 
-        Assert.Equal("Lead000", ascending.Value!.Items.First().FirstName);
-        Assert.Equal("Lead014", descending.Value!.Items.First().FirstName);
+        Assert.Equal("Lead000", ascending.Items.First().FirstName);
+        Assert.Equal("Lead014", descending.Items.First().FirstName);
     }
 
     [Fact]
@@ -154,8 +160,8 @@ public class LeadListPaginationTests(PostgreSqlFixture fixture) : IClassFixture<
         // An unrecognized key must not reach the database as a property name.
         var result = await Fetch(tenantId, connectionString, _factory, sort: "'; DROP TABLE leads;--");
 
-        Assert.Equal(5, result.Value!.TotalCount);
-        Assert.Equal(5, result.Value!.Items.Count);
+        Assert.Equal(5, result.TotalCount);
+        Assert.Equal(5, result.Items.Count);
     }
 
     [Fact]
@@ -166,12 +172,12 @@ public class LeadListPaginationTests(PostgreSqlFixture fixture) : IClassFixture<
 
         var result = await Fetch(tenantId, connectionString, _factory);
 
-        Assert.Empty(result.Value!.Items);
-        Assert.Equal(0, result.Value!.TotalCount);
-        Assert.Equal(0, result.Value!.TotalPages);
+        Assert.Empty(result.Items);
+        Assert.Equal(0, result.TotalCount);
+        Assert.Equal(0, result.TotalPages);
 
         // Still page 1, so the UI has a coherent "page 1 of 0" rather than page 0.
-        Assert.Equal(1, result.Value!.Page);
+        Assert.Equal(1, result.Page);
     }
 
     [Fact]
@@ -198,7 +204,7 @@ public class LeadListPaginationTests(PostgreSqlFixture fixture) : IClassFixture<
 
         var result = await Fetch(tenantA, connectionString, _factory);
 
-        Assert.Equal(3, result.Value!.TotalCount);
-        Assert.All(result.Value!.Items, i => Assert.StartsWith("Lead", i.FirstName));
+        Assert.Equal(3, result.TotalCount);
+        Assert.All(result.Items, i => Assert.StartsWith("Lead", i.FirstName));
     }
 }

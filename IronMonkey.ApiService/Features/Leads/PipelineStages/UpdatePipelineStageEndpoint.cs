@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Features.Configuration;
+using IronMonkey.ApiService.Features.Pipelines;
 using IronMonkey.Data;
 
 namespace IronMonkey.ApiService.Features.Leads.PipelineStages;
@@ -45,7 +46,9 @@ public class UpdatePipelineStageEndpoint : IEndpoint
         if (stage is null)
             return TypedResults.NotFound();
 
-        var nameExists = await db.PipelineStages
+        // Uniqueness within the stage's OWN pipeline, matching the index. Another pipeline
+        // may legitimately have a stage of the same name at the same position.
+        var nameExists = await PipelineStageResolution.Stages(db, stage.PipelineId)
             .AnyAsync(p => p.Id != id && p.Name.ToLower() == name.ToLower(), cancellationToken);
 
         if (nameExists)
@@ -53,7 +56,7 @@ public class UpdatePipelineStageEndpoint : IEndpoint
 
         if (request.Order > 0 && request.Order != stage.Order)
         {
-            var orderExists = await db.PipelineStages
+            var orderExists = await PipelineStageResolution.Stages(db, stage.PipelineId)
                 .AnyAsync(p => p.Order == request.Order && p.Id != id, cancellationToken);
 
             if (orderExists)

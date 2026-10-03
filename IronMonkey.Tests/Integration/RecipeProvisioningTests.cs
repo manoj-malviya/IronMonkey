@@ -80,7 +80,10 @@ public class RecipeProvisioningTests : IClassFixture<PostgreSqlFixture>
             .SingleAsync(t => t.Name == $"Recipe Stages Co {uniqueId}");
         var tenantContextFactory = new TenantDbContextFactory();
         await using var tenantDb = tenantContextFactory.CreateForTenant(tenant.DatabaseConnectionString!, tenant.Id);
-        var stages = await tenantDb.PipelineStages.ToListAsync();
+        // Lead stages only — opportunity stages share this table and are asserted elsewhere.
+        var stages = await tenantDb.PipelineStages
+            .Where(s => s.RecordType == PipelineRecordType.Lead)
+            .ToListAsync();
         Assert.Equal(2, stages.Count);
         Assert.Contains(stages, s => s.Name == "New Lead" && s.StageType == StageType.Entry);
         Assert.Contains(stages, s => s.Name == "In Progress" && s.StageType == StageType.Active);

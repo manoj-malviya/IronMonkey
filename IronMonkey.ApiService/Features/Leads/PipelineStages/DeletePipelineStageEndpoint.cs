@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Features.Configuration;
+using IronMonkey.ApiService.Features.Pipelines;
 using IronMonkey.Data;
 
 namespace IronMonkey.ApiService.Features.Leads.PipelineStages;
@@ -59,11 +60,18 @@ public class DeletePipelineStageEndpoint : IEndpoint
             if (reassignTo == id)
                 return TypedResults.BadRequest("Leads cannot be reassigned to the stage being removed.");
 
-            var target = await db.PipelineStages
+            // Resolved within the SAME PIPELINE as the stage being removed. Without that
+            // predicate a caller could reassign this pipeline's leads onto another
+            // pipeline's stage, leaving every one of them pointing at a stage their own
+            // pipeline does not contain — invisible on both boards.
+            var target = await PipelineStageResolution.Stages(db, stage.PipelineId)
                 .SingleOrDefaultAsync(p => p.Id == reassignTo && p.IsActive, cancellationToken);
 
             if (target is null)
-                return TypedResults.BadRequest("The stage chosen for reassignment does not exist or is not active.");
+            {
+                return TypedResults.BadRequest(
+                    "The stage chosen for reassignment does not exist in this pipeline, or is not active.");
+            }
         }
 
         // The move and the deactivation are one decision, so they commit together — a failure

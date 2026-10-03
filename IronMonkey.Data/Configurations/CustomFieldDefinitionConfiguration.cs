@@ -53,5 +53,16 @@ internal sealed class CustomFieldDefinitionConfiguration : IEntityTypeConfigurat
         builder.HasIndex(c => new { c.TenantId, c.AppliesTo, c.FieldKey })
             .IsUnique()
             .HasDatabaseName("ix_custom_field_definitions_tenant_scope_key_unique");
+    
+        // Nullable pipeline target: null is tenant-wide. Deliberately NOT a foreign key.
+        //
+        // An FK here would force a choice between Restrict (a pipeline could not be removed
+        // until every rule targeting it was hand-edited) and SetNull (the database would
+        // silently widen a narrowly-targeted field to the whole tenant the moment a
+        // pipeline went away). Reverting to tenant-wide IS the chosen behaviour, but it is a
+        // product decision the delete endpoint makes explicitly, reports in its impact
+        // response and states in its result message — not something a cascade rule does
+        // behind the Admin's back.
+        builder.HasIndex(field => new { field.TenantId, field.PipelineId });
     }
 }

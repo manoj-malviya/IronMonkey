@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
+using IronMonkey.ApiService.Features.Pipelines;
+using IronMonkey.Data.Entities;
 using IronMonkey.Data;
 
 namespace IronMonkey.ApiService.Features.Reports.Dashboard;
@@ -44,14 +46,26 @@ public class GetDashboardSummaryEndpoint : IEndpoint
         int TotalContacts,
         bool HasAnyStages,
         List<StageBreakdownItem> ByStage,
+        /// <summary>Which pipeline(s) every figure above covers — a name, or "All pipelines".</summary>
+        string ScopeLabel,
+        Guid? PipelineId,
+        bool IsTenantWide,
+        bool IsMultiPipeline,
         DateTime GeneratedAt);
 
-    internal static async Task<Ok<DashboardSummaryResponse>> Handle(
+    /// <param name="pipelineId">
+    /// Which lead pipeline the figures cover. Omitted means the default one, NOT all of
+    /// them — a widening default is exactly how a tenant ends up reading a cross-pipeline
+    /// sum under one pipeline's heading. Pass "all" for the tenant-wide figure.
+    /// </param>
+    internal static async Task<Results<Ok<DashboardSummaryResponse>, BadRequest<string>>> Handle(
         string? preset,
         DateTime? from,
         DateTime? to,
+        string? pipelineId,
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
+        IPipelineScopeResolver scopeResolver,
         CancellationToken cancellationToken)
     {
         var range = DashboardDateRange.Resolve(preset, from, to);
@@ -60,13 +74,25 @@ public class GetDashboardSummaryEndpoint : IEndpoint
         var connectionString = await tenantService.GetConnectionStringAsync(cancellationToken);
         await using var db = dbContextFactory.CreateForTenant(connectionString, tenantId);
 
+        var scope = await scopeResolver.ResolveAsync(
+            db, PipelineRecordType.Lead, pipelineId, cancellationToken);
+
+        if (!scope.IsValid) return TypedResults.BadRequest(scope.Error!);
+
+        var scopedPipelines = scope.PipelineIds;
+
         // The global query filters on TenantDbContext already scope every set below to this
         // tenant and exclude soft-deleted rows, so no TenantId predicate is repeated here.
+        // The pipeline predicate is NOT covered by those filters and is stated explicitly on
+        // every set that feeds a figure.
         var leadsInRange = db.Leads
-            .Where(l => l.CreatedAt >= range.From && l.CreatedAt < range.ToExclusive);
+            .Where(l => l.CreatedAt >= range.From && l.CreatedAt < range.ToExclusive)
+            .Where(l => scopedPipelines.Contains(l.PipelineId));
 
         var stages = await db.PipelineStages
-            .Where(s => s.IsActive)
+            .Where(s => s.IsActive
+                        && s.RecordType == PipelineRecordType.Lead
+                        && scopedPipelines.Contains(s.PipelineId))
             .OrderBy(s => s.Order)
             .Select(s => new { s.Id, s.Name, s.Order, s.StageType })
             .ToListAsync(cancellationToken);
@@ -119,6 +145,10 @@ public class GetDashboardSummaryEndpoint : IEndpoint
             // apart from "configured but no leads in this range" (offer create / widen range).
             stages.Count > 0,
             byStage,
+            scope.ScopeLabel,
+            scope.SelectedPipelineId,
+            scope.IsTenantWide,
+            scope.IsMultiPipelineTenant,
             DateTime.UtcNow));
     }
 }

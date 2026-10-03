@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
 using IronMonkey.Data.Presentation;
+using IronMonkey.Common;
 using IronMonkey.Data.RecipeContent;
 using BC = BCrypt.Net.BCrypt;
 
@@ -160,15 +161,47 @@ public class TenantProvisioningService : ITenantProvisioningService
             });
         }
 
-        // Apply pipeline stages (D-07: stages before fields and rules)
-        var stages = content?.PipelineStages ?? [];
-        foreach (var stageDef in stages)
+        // ── Pipelines and their stages (D-07: stages before fields and rules) ──────
+        //
+        // Every stage a tenant is provisioned with belongs to a pipeline from the moment it
+        // is created, so a freshly provisioned tenant is never in the orphaned-stage state
+        // the migration exists to clear up for older ones.
+        //
+        // A recipe that names pipelines is authoritative. One that does not — which is every
+        // recipe stored before this existed — has its flat stage lists read as the default
+        // lead and opportunity pipelines, which is exactly what they meant before pipelines
+        // existed. That is what keeps an old recipe provisioning to a single-pipeline tenant.
+        var pipelineDefs = BuildPipelineDefinitions(content);
+
+        foreach (var pipelineDef in pipelineDefs)
         {
-            var stageType = Enum.TryParse<StageType>(stageDef.StageType, out var parsed)
-                ? parsed
-                : StageType.Active;
-            var stage = PipelineStage.Create(tenant.Id, stageDef.Name, stageDef.Order, stageType);
-            db.PipelineStages.Add(stage);
+            var recordType = Enum.TryParse<PipelineRecordType>(pipelineDef.RecordType, ignoreCase: true, out var parsedType)
+                ? parsedType
+                : PipelineRecordType.Lead;
+
+            var pipeline = Pipeline.Create(
+                tenant.Id, recordType, pipelineDef.Name, pipelineDef.Order,
+                pipelineDef.IsDefault, pipelineDef.Description);
+
+            db.Pipelines.Add(pipeline);
+
+            foreach (var stageDef in pipelineDef.Stages)
+            {
+                var stageType = Enum.TryParse<StageType>(stageDef.StageType, out var parsed)
+                    ? parsed
+                    : StageType.Active;
+
+                // The recipe's Order is used VERBATIM. Some stored recipes number their
+                // stages from 0 and some from 1, and both are correct — Order only has to be
+                // a consistent sort key within the pipeline. Substituting a 1-based sequence
+                // for a 0-based one would silently renumber every stage of those recipes and
+                // break the tests that pin their exact seeded shape.
+                //
+                // CreateIn, not CreateFor: the stage takes its record type from the pipeline
+                // it is placed in, so the two can never disagree.
+                db.PipelineStages.Add(PipelineStage.CreateIn(
+                    pipeline, stageDef.Name, stageDef.Order, stageType));
+            }
         }
 
         // Apply custom field definitions (D-07: fields after stages)
@@ -200,9 +233,11 @@ public class TenantProvisioningService : ITenantProvisioningService
         var sampleLeads = content?.SampleLeads ?? [];
         if (sampleLeads.Count > 0)
         {
+            // Lead stages only: opportunity stages now live in the same table and a sample
+            // lead placed in one would be invisible on every lead board.
             var stageMap = await db.PipelineStages
                 .AsNoTracking()
-                .Where(s => s.TenantId == tenant.Id)
+                .Where(s => s.TenantId == tenant.Id && s.RecordType == PipelineRecordType.Lead)
                 .ToDictionaryAsync(s => s.Name, s => s.Id, cancellationToken);
 
             foreach (var leadDef in sampleLeads)
@@ -237,6 +272,112 @@ public class TenantProvisioningService : ITenantProvisioningService
 
         await db.SaveChangesAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// Turns a recipe into the list of pipelines to seed, applying the backward-compatibility
+    /// rules in one place so provisioning itself stays a straight loop.
+    ///
+    /// <para>Three cases:</para>
+    /// <list type="number">
+    /// <item><b>The recipe names pipelines.</b> Used as given. The flat
+    ///   <c>PipelineStages</c>/<c>OpportunityStages</c> lists are ignored — a recipe that
+    ///   specified both would otherwise produce a surprising merge.</item>
+    /// <item><b>The recipe names none (null or empty).</b> Its flat lead stage list becomes
+    ///   the default lead pipeline and its opportunity stage list the default opportunity
+    ///   one. This is every recipe stored before pipelines existed, and it provisions to
+    ///   exactly the single-pipeline tenant it always did.</item>
+    /// <item><b>No recipe at all.</b> Product defaults for both record types.</item>
+    /// </list>
+    ///
+    /// <para>
+    /// Exactly one pipeline per record type is marked default. If a recipe marks none — or,
+    /// wrongly, marks several — the first of that record type wins and the rest are cleared,
+    /// because the filtered unique index permits exactly one and a record type with none has
+    /// no answer for "no pipeline specified".
+    /// </para>
+    /// </summary>
+    internal static List<PipelineDefinition> BuildPipelineDefinitions(RecipeContentModel? content)
+    {
+        List<PipelineDefinition> definitions;
+
+        if (content?.Pipelines is { Count: > 0 } named)
+        {
+            definitions = [.. named.Select(p => new PipelineDefinition
+            {
+                Name = string.IsNullOrWhiteSpace(p.Name) ? "Default" : p.Name.Trim(),
+                RecordType = p.RecordType,
+                Description = p.Description,
+                IsDefault = p.IsDefault,
+                Order = p.Order,
+                Stages = p.Stages.Count > 0
+                    ? p.Stages
+                    : DefaultStagesFor(p.RecordType)
+            })];
+        }
+        else
+        {
+            definitions = [];
+
+            // The flat lead list. Empty (or absent) still produces a pipeline — a tenant with
+            // no lead pipeline could not hold a lead at all, which no recipe means to express.
+            var leadStages = content?.PipelineStages is { Count: > 0 } ls
+                ? ls
+                : DefaultStagesFor(nameof(PipelineRecordType.Lead));
+
+            definitions.Add(new PipelineDefinition
+            {
+                Name = TenantDbContext.DefaultLeadPipelineName,
+                RecordType = nameof(PipelineRecordType.Lead),
+                IsDefault = true,
+                Order = 1,
+                Stages = leadStages
+            });
+
+            // Opportunity stages keep Part A's null-vs-empty distinction exactly: null means
+            // "no opinion, use the product defaults", while an explicitly empty list means
+            // "seed none" and is honoured — the pipeline is still created (so the tenant can
+            // add stages to it later) but arrives with no stages, as authored.
+            var opportunityStages = content?.OpportunityStages
+                ?? DefaultStagesFor(nameof(PipelineRecordType.Opportunity));
+
+            definitions.Add(new PipelineDefinition
+            {
+                Name = TenantDbContext.DefaultOpportunityPipelineName,
+                RecordType = nameof(PipelineRecordType.Opportunity),
+                IsDefault = true,
+                Order = 1,
+                Stages = opportunityStages
+            });
+        }
+
+        // Exactly one default per record type.
+        foreach (var group in definitions.GroupBy(d =>
+                     Enum.TryParse<PipelineRecordType>(d.RecordType, ignoreCase: true, out var t)
+                         ? t : PipelineRecordType.Lead))
+        {
+            var ordered = group.OrderBy(d => d.Order).ThenBy(d => d.Name, StringComparer.Ordinal).ToList();
+            var chosen = ordered.FirstOrDefault(d => d.IsDefault) ?? ordered[0];
+
+            foreach (var d in ordered) d.IsDefault = ReferenceEquals(d, chosen);
+        }
+
+        return definitions;
+    }
+
+    /// <summary>The product's default stage set for a record type, shared by every path that
+    /// needs one so the three cannot drift.</summary>
+    private static List<PipelineStageDefinition> DefaultStagesFor(string recordType) =>
+        string.Equals(recordType, nameof(PipelineRecordType.Opportunity), StringComparison.OrdinalIgnoreCase)
+            ? [.. OpportunityStages.Defaults.Select(d =>
+                new PipelineStageDefinition { Name = d.Name, Order = d.Order, StageType = d.StageType })]
+            :
+            [
+                new() { Name = "New", Order = 1, StageType = nameof(StageType.Entry) },
+                new() { Name = "Contacted", Order = 2, StageType = nameof(StageType.Active) },
+                new() { Name = "Qualified", Order = 3, StageType = nameof(StageType.Active) },
+                new() { Name = "Converted", Order = 4, StageType = nameof(StageType.ClosedWon) },
+                new() { Name = "Closed Lost", Order = 5, StageType = nameof(StageType.ClosedLost) }
+            ];
 
     private static string GenerateSlug(string companyName)
     {

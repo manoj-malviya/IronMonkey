@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
+using IronMonkey.ApiService.Features.Pipelines;
 using IronMonkey.Data;
+using IronMonkey.Data.Entities;
 
 namespace IronMonkey.ApiService.Features.Leads.PipelineStages;
 
@@ -23,7 +25,12 @@ public class ReorderPipelineStagesEndpoint : IEndpoint
         .RequireAuthorization();
 
     /// <param name="StageIds">Every stage id, in the order they should appear.</param>
-    public record Request(List<Guid> StageIds);
+    /// <param name="PipelineId">
+    /// The pipeline whose sequence is being rewritten. Omitted means the tenant's default
+    /// lead pipeline. Each pipeline owns an independent 1..n sequence, so a reorder always
+    /// scopes to one — reordering across pipelines would interleave two funnels.
+    /// </param>
+    public record Request(List<Guid> StageIds, Guid? PipelineId = null);
 
     public record Response(Guid Id, string Name, int Order, bool IsActive);
 
@@ -44,11 +51,22 @@ public class ReorderPipelineStagesEndpoint : IEndpoint
 
         await using var db = dbContextFactory.CreateForTenant(connectionString, tenantId);
 
-        var stages = await db.PipelineStages.ToListAsync(cancellationToken);
+        var pipeline = await PipelineTarget.ResolveAsync(
+            db, PipelineRecordType.Lead, request.PipelineId, cancellationToken);
+
+        if (pipeline is null)
+            return TypedResults.BadRequest("The requested pipeline does not exist for leads in this tenant.");
+
+        // Only THIS PIPELINE's stages. Comparing against every stage in the tenant would make
+        // the set check below fail for any tenant with a second pipeline, and would let one
+        // pipeline's reorder renumber another's.
+        var stages = await PipelineStageResolution.Stages(db, pipeline.Id)
+            .ToListAsync(cancellationToken);
 
         // A partial list would silently leave the omitted stages at positions that now
         // collide with the new sequence. Require the caller to have seen the same set it is
-        // reordering — this is also what catches a concurrent create from another admin.
+        // reordering — this also catches a concurrent create from another admin, and a stage
+        // id from a different pipeline (it is simply not in this pipeline's stored set).
         var submitted = request.StageIds.ToHashSet();
         var existing = stages.Select(s => s.Id).ToHashSet();
 

@@ -379,7 +379,10 @@ public class RecipeEndpointTests : IClassFixture<PostgreSqlFixture>
             .SingleAsync(t => t.Name == companyName);
         var tenantContextFactory = new TenantDbContextFactory();
         await using var tenantDb = tenantContextFactory.CreateForTenant(tenant.DatabaseConnectionString!, tenant.Id);
-        var stages = await tenantDb.PipelineStages.ToListAsync();
+        // Lead stages only — opportunity stages share this table and are asserted elsewhere.
+        var stages = await tenantDb.PipelineStages
+            .Where(s => s.RecordType == PipelineRecordType.Lead)
+            .ToListAsync();
         Assert.Equal(2, stages.Count);
     }
 

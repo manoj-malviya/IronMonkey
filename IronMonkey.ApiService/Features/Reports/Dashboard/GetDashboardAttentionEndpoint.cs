@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
+using IronMonkey.ApiService.Features.Pipelines;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
 using TaskStatus = IronMonkey.Data.Entities.TaskStatus;
@@ -53,23 +54,50 @@ public class GetDashboardAttentionEndpoint : IEndpoint
         int StaleLeadCount,
         List<StaleLeadItem> StaleLeads,
         int StaleAfterDays,
+        string ScopeLabel,
+        Guid? PipelineId,
+        bool IsTenantWide,
+        bool IsMultiPipeline,
         DateTime GeneratedAt);
 
-    internal static async Task<Ok<DashboardAttentionResponse>> Handle(
+    /// <param name="pipelineId">
+    /// Which lead pipeline to report on. Omitted means the default one. This panel stays
+    /// deliberately un-date-filtered (an overdue task is overdue in any window) but it IS
+    /// pipeline-filtered: a stale lead belongs to one funnel, and showing another funnel's
+    /// under this one's heading is the same wrong-number problem the date rule is not about.
+    /// </param>
+    internal static async Task<Results<Ok<DashboardAttentionResponse>, BadRequest<string>>> Handle(
+        string? pipelineId,
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
+        IPipelineScopeResolver scopeResolver,
         CancellationToken cancellationToken)
     {
         var tenantId = tenantService.GetCurrentTenantId();
         var connectionString = await tenantService.GetConnectionStringAsync(cancellationToken);
         await using var db = dbContextFactory.CreateForTenant(connectionString, tenantId);
 
+        var scope = await scopeResolver.ResolveAsync(
+            db, PipelineRecordType.Lead, pipelineId, cancellationToken);
+
+        if (!scope.IsValid) return TypedResults.BadRequest(scope.Error!);
+
+        var scopedPipelines = scope.PipelineIds;
+
         var now = DateTime.UtcNow;
         var staleBefore = now.AddDays(-StaleAfterDays);
 
         // Overdue = past due and still actionable. Completed and cancelled tasks are done
         // with, however far in the past their due date sits.
+        // A task belongs to a lead, and the lead belongs to a pipeline — so the task is
+        // scoped through its lead. Left unscoped, a tenant's second pipeline's overdue work
+        // would be counted into the first pipeline's panel.
+        var leadIdsInScope = db.Leads
+            .Where(l => scopedPipelines.Contains(l.PipelineId))
+            .Select(l => l.Id);
+
         var overdueQuery = db.LeadTasks
+            .Where(t => leadIdsInScope.Contains(t.LeadId))
             .Where(t => t.DueDate != null
                         && t.DueDate < now
                         && t.Status != TaskStatus.Completed
@@ -95,7 +123,8 @@ public class GetDashboardAttentionEndpoint : IEndpoint
         // Stale = open work nobody has touched recently. Converted leads and leads in a
         // terminal stage are finished, so ageing there is expected, not a problem.
         var terminalStageIds = await db.PipelineStages
-            .Where(s => s.StageType == StageType.ClosedWon || s.StageType == StageType.ClosedLost)
+            .Where(s => (s.StageType == StageType.ClosedWon || s.StageType == StageType.ClosedLost)
+                        && scopedPipelines.Contains(s.PipelineId))
             .Select(s => s.Id)
             .ToListAsync(cancellationToken);
 
@@ -103,6 +132,7 @@ public class GetDashboardAttentionEndpoint : IEndpoint
         // insert and on every subsequent edit or stage move, so it tracks real work rather
         // than mere age, and is never default for a persisted row.
         var staleQuery = db.Leads
+            .Where(l => scopedPipelines.Contains(l.PipelineId))
             .Where(l => !l.IsConverted
                         && !terminalStageIds.Contains(l.PipelineStageId)
                         && l.UpdatedAt < staleBefore);
@@ -141,6 +171,10 @@ public class GetDashboardAttentionEndpoint : IEndpoint
                 l.LastActivityAt,
                 Math.Max(0, (int)(now - l.LastActivityAt).TotalDays))).ToList(),
             StaleAfterDays,
+            scope.ScopeLabel,
+            scope.SelectedPipelineId,
+            scope.IsTenantWide,
+            scope.IsMultiPipelineTenant,
             now));
     }
 

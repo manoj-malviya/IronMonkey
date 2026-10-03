@@ -16,10 +16,21 @@ public interface IConfigurationUsageService
 {
     Task<StageUsage> GetStageUsageAsync(TenantDbContext db, Guid stageId, CancellationToken ct);
 
+    /// <summary>
+    /// The same question for an opportunity stage. Separate from the lead overload only
+    /// because it counts a different table — the rules it feeds (reassign before removing,
+    /// never remove the last active stage) are identical, and deliberately so.
+    /// </summary>
+    Task<StageUsage> GetOpportunityStageUsageAsync(TenantDbContext db, Guid stageId, CancellationToken ct);
+
     Task<FieldUsage> GetFieldUsageAsync(TenantDbContext db, CustomFieldDefinition field, CancellationToken ct);
 }
 
-/// <param name="LeadCount">Leads currently sitting in the stage.</param>
+/// <param name="LeadCount">
+/// Records currently sitting in the stage — leads for a lead stage, opportunities for an
+/// opportunity stage. One field rather than two because every caller asks the same question
+/// ("is anything in here?") and a second always-zero field invites reading the wrong one.
+/// </param>
 /// <param name="IsOnlyActiveStage">
 /// True when deactivating would leave the tenant with no active stage — a pipeline with
 /// nowhere to put a lead cannot accept one.
@@ -45,7 +56,22 @@ public sealed class ConfigurationUsageService : IConfigurationUsageService
     {
         var leadCount = await db.Leads.CountAsync(l => l.PipelineStageId == stageId, ct);
 
-        var activeStageCount = await db.PipelineStages.CountAsync(s => s.IsActive, ct);
+        // Counted within THIS STAGE'S OWN PIPELINE.
+        //
+        // Scoping this by record type alone was correct when a tenant had one lead funnel.
+        // With several, a second pipeline's stages would keep the last stage of THIS
+        // pipeline from ever looking like the only active one — so the guard would not fire
+        // and the pipeline could be left with nowhere to put a lead. The pipeline is the unit
+        // that needs somewhere to put a record, so the pipeline is what is counted.
+        var pipelineId = await db.PipelineStages
+            .Where(s => s.Id == stageId)
+            .Select(s => (Guid?)s.PipelineId)
+            .SingleOrDefaultAsync(ct);
+
+        var activeStageCount = pipelineId is { } pid
+            ? await db.PipelineStages.CountAsync(s => s.IsActive && s.PipelineId == pid, ct)
+            : 0;
+
         var thisStageActive = await db.PipelineStages
             .AnyAsync(s => s.Id == stageId && s.IsActive, ct);
 
@@ -56,6 +82,38 @@ public sealed class ConfigurationUsageService : IConfigurationUsageService
             leadCount,
             IsOnlyActiveStage: thisStageActive && activeStageCount <= 1,
             transitionCount);
+    }
+
+    public async Task<StageUsage> GetOpportunityStageUsageAsync(
+        TenantDbContext db, Guid stageId, CancellationToken ct)
+    {
+        var opportunityCount = await db.Opportunities.CountAsync(o => o.PipelineStageId == stageId, ct);
+
+        // Per pipeline, for the reason given on the lead overload above: each pipeline needs
+        // at least one active stage of its own, and counting across pipelines would hide the
+        // moment one of them ran out.
+        var pipelineId = await db.PipelineStages
+            .Where(s => s.Id == stageId)
+            .Select(s => (Guid?)s.PipelineId)
+            .SingleOrDefaultAsync(ct);
+
+        var activeStageCount = pipelineId is { } pid
+            ? await db.PipelineStages.CountAsync(s => s.IsActive && s.PipelineId == pid, ct)
+            : 0;
+
+        var thisStageActive = await db.PipelineStages
+            .AnyAsync(s => s.Id == stageId && s.IsActive, ct);
+
+        // Recorded history referencing the stage. Unlike the lead path this counts
+        // stage_changes (what happened) rather than stage_transitions (what is permitted):
+        // the allowed-edges graph is a lead-pipeline concept and holds no opportunity rows.
+        var historyCount = await db.StageChanges
+            .CountAsync(c => c.FromStageId == stageId || c.ToStageId == stageId, ct);
+
+        return new StageUsage(
+            opportunityCount,
+            IsOnlyActiveStage: thisStageActive && activeStageCount <= 1,
+            historyCount);
     }
 
     public async Task<FieldUsage> GetFieldUsageAsync(

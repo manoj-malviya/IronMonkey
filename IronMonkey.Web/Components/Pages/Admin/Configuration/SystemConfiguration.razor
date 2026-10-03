@@ -61,6 +61,14 @@
             <PipelineStagesTab OnSuccess="ShowSuccess" OnError="ShowError" />
             break;
 
+        case "deal-stages":
+            <DealStagesTab OnSuccess="ShowSuccess" OnError="ShowError" />
+            break;
+
+        case "pipelines":
+            <PipelinesTab OnSuccess="ShowSuccess" OnError="ShowError" />
+            break;
+
         case "fields":
             <CustomFieldsTab OnSuccess="ShowSuccess" OnError="ShowError" />
             break;
@@ -321,6 +329,10 @@
     [
         new("stages", "Pipeline stages",
             "The columns of your lead board, in order. Retire a stage without losing its leads."),
+        new("deal-stages", "Deal stages",
+            "The columns of your deal board, in order, and which of them mean won or lost."),
+        new("pipelines", "Pipelines",
+            "Run more than one funnel — different stages, fields and routing — inside one organisation."),
         new("fields", "Custom fields",
             "Extra fields captured on leads and contacts, with their types, options and defaults."),
         new("routing", "Routing",

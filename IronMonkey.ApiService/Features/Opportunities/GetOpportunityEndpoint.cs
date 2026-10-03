@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.Data;
+using IronMonkey.Data.Entities;
 
 namespace IronMonkey.ApiService.Features.Opportunities;
 
@@ -14,9 +15,14 @@ public class GetOpportunityEndpoint : IEndpoint
         .WithTags("Opportunities")
         .RequireAuthorization();
 
+    /// <param name="Stage">The stage's current name, for display only.</param>
+    /// <param name="StageType">
+    /// Won/lost is read from here, never from the name — the tenant may rename any stage.
+    /// </param>
     public record Response(
         Guid Id, string Title, Guid ContactId, string ContactName,
-        string Stage, decimal Amount, DateTime ExpectedCloseDate,
+        Guid StageId, string Stage, string StageType, bool IsTerminal,
+        decimal Amount, DateTime ExpectedCloseDate,
         string? LossReason, DateTime CreatedAt);
 
     private static async Task<Results<Ok<Response>, NotFound>> Handle(
@@ -32,6 +38,7 @@ public class GetOpportunityEndpoint : IEndpoint
 
         var opportunity = await db.Opportunities
             .Include(o => o.Contact)
+            .Include(o => o.Stage)
             .SingleOrDefaultAsync(o => o.Id == id, cancellationToken);
 
         if (opportunity is null)
@@ -39,7 +46,12 @@ public class GetOpportunityEndpoint : IEndpoint
 
         return TypedResults.Ok(new Response(
             opportunity.Id, opportunity.Title, opportunity.ContactId,
-            opportunity.Contact?.Name ?? "—", opportunity.Stage, opportunity.Amount,
+            opportunity.Contact?.Name ?? "—",
+            opportunity.PipelineStageId,
+            opportunity.Stage?.Name ?? "—",
+            (opportunity.Stage?.StageType ?? StageType.Active).ToString(),
+            opportunity.Stage?.IsTerminal ?? false,
+            opportunity.Amount,
             opportunity.ExpectedCloseDate, opportunity.LossReason, opportunity.CreatedAt));
     }
 }

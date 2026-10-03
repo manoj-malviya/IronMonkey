@@ -44,6 +44,30 @@ public sealed class CustomFieldDefinition : BaseTenantEntity
     /// before this existed keep their original meaning.</summary>
     public CustomFieldEntity AppliesTo { get; private set; } = CustomFieldEntity.Lead;
 
+    /// <summary>
+    /// The pipeline this field targets, or null for every pipeline in the tenant.
+    ///
+    /// <b>Precedence: the more specific target wins, and does not merge.</b> When a
+    /// pipeline-scoped field and a tenant-wide one both apply to the same record, the
+    /// pipeline-scoped one is used and the tenant-wide one is not also applied. Unioning
+    /// them would make a pipeline-scoped field unable to override anything — it could only
+    /// ever add — and "scoped to this pipeline" would then be indistinguishable from
+    /// "additional".
+    ///
+    /// Nullable rather than defaulted to the tenant's default pipeline: null means "no
+    /// opinion about pipelines", which is what every row that existed before multiple
+    /// pipelines did meant, and is what a single-pipeline tenant keeps meaning. A default
+    /// value here would have silently narrowed every existing row the day a second pipeline
+    /// was created.
+    ///
+    /// <b>On pipeline removal</b> the reference is set back to null — the field reverts to
+    /// tenant-wide rather than being deleted or left pointing at a pipeline that is gone.
+    /// Deleting it would destroy configuration the Admin never asked to lose; leaving it
+    /// dangling would make it silently match nothing, which is the same as deleting it but
+    /// without saying so.
+    /// </summary>
+    public Guid? PipelineId { get; private set; }
+
     /// <summary>Order the field appears in on a form, ascending.</summary>
     public int DisplayOrder { get; private set; }
 
@@ -57,7 +81,8 @@ public sealed class CustomFieldDefinition : BaseTenantEntity
         int displayOrder = 0,
         string? fieldKey = null,
         string? helpText = null,
-        string? defaultValue = null)
+        string? defaultValue = null,
+        Guid? pipelineId = null)
         => new()
         {
             Id = Guid.NewGuid(),
@@ -70,7 +95,8 @@ public sealed class CustomFieldDefinition : BaseTenantEntity
             AppliesTo = appliesTo,
             DisplayOrder = displayOrder,
             HelpText = helpText,
-            DefaultValue = defaultValue
+            DefaultValue = defaultValue,
+            PipelineId = pipelineId
         };
 
     public void Update(
@@ -94,6 +120,12 @@ public sealed class CustomFieldDefinition : BaseTenantEntity
         HelpText = helpText;
         DefaultValue = defaultValue;
     }
+
+    /// <summary>
+    /// Retargets the field. Null makes it tenant-wide again, which is also what happens
+    /// when the pipeline it targeted is removed.
+    /// </summary>
+    public void SetPipeline(Guid? pipelineId) => PipelineId = pipelineId;
 
     public void Archive() => IsArchived = true;
 

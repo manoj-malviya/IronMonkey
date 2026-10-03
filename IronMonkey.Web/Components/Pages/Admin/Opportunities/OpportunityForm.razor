@@ -71,23 +71,25 @@
                 </div>
                 <div>
                     <label class="mb-1 block text-sm font-medium text-slate-700">Stage</label>
-                    <select @bind="_model.Stage"
+                    <select @bind="_model.StageId"
                             class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        @foreach (var s in IronMonkey.Common.OpportunityStages.All)
+                        @foreach (var s in _stages)
                         {
-                            <option value="@s">@s</option>
+                            <option value="@s.Id">@s.Name</option>
                         }
                     </select>
                 </div>
             </div>
 
-            @if (_model.Stage == IronMonkey.Common.OpportunityStages.Lost)
+            @* The loss reason is prompted for by stage TYPE, not by a stage named "Lost" —
+               a tenant that renamed it to "Declined" must still be asked. *@
+            @if (SelectedStageType == "ClosedLost")
             {
                 <div class="mt-4">
                     <label class="mb-1 block text-sm font-medium text-slate-700">Loss reason</label>
                     <InputText @bind-Value="_model.LossReason" placeholder="e.g. Price, chose competitor, no budget"
                                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                    <p class="mt-1 text-xs text-slate-500">Required when marking a deal as Lost.</p>
+                    <p class="mt-1 text-xs text-slate-500">Required when closing a deal as lost.</p>
                 </div>
             }
 
@@ -108,6 +110,12 @@
 
     private OpportunityModel _model = new();
     private List<ContactItem> _contacts = [];
+    private List<StageItem> _stages = [];
+
+    // Drives the loss-reason prompt. Falls back to empty rather than guessing, so a stage
+    // that has not loaded yet never makes the field spuriously appear or disappear.
+    private string SelectedStageType =>
+        _stages.FirstOrDefault(s => s.Id == _model.StageId)?.StageType ?? "";
     private bool _isLoading = true;
     private bool _isSaving;
     private string? _error;
@@ -115,6 +123,11 @@
     protected override async Task OnInitializedAsync()
     {
         _contacts = await Api.GetFromJsonAsync<List<ContactItem>>("/api/contacts") ?? [];
+
+        // An inactive stage is included only so an existing deal sitting in one still shows
+        // its own stage in the picker instead of silently switching to another.
+        _stages = await Api.GetFromJsonAsync<List<StageItem>>(
+            "/api/opportunity-stages?includeInactive=true") ?? [];
 
         if (IsEdit)
         {
@@ -125,7 +138,7 @@
                 {
                     Title = o.Title,
                     ContactId = o.ContactId,
-                    Stage = o.Stage,
+                    StageId = o.StageId,
                     Amount = o.Amount,
                     ExpectedCloseDate = o.ExpectedCloseDate,
                     LossReason = o.LossReason ?? ""
@@ -133,9 +146,15 @@
             }
             else _error = "Opportunity not found.";
         }
-        else if (_contacts.Count > 0)
+        else
         {
-            _model.ContactId = _contacts[0].Id;
+            if (_contacts.Count > 0) _model.ContactId = _contacts[0].Id;
+
+            // Default a new deal to the first non-terminal stage — creating one straight into
+            // a closed stage is not a default anyone wants.
+            var entry = _stages.FirstOrDefault(s => s.StageType == "Entry")
+                        ?? _stages.FirstOrDefault(s => s.StageType == "Active");
+            if (entry is not null) _model.StageId = entry.Id;
         }
 
         _isLoading = false;
@@ -151,7 +170,7 @@
             {
                 _model.Title,
                 _model.ContactId,
-                _model.Stage,
+                _model.StageId,
                 _model.Amount,
                 ExpectedCloseDate = DateTime.SpecifyKind(_model.ExpectedCloseDate, DateTimeKind.Utc),
                 _model.LossReason
@@ -175,7 +194,7 @@
         public string Title { get; set; } = "";
 
         public Guid ContactId { get; set; }
-        public string Stage { get; set; } = IronMonkey.Common.OpportunityStages.Qualification;
+        public Guid StageId { get; set; }
 
         [Range(0, double.MaxValue, ErrorMessage = "Amount cannot be negative.")]
         public decimal Amount { get; set; }
@@ -195,9 +214,16 @@
     {
         public string Title { get; set; } = "";
         public Guid ContactId { get; set; }
-        public string Stage { get; set; } = "";
+        public Guid StageId { get; set; }
         public decimal Amount { get; set; }
         public DateTime ExpectedCloseDate { get; set; }
         public string? LossReason { get; set; }
+    }
+
+    private class StageItem
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = "";
+        public string StageType { get; set; } = "";
     }
 }

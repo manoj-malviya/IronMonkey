@@ -210,6 +210,9 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("PipelineId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
 
@@ -219,6 +222,8 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "PipelineId");
 
                     b.HasIndex("TenantId", "AppliesTo", "DisplayOrder");
 
@@ -411,6 +416,9 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<Guid>("PipelineId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("PipelineStageId")
                         .HasColumnType("uuid");
 
@@ -433,6 +441,8 @@ namespace IronMonkey.Data.Migrations.Tenant
 
                     b.HasIndex("IsConverted");
 
+                    b.HasIndex("PipelineId");
+
                     b.HasIndex("PipelineStageId");
 
                     b.HasIndex("TenantId");
@@ -450,6 +460,9 @@ namespace IronMonkey.Data.Migrations.Tenant
 
                     b.HasIndex("TenantId", "Source")
                         .HasDatabaseName("IX_Leads_TenantId_Source");
+
+                    b.HasIndex("TenantId", "PipelineId", "PipelineStageId")
+                        .HasDatabaseName("IX_leads_TenantId_PipelineId_PipelineStageId");
 
                     b.ToTable("leads", (string)null);
                 });
@@ -917,10 +930,11 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<string>("Stage")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<Guid>("PipelineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PipelineStageId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
@@ -937,9 +951,17 @@ namespace IronMonkey.Data.Migrations.Tenant
 
                     b.HasIndex("ContactId");
 
-                    b.HasIndex("Stage");
+                    b.HasIndex("PipelineId");
+
+                    b.HasIndex("PipelineStageId");
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "PipelineStageId")
+                        .HasDatabaseName("IX_opportunities_TenantId_PipelineStageId");
+
+                    b.HasIndex("TenantId", "PipelineId", "PipelineStageId")
+                        .HasDatabaseName("IX_opportunities_TenantId_PipelineId_PipelineStageId");
 
                     b.ToTable("opportunities", (string)null);
                 });
@@ -1063,6 +1085,56 @@ namespace IronMonkey.Data.Migrations.Tenant
                         });
                 });
 
+            modelBuilder.Entity("IronMonkey.Data.Entities.Pipeline", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RecordType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "RecordType", "Order");
+
+                    b.ToTable("pipelines", (string)null);
+                });
+
             modelBuilder.Entity("IronMonkey.Data.Entities.PipelineStage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1089,6 +1161,13 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.Property<int>("Order")
                         .HasColumnType("integer");
 
+                    b.Property<Guid>("PipelineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RecordType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("StageType")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1101,7 +1180,11 @@ namespace IronMonkey.Data.Migrations.Tenant
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId", "Order");
+                    b.HasIndex("PipelineId");
+
+                    b.HasIndex("TenantId", "PipelineId", "Order");
+
+                    b.HasIndex("TenantId", "RecordType", "Order");
 
                     b.ToTable("pipeline_stages", (string)null);
                 });
@@ -1358,6 +1441,9 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.Property<bool>("IsEnabled")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid?>("PipelineId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("RoundRobinPointer")
                         .HasColumnType("integer");
 
@@ -1378,6 +1464,8 @@ namespace IronMonkey.Data.Migrations.Tenant
 
                     b.HasIndex("TenantId")
                         .IsUnique();
+
+                    b.HasIndex("TenantId", "PipelineId");
 
                     b.ToTable("routing_configs", (string)null);
                 });
@@ -1454,6 +1542,70 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.HasIndex("AdminEmail");
 
                     b.ToTable("SignupRequests", (string)null);
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.StageChange", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ChangedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("FromPipelineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("FromStageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RecordId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RecordType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ToPipelineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ToStageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FromStageId");
+
+                    b.HasIndex("ToStageId");
+
+                    b.HasIndex("TenantId", "ToPipelineId", "OccurredAt")
+                        .HasDatabaseName("IX_stage_changes_TenantId_ToPipelineId_OccurredAt");
+
+                    b.HasIndex("TenantId", "ToStageId", "OccurredAt")
+                        .HasDatabaseName("IX_stage_changes_TenantId_ToStageId_OccurredAt");
+
+                    b.HasIndex("TenantId", "RecordType", "RecordId", "OccurredAt")
+                        .HasDatabaseName("IX_stage_changes_TenantId_Record_OccurredAt");
+
+                    b.ToTable("stage_changes", (string)null);
                 });
 
             modelBuilder.Entity("IronMonkey.Data.Entities.StageTransition", b =>
@@ -2029,6 +2181,9 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<Guid?>("PipelineId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
 
@@ -2042,6 +2197,8 @@ namespace IronMonkey.Data.Migrations.Tenant
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId", "IsActive");
+
+                    b.HasIndex("TenantId", "PipelineId");
 
                     b.ToTable("workflow_rules", (string)null);
                 });
@@ -2112,11 +2269,19 @@ namespace IronMonkey.Data.Migrations.Tenant
 
             modelBuilder.Entity("IronMonkey.Data.Entities.Lead", b =>
                 {
+                    b.HasOne("IronMonkey.Data.Entities.Pipeline", "Pipeline")
+                        .WithMany()
+                        .HasForeignKey("PipelineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("IronMonkey.Data.Entities.PipelineStage", "Stage")
                         .WithMany()
                         .HasForeignKey("PipelineStageId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Pipeline");
 
                     b.Navigation("Stage");
                 });
@@ -2155,7 +2320,34 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("IronMonkey.Data.Entities.Pipeline", "Pipeline")
+                        .WithMany()
+                        .HasForeignKey("PipelineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("IronMonkey.Data.Entities.PipelineStage", "Stage")
+                        .WithMany()
+                        .HasForeignKey("PipelineStageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Contact");
+
+                    b.Navigation("Pipeline");
+
+                    b.Navigation("Stage");
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.PipelineStage", b =>
+                {
+                    b.HasOne("IronMonkey.Data.Entities.Pipeline", "Pipeline")
+                        .WithMany()
+                        .HasForeignKey("PipelineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Pipeline");
                 });
 
             modelBuilder.Entity("IronMonkey.Data.Entities.RolePermission", b =>
@@ -2171,6 +2363,24 @@ namespace IronMonkey.Data.Migrations.Tenant
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("IronMonkey.Data.Entities.StageChange", b =>
+                {
+                    b.HasOne("IronMonkey.Data.Entities.PipelineStage", "FromStage")
+                        .WithMany()
+                        .HasForeignKey("FromStageId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("IronMonkey.Data.Entities.PipelineStage", "ToStage")
+                        .WithMany()
+                        .HasForeignKey("ToStageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("FromStage");
+
+                    b.Navigation("ToStage");
                 });
 
             modelBuilder.Entity("IronMonkey.Data.Entities.StageTransition", b =>

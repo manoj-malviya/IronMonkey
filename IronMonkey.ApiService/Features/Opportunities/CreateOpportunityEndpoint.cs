@@ -5,7 +5,7 @@ using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.ApiService.Common.Extensions;
 using IronMonkey.ApiService.Common.Results;
-using IronMonkey.Common;
+using IronMonkey.ApiService.Features.Configuration;
 using IronMonkey.Data;
 using IronMonkey.Data.Entities;
 
@@ -20,11 +20,15 @@ public class CreateOpportunityEndpoint : IEndpoint
         .RequireAuthorization()
         .WithRequestValidation<Request>();
 
+    /// <param name="StageId">
+    /// Optional. Omitted lands the deal in the tenant's default entry stage, so a caller that
+    /// does not care about stages does not have to fetch the list first.
+    /// </param>
     public record Request(
-        string Title, Guid ContactId, string Stage,
+        string Title, Guid ContactId, Guid? StageId,
         decimal Amount, DateTime ExpectedCloseDate);
 
-    public record Response(Guid Id, string Title, string Stage, decimal Amount);
+    public record Response(Guid Id, string Title, Guid StageId, string Stage, decimal Amount);
 
     public class RequestValidator : AbstractValidator<Request>
     {
@@ -40,11 +44,9 @@ public class CreateOpportunityEndpoint : IEndpoint
         Request request,
         ITenantService tenantService,
         ITenantDbContextFactory dbContextFactory,
+        IUserContext userContext,
         CancellationToken cancellationToken)
     {
-        if (!OpportunityStages.IsValid(request.Stage))
-            return new ValidationError($"Invalid stage. Valid: {string.Join(", ", OpportunityStages.All)}");
-
         var tenantId = tenantService.GetCurrentTenantId();
         var connectionString = await tenantService.GetConnectionStringAsync(cancellationToken);
 
@@ -54,19 +56,49 @@ public class CreateOpportunityEndpoint : IEndpoint
         if (!contactExists)
             return new ValidationError("The selected contact no longer exists.");
 
+        // The stage is resolved against this tenant's own opportunity stages, so a lead
+        // stage id or another tenant's id simply does not resolve.
+        PipelineStage? stage;
+        if (request.StageId is { } stageId)
+        {
+            stage = await OpportunityStageResolver.FindAsync(db, stageId, cancellationToken);
+            if (stage is null)
+                return new ValidationError("The selected stage does not exist for this tenant.");
+            if (!stage.IsActive)
+                return new ValidationError($"'{stage.Name}' is not an active stage.");
+        }
+        else
+        {
+            stage = await OpportunityStageResolver.GetDefaultEntryAsync(db, cancellationToken);
+            if (stage is null)
+                return new ValidationError("This tenant has no active opportunity stage to place the deal in.");
+        }
+
         var opportunity = Opportunity.Create(
             tenantId, request.Title.Trim(), request.ContactId,
             // Postgres timestamptz requires UTC; a date picked in the browser arrives
             // unspecified and would otherwise throw on save.
             DateTime.SpecifyKind(request.ExpectedCloseDate, DateTimeKind.Utc),
-            request.Stage);
+            stage.Id);
         opportunity.SetAmount(request.Amount);
 
         db.Opportunities.Add(opportunity);
+
+        // The first placement is history too: without it the time a deal spent in its entry
+        // stage has no start, so velocity reporting begins at the first *move* instead of at
+        // creation.
+        StageChangeRecorder.Record(
+            db, tenantId, PipelineRecordType.Opportunity, opportunity.Id,
+            fromStageId: null, toStageId: stage.Id, userContext.UserId,
+            // First placement, so there is no previous pipeline. The deal's pipeline is the
+            // one its stage belongs to — read off the stage rather than passed in, so the
+            // two cannot disagree.
+            fromPipelineId: null, toPipelineId: stage.PipelineId);
+
         await db.SaveChangesAsync(cancellationToken);
 
         return TypedResults.Created(
             $"/api/opportunities/{opportunity.Id}",
-            new Response(opportunity.Id, opportunity.Title, opportunity.Stage, opportunity.Amount));
+            new Response(opportunity.Id, opportunity.Title, stage.Id, stage.Name, opportunity.Amount));
     }
 }

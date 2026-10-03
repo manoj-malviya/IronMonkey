@@ -58,10 +58,17 @@ public class UpdateLeadEndpoint : IEndpoint
         if (lead is null)
             return TypedResults.NotFound();
 
+        // Scoped to the lead's OWN pipeline. A bare existence check would accept any stage
+        // in the tenant, including one from a different pipeline — the lead would then point
+        // at a stage its pipeline does not contain, showing on no board and counted in the
+        // wrong pipeline's per-stage totals. Changing pipeline is a separate operation:
+        // POST /api/leads/{id}/pipeline.
         var stageExists = await db.PipelineStages
-            .AnyAsync(p => p.Id == request.PipelineStageId, cancellationToken);
+            .AnyAsync(p => p.Id == request.PipelineStageId && p.PipelineId == lead.PipelineId,
+                cancellationToken);
+
         if (!stageExists)
-            return new ValidationError("Invalid pipeline stage.");
+            return new ValidationError("That stage does not belong to this lead's pipeline.");
 
         var definitions = await db.CustomFieldDefinitions
             .Where(f => f.AppliesTo == CustomFieldEntity.Lead)

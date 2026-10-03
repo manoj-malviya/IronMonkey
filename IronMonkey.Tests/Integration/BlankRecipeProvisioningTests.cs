@@ -69,11 +69,26 @@ public class BlankRecipeProvisioningTests : IClassFixture<PostgreSqlFixture>
             .SingleAsync(t => t.Name == $"Blank Recipe Co {uniqueId}");
         var tenantContextFactory = new TenantDbContextFactory();
         await using var tenantDb = tenantContextFactory.CreateForTenant(tenant.DatabaseConnectionString!, tenant.Id);
-        var stages = await tenantDb.PipelineStages.ToListAsync();
+        // Lead stages only. Provisioning also seeds the tenant's opportunity stages into
+        // this same table now, and this assertion is about what the recipe defined for leads.
+        var stages = await tenantDb.PipelineStages
+            .Where(s => s.RecordType == PipelineRecordType.Lead)
+            .ToListAsync();
         Assert.Single(stages);
         var stage = stages[0];
         Assert.Equal("New", stage.Name);
         Assert.Equal(StageType.Entry, stage.StageType);
+
+        // The Blank recipe predates opportunity stages and defines none, so the tenant falls
+        // back to the product defaults rather than being left unable to create a deal. This
+        // is the backward-compatibility guarantee, asserted against a real provision.
+        var opportunityStages = await tenantDb.PipelineStages
+            .Where(s => s.RecordType == PipelineRecordType.Opportunity)
+            .ToListAsync();
+
+        Assert.NotEmpty(opportunityStages);
+        Assert.Contains(opportunityStages, s => s.StageType == StageType.ClosedWon);
+        Assert.Contains(opportunityStages, s => s.StageType == StageType.ClosedLost);
     }
 
     [Fact]

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using IronMonkey.ApiService.Common;
 using IronMonkey.ApiService.Common.Auth;
 using IronMonkey.Data;
+using IronMonkey.Data.Entities;
 
 namespace IronMonkey.ApiService.Features.Contacts;
 
@@ -14,7 +15,9 @@ public class GetContactEndpoint : IEndpoint
         .WithTags("Contacts")
         .RequireAuthorization();
 
-    public record OpportunitySummary(Guid Id, string Title, string Stage, decimal Amount, DateTime ExpectedCloseDate);
+    public record OpportunitySummary(
+        Guid Id, string Title, Guid StageId, string Stage, string StageType, bool IsTerminal,
+        decimal Amount, DateTime ExpectedCloseDate);
     public record Response(
         Guid Id, string Name, string Email, string Mobile, DateTime CreatedAt,
         List<OpportunitySummary> Opportunities,
@@ -38,7 +41,11 @@ public class GetContactEndpoint : IEndpoint
         var opportunities = await db.Opportunities
             .Where(o => o.ContactId == id)
             .OrderByDescending(o => o.CreatedAt)
-            .Select(o => new OpportunitySummary(o.Id, o.Title, o.Stage, o.Amount, o.ExpectedCloseDate))
+            .Select(o => new OpportunitySummary(
+                o.Id, o.Title, o.PipelineStageId, o.Stage.Name,
+                o.Stage.StageType.ToString(),
+                o.Stage.StageType == StageType.ClosedWon || o.Stage.StageType == StageType.ClosedLost,
+                o.Amount, o.ExpectedCloseDate))
             .ToListAsync(cancellationToken);
 
         return TypedResults.Ok(new Response(

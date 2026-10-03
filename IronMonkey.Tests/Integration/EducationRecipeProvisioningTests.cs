@@ -67,7 +67,10 @@ public class EducationRecipeProvisioningTests : IClassFixture<PostgreSqlFixture>
         var tenantContextFactory = new TenantDbContextFactory();
         await using var tenantDb = tenantContextFactory.CreateForTenant(tenant.DatabaseConnectionString!, tenant.Id);
 
-        var stages = await tenantDb.PipelineStages.OrderBy(s => s.Order).ToListAsync();
+        // Lead stages only — opportunity stages share this table and are asserted elsewhere.
+        var stages = await tenantDb.PipelineStages
+            .Where(s => s.RecordType == PipelineRecordType.Lead)
+            .OrderBy(s => s.Order).ToListAsync();
 
         Assert.Equal(6, stages.Count);
 

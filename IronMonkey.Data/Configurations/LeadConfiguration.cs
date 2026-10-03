@@ -47,6 +47,20 @@ internal sealed class LeadConfiguration : IEntityTypeConfiguration<Lead>
             .HasForeignKey(l => l.PipelineStageId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.Property(lead => lead.PipelineId).IsRequired();
+
+        // Restrict: a pipeline must never be removed out from under the records in it.
+        builder.HasOne(lead => lead.Pipeline)
+            .WithMany()
+            .HasForeignKey(lead => lead.PipelineId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // The list, board and dashboard all filter by pipeline first and then by stage, so
+        // the composite is what keeps a pipeline-scoped aggregate an index seek rather than
+        // a scan of every leads in the tenant.
+        builder.HasIndex(lead => new { lead.TenantId, lead.PipelineId, lead.PipelineStageId })
+            .HasDatabaseName("IX_leads_TenantId_PipelineId_PipelineStageId");
+
         builder.HasIndex(lead => lead.TenantId);
 
         builder.HasIndex(lead => new { lead.TenantId, lead.Email });

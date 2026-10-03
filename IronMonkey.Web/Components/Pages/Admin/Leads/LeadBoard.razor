@@ -8,7 +8,24 @@
 <div class="space-y-6">
 
     <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-slate-900">Pipeline Board</h1>
+        <div class="flex flex-wrap items-center gap-3">
+            <h1 class="text-2xl font-bold text-slate-900">Pipeline Board</h1>
+
+            @* A board is one funnel by definition — merging two pipelines' columns would
+               produce a board whose columns no single record can move between. So this picks
+               WHICH board, and renders only when there is more than one to pick. *@
+            @if (_isMultiPipeline)
+            {
+                <select value="@_pipelineFilter" @onchange="OnPipelineChangedAsync"
+                        aria-label="Pipeline"
+                        class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                    @foreach (var p in _pipelineOptions)
+                    {
+                        <option value="@p.Id">@p.Name@(p.IsDefault ? " (default)" : "")</option>
+                    }
+                </select>
+            }
+        </div>
         <div class="flex items-center gap-2">
             <button @onclick='() => Nav.NavigateTo("/admin/leads")'
                     class="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
@@ -98,7 +115,51 @@
     private Guid? _draggingLeadId;
     private Guid? _dragOverStageId;
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    private string _pipelineFilter = "";
+    private bool _isMultiPipeline;
+    private List<PipelineOption> _pipelineOptions = [];
+
+    private class PipelineOption
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = "";
+        public bool IsDefault { get; set; }
+    }
+
+    private class PipelineListPayload
+    {
+        public List<PipelineOption> Items { get; set; } = [];
+        public bool IsMultiPipeline { get; set; }
+        public Guid? DefaultPipelineId { get; set; }
+    }
+
+    /// <summary>
+    /// Deliberately does NOT fetch: this runs during prerender, where the JWT in
+    /// ProtectedSessionStorage is unreadable, so the call would go out unauthenticated and
+    /// 401 silently. Loading happens in OnAfterRenderAsync instead.
+    /// </summary>
+    protected override Task OnInitializedAsync() => Task.CompletedTask;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        var pipelines = await Api.GetFromJsonAsync<PipelineListPayload>("/api/pipelines?recordType=Lead");
+        _pipelineOptions = pipelines?.Items ?? [];
+        _isMultiPipeline = pipelines?.IsMultiPipeline ?? false;
+
+        if (_isMultiPipeline && pipelines?.DefaultPipelineId is { } defaultId)
+            _pipelineFilter = defaultId.ToString();
+
+        await LoadAsync();
+        StateHasChanged();
+    }
+
+    private async Task OnPipelineChangedAsync(ChangeEventArgs e)
+    {
+        _pipelineFilter = e.Value?.ToString() ?? "";
+        await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {
@@ -106,7 +167,13 @@
         _error = null;
         try
         {
-            var board = await Api.GetFromJsonAsync<BoardResponse>("/api/kanban");
+            // Omitted resolves to the default pipeline server-side, which for a
+            // single-pipeline tenant is the only one — so this page is unchanged for them.
+            var url = "/api/kanban";
+            if (!string.IsNullOrWhiteSpace(_pipelineFilter))
+                url += $"?pipelineId={Uri.EscapeDataString(_pipelineFilter)}";
+
+            var board = await Api.GetFromJsonAsync<BoardResponse>(url);
             _columns = board?.Columns ?? [];
         }
         catch (Exception ex) { _error = $"Failed to load board: {ex.Message}"; }

@@ -28,7 +28,7 @@
             <div>
                 <h1 class="text-2xl font-bold text-slate-900">@_opportunity.Title</h1>
                 <p class="mt-1 text-sm text-slate-500">
-                    <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold @StageClass(_opportunity.Stage)">@_opportunity.Stage</span>
+                    <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold @StageClass(_opportunity.StageType)">@_opportunity.Stage</span>
                     <span class="ml-2">@_opportunity.Amount.ToString("N0")</span>
                 </p>
             </div>
@@ -103,12 +103,13 @@
         finally { _isLoading = false; }
     }
 
-    private static string StageClass(string stage) => stage switch
+    // Keyed on the stage TYPE, not the name: a tenant owns its stage names and may change
+    // them at any time, but the meaning of won/lost is fixed.
+    private static string StageClass(string stageType) => stageType switch
     {
-        "Won" => "bg-emerald-100 text-emerald-800",
-        "Lost" => "bg-red-100 text-red-800",
-        "Negotiation" => "bg-amber-100 text-amber-800",
-        "Proposal" => "bg-indigo-100 text-indigo-800",
+        "ClosedWon" => "bg-emerald-100 text-emerald-800",
+        "ClosedLost" => "bg-red-100 text-red-800",
+        "Entry" => "bg-indigo-100 text-indigo-800",
         _ => "bg-slate-100 text-slate-700"
     };
 
@@ -117,7 +118,10 @@
         public string Title { get; set; } = "";
         public Guid ContactId { get; set; }
         public string ContactName { get; set; } = "";
+        public Guid StageId { get; set; }
         public string Stage { get; set; } = "";
+        public string StageType { get; set; } = "";
+        public bool IsTerminal { get; set; }
         public decimal Amount { get; set; }
         public DateTime ExpectedCloseDate { get; set; }
         public string? LossReason { get; set; }
